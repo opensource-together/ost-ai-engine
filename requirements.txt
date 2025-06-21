@@ -1,0 +1,18 @@
+# --- Web Framework ---
+fastapi
+uvicorn[standard]
+
+# --- Database ---
+sqlalchemy
+psycopg2-binary
+
+# --- Machine Learning ---
+scikit-learn
+pandas
+
+# --- Background Tasks ---
+celery
+redis
+
+# --- Configuration ---
+python-dotenv 
