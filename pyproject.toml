@@ -1,0 +1,32 @@
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.ruff]
+# Set the python version
+target-version = "py39"
+
+# Same as Black.
+line-length = 88
+
+# Enable a subset of rules
+select = [
+    "F",  # Pyflakes
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "I",  # isort (import sorting)
+    "UP", # pyupgrade
+]
+
+# Exclude commonly ignored directories.
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "venv",
+]
+
+[tool.ruff.isort]
+# Tell isort where our own code is located
+known-first-party = ["src"] 

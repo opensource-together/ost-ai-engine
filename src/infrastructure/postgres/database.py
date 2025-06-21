@@ -1,6 +1,7 @@
+import os
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
-import os
 
 # --- Database Configuration ---
 # It's recommended to get this from environment variables
@@ -15,6 +16,7 @@ engine = create_engine(DATABASE_URL)
 # The Session is our "handle" to the database for making queries.
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+
 def get_db():
     """
     Dependency function to get a database session.
@@ -24,4 +26,4 @@ def get_db():
     try:
         yield db
     finally:
-        db.close() 
+        db.close()
