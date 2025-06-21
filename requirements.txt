@@ -15,4 +15,8 @@ celery
 redis
 
 # --- Configuration ---
-python-dotenv 
+python-dotenv
+
+# --- Code Quality ---
+black
+ruff 
