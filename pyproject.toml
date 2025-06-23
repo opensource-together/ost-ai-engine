@@ -1,10 +1,10 @@
 [tool.black]
 line-length = 88
-target-version = ['py39']
+target-version = ['py313']
 
 [tool.ruff]
 # Set the python version
-target-version = "py39"
+target-version = "py313"
 
 # Same as Black.
 line-length = 88
@@ -30,3 +30,33 @@ exclude = [
 [tool.ruff.isort]
 # Tell isort where our own code is located
 known-first-party = ["src"] 
+
+[tool.poetry.group.dev.dependencies]
+black = "^25.1.0"
+ruff = "^0.12.0"
+faker = "^37.4.0"
+
+[project]
+name = "data-engine"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "spideystreet",email = "dhicham.pro@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi (>=0.115.13,<0.116.0)",
+    "uvicorn (>=0.34.3,<0.35.0)",
+    "sqlalchemy (>=2.0.41,<3.0.0)",
+    "psycopg2-binary (>=2.9.10,<3.0.0)",
+    "celery[redis] (>=5.5.3,<6.0.0)",
+    "scikit-learn (>=1.7.0,<2.0.0)",
+    "pandas (>=2.3.0,<3.0.0)",
+    "python-dotenv (>=1.1.0,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
