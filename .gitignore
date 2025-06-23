@@ -113,3 +113,4 @@ TODO.md
 
 # SQL
 *.sql
+postgres-data/

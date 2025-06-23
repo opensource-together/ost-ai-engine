@@ -10,6 +10,7 @@ class GithubScraper:
     """
     A scraper to fetch repository data from GitHub.
     """
+
     def __init__(self):
         """
         Initializes the scraper by connecting to the GitHub API.
@@ -22,10 +23,10 @@ class GithubScraper:
     def _format_repo_data(self, repo):
         """Helper function to format a PyGithub repository object into a dictionary."""
         try:
-            readme_content = repo.get_readme().decoded_content.decode('utf-8')
+            readme_content = repo.get_readme().decoded_content.decode("utf-8")
         except GithubException:
             readme_content = "README not found or could not be decoded."
-        
+
         return {
             "title": repo.name,
             "description": repo.description or "No description provided.",
@@ -36,10 +37,12 @@ class GithubScraper:
             "stargazers_count": repo.stargazers_count,
             "forks_count": repo.forks_count,
             "open_issues_count": repo.open_issues_count,
-            "pushed_at": repo.pushed_at
+            "pushed_at": repo.pushed_at,
         }
 
-    def get_repositories(self, query: str = "language:python stars:>1000", limit: int = 50):
+    def get_repositories(
+        self, query: str = "language:python stars:>1000", limit: int = 50
+    ):
         """
         Fetches a list of repositories matching a search query.
 
@@ -53,13 +56,13 @@ class GithubScraper:
         print(f"Searching GitHub for repositories with query: '{query}'...")
         try:
             repos = self.github_api.search_repositories(query=query)
-            
+
             repo_list = []
             for i, repo in enumerate(repos):
                 if i >= limit:
                     break
                 repo_list.append(self._format_repo_data(repo))
-            
+
             print(f"Successfully fetched {len(repo_list)} repositories.")
             return repo_list
 
@@ -89,6 +92,6 @@ class GithubScraper:
             except GithubException as e:
                 print(f"Could not fetch repository '{name}': {e}")
                 continue
-        
+
         print(f"Successfully fetched {len(repo_list)} repositories.")
-        return repo_list 
+        return repo_list
