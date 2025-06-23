@@ -5,6 +5,7 @@ from sqlalchemy import (
     Column,
     DateTime,
     ForeignKey,
+    Integer,
     String,
     Text,
     UniqueConstraint,
@@ -45,6 +46,11 @@ class Project(Base):
     readme = Column(Text)
     language = Column(Text)
     topics = Column(Text)
+    html_url = Column(Text)
+    stargazers_count = Column(Integer)
+    forks_count = Column(Integer)
+    open_issues_count = Column(Integer)
+    pushed_at = Column(DateTime(timezone=True))
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime(timezone=True),
