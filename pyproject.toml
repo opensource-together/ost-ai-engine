@@ -29,7 +29,10 @@ exclude = [
 
 [tool.ruff.isort]
 # Tell isort where our own code is located
-known-first-party = ["src"] 
+known-first-party = ["src"]
+
+[tool.poetry]
+packages = [{include = "src"}]
 
 [tool.poetry.group.dev.dependencies]
 black = "^25.1.0"

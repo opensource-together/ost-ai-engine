@@ -107,3 +107,9 @@ Thumbs.db
 
 # Personal
 TODO.md
+
+# Linters
+.ruff*
+
+# SQL
+*.sql

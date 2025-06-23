@@ -1,7 +1,10 @@
 import os
-
+from dotenv import load_dotenv
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+
+# Load environment variables from a .env file
+load_dotenv()
 
 # --- Database Configuration ---
 # It's recommended to get this from environment variables
