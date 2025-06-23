@@ -31,7 +31,12 @@ class GithubScraper:
             "description": repo.description or "No description provided.",
             "readme": readme_content,
             "topics": repo.get_topics(),
-            "language": repo.language
+            "language": repo.language,
+            "html_url": repo.html_url,
+            "stargazers_count": repo.stargazers_count,
+            "forks_count": repo.forks_count,
+            "open_issues_count": repo.open_issues_count,
+            "pushed_at": repo.pushed_at
         }
 
     def get_repositories(self, query: str = "language:python stars:>1000", limit: int = 50):
