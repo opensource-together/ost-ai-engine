@@ -74,7 +74,12 @@ def populate_database(db: Session, num_users: int = 50, num_projects_to_fetch: i
             description=gh_project["description"],
             readme=gh_project["readme"],
             language=gh_project["language"],
-            topics=",".join(gh_project["topics"]) # Store topics as a comma-separated string
+            topics=",".join(gh_project["topics"]), # Store topics as a comma-separated string
+            html_url=gh_project["html_url"],
+            stargazers_count=gh_project["stargazers_count"],
+            forks_count=gh_project["forks_count"],
+            open_issues_count=gh_project["open_issues_count"],
+            pushed_at=gh_project["pushed_at"]
         )
         projects.append(project)
         # Create 1-3 fake roles for each project
