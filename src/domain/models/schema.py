@@ -42,6 +42,9 @@ class Project(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(100), nullable=False)
     description = Column(Text)
+    readme = Column(Text)
+    language = Column(Text)
+    topics = Column(Text)
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime(timezone=True),

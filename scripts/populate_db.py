@@ -1,16 +1,22 @@
 import random
+import os
 from faker import Faker
 from sqlalchemy.orm import Session
-from src.infrastructure.postgres.database import SessionLocal
-from src.domain.models.schema import User, Project, ProjectRole, TeamMember, Contribution, Application
+from src.infrastructure.postgres.database import SessionLocal, engine
+from src.domain.models.schema import Base, User, Project, ProjectRole, TeamMember, Contribution, Application
+from src.infrastructure.scraping.github_scraper import GithubScraper
 
 # Initialize Faker to generate fake data
 fake = Faker()
 
-def populate_database(db: Session, num_users: int = 50, num_projects: int = 20, num_actions: int = 100):
+def populate_database(db: Session, num_users: int = 50, num_projects_to_fetch: int = 20, num_actions: int = 100):
     """
     Populates the database with simulated data.
     """
+    print("Dropping and recreating all tables...")
+    Base.metadata.drop_all(bind=engine)
+    Base.metadata.create_all(bind=engine)
+
     print("Clearing old data...")
     # Clear existing data to ensure a clean slate
     db.query(Application).delete()
@@ -33,17 +39,45 @@ def populate_database(db: Session, num_users: int = 50, num_projects: int = 20, 
     db.add_all(users)
     db.commit()
 
+    # --- Fetch Real Projects from GitHub ---
+    print("Fetching projects from GitHub...")
+    scraper = GithubScraper()
+    gh_projects = []
+
+    repo_list_str = os.getenv("GITHUB_REPO_LIST")
+    if repo_list_str:
+        print("Fetching repositories from GITHUB_REPO_LIST variable...")
+        repo_names = [name.strip() for name in repo_list_str.split(',')]
+        gh_projects = scraper.get_repositories_by_names(repo_names)
+    else:
+        print("Searching for repositories using query variables...")
+        # Get queries from environment variables, with defaults
+        python_query = os.getenv("GITHUB_PYTHON_QUERY", "language:python stars:>2000")
+        js_query = os.getenv("GITHUB_JS_QUERY", "language:javascript stars:>2000")
+
+        # Let's fetch popular Python and JavaScript projects for variety
+        gh_projects_py = scraper.get_repositories(query=python_query, limit=num_projects_to_fetch // 2)
+        gh_projects_js = scraper.get_repositories(query=js_query, limit=num_projects_to_fetch // 2)
+        gh_projects = gh_projects_py + gh_projects_js
+    
+    if not gh_projects:
+        print("Could not fetch any projects from GitHub. Aborting population.")
+        return
+
     # --- Create Projects and Roles ---
-    print(f"Creating {num_projects} projects with roles...")
+    print(f"Creating {len(gh_projects)} projects with roles in the database...")
     projects = []
     roles = []
-    for _ in range(num_projects):
+    for gh_project in gh_projects:
         project = Project(
-            title=fake.bs().title(),
-            description=fake.paragraph(nb_sentences=5)
+            title=gh_project["title"],
+            description=gh_project["description"],
+            readme=gh_project["readme"],
+            language=gh_project["language"],
+            topics=",".join(gh_project["topics"]) # Store topics as a comma-separated string
         )
         projects.append(project)
-        # Create 1-3 roles for each project
+        # Create 1-3 fake roles for each project
         for i in range(random.randint(1, 3)):
             role = ProjectRole(
                 project=project,
@@ -58,26 +92,33 @@ def populate_database(db: Session, num_users: int = 50, num_projects: int = 20, 
     # --- Create "Strong Interest" Actions ---
     print(f"Simulating {num_actions} user actions...")
     actions = []
+    # Use a cache to prevent creating duplicate relationships in the same run
+    team_member_cache = set()
+    application_cache = set()
+
     for _ in range(num_actions):
         user = random.choice(users)
         project = random.choice(projects)
         action_type = random.choice(['member', 'contribution', 'application'])
 
         if action_type == 'member':
-            # Use a simple check to avoid violating the unique constraint
-            if not db.query(TeamMember).filter_by(user_id=user.id, project_id=project.id).first():
+            # Check cache and DB to avoid violating the unique constraint
+            if (user.id, project.id) not in team_member_cache and \
+               not db.query(TeamMember).filter_by(user_id=user.id, project_id=project.id).first():
                 actions.append(TeamMember(user=user, project=project))
+                team_member_cache.add((user.id, project.id))
 
         elif action_type == 'contribution':
             actions.append(Contribution(user=user, project=project, title=fake.sentence()))
 
         elif action_type == 'application':
-            # Ensure the project has roles to apply for
             if project.roles:
                 role = random.choice(project.roles)
-                # Use a simple check to avoid violating the unique constraint
-                if not db.query(Application).filter_by(user_id=user.id, project_role_id=role.id).first():
+                # Check cache and DB to avoid violating the unique constraint
+                if (user.id, role.id) not in application_cache and \
+                   not db.query(Application).filter_by(user_id=user.id, project_role_id=role.id).first():
                     actions.append(Application(user=user, role=role))
+                    application_cache.add((user.id, role.id))
 
     db.add_all(actions)
     db.commit()
@@ -95,7 +136,7 @@ if __name__ == "__main__":
     db_session = SessionLocal()
     try:
         # Before running, make sure your .env file is pointing to the TEST database
-        # e.g., DATABASE_URL="postgresql://user:password@localhost:5434/test_ost_db"
+        # and contains your GITHUB_ACCESS_TOKEN.
         populate_database(db_session)
     finally:
         db_session.close()
