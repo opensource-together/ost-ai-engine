@@ -126,3 +126,4 @@ class Application(Base):
     __table_args__ = (
         UniqueConstraint("user_id", "project_role_id", name="_user_role_uc"),
     )
+ 
