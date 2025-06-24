@@ -114,3 +114,7 @@ TODO.md
 # SQL
 *.sql
 postgres-data/
+
+# Model artifacts
+models/
+model/
