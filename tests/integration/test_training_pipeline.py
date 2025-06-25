@@ -1,5 +1,5 @@
 import os
-from datetime import datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -27,7 +27,7 @@ class MockGithubScraper:
                     "stargazers_count": (i + 1) * 100,
                     "forks_count": (i + 1) * 10,
                     "open_issues_count": i + 1,
-                    "pushed_at": datetime.utcnow(),
+                    "pushed_at": datetime.now(timezone.utc),
                 }
             )
         return fake_projects
