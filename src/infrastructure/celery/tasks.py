@@ -15,4 +15,4 @@ def run_training_pipeline_task():
         # Proper logging should be added here in a real application
         print(f"Celery task: An error occurred during the training pipeline: {e}")
         # Optionally re-raise to have Celery mark the task as FAILED
-        raise 
+        raise

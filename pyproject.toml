@@ -38,6 +38,16 @@ packages = [{include = "src"}]
 black = "^25.1.0"
 ruff = "^0.12.0"
 pygithub = "^2.6.1"
+sqlalchemy = "^2.0.41"
+
+
+[tool.poetry.group."ci/cd".dependencies]
+pytest = "^8.4.1"
+
+
+[tool.poetry.group.env.dependencies]
+dotenv = "^0.9.9"
+pytest-dotenv = "^0.5.2"
 
 [project]
 name = "data-engine"

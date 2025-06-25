@@ -4,9 +4,12 @@ from src.infrastructure.analysis.similarity_calculator import SimilarityCalculat
 from src.infrastructure.analysis.model_persistence_service import ModelPersistenceService
 
 
-def run_training_pipeline():
+def run_training_pipeline(output_dir: str = "models/"):
     """
     Executes the full model training pipeline.
+
+    Args:
+        output_dir (str): The directory where model artifacts will be saved.
     """
     print("Starting the model training pipeline...")
 
@@ -30,8 +33,8 @@ def run_training_pipeline():
     similarity_matrix = calculator.calculate(feature_matrix)
 
     # 4. Save model artifacts
-    print("Step 4: Saving model artifacts...")
-    persistence_service = ModelPersistenceService()
+    print(f"Step 4: Saving model artifacts to '{output_dir}'...")
+    persistence_service = ModelPersistenceService(model_dir=output_dir)
     artifacts = {
         "projects": projects,
         "similarity_matrix": similarity_matrix,

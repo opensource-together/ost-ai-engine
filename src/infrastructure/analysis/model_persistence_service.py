@@ -8,12 +8,14 @@ class ModelPersistenceService:
     Handles saving and loading of model artifacts.
     """
 
-    def __init__(self):
+    def __init__(self, model_dir: str = "models/"):
         """
-        Initializes the service with a directory to store models,
-        configured via the MODEL_DIR environment variable.
+        Initializes the service with a directory to store models.
+
+        Args:
+            model_dir (str): The directory to save/load models from.
         """
-        self.model_dir = os.getenv("MODEL_DIR", "models/")
+        self.model_dir = model_dir
         os.makedirs(self.model_dir, exist_ok=True)
 
     def save_model_artifacts(self, artifacts: dict):
