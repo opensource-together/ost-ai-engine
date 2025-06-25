@@ -1,0 +1,59 @@
+name: CI Pipeline
+
+on:
+  push:
+    branches: [ "main", "spidey/**" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+
+    # Define a PostgreSQL service container
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        # Add a health check to wait for the database to be ready
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+
+    - name: Install Poetry
+      run: pipx install poetry
+
+    - name: Install dependencies
+      run: poetry install
+
+    - name: Run Linters and Formatters
+      run: |
+        poetry run ruff check .
+        poetry run black --check .
+
+    - name: Run Tests
+      # We provide the database connection details to the tests here.
+      # The host 'postgres' is automatically available because of the 'services' block.
+      env:
+        DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
+        GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: poetry run pytest
+
+    - name: Build Docker image
+      run: docker build . --file Dockerfile 
