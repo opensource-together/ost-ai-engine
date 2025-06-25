@@ -1,4 +1,3 @@
-
 from sqlalchemy.orm import Session
 
 from src.domain.models.schema import Project
