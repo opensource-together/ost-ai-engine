@@ -102,7 +102,9 @@ def populate_database(
             role = ProjectRole(
                 project=project,
                 title=f"Developer Role {i+1}",
-                description=f"A sample description for role {i+1} on project {project.title}.",
+                description=(
+                    f"A sample description for role {i+1} on project {project.title}."
+                ),
             )
             roles.append(role)
     db.add_all(projects)

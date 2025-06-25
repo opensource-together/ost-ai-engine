@@ -23,8 +23,9 @@ class ModelPersistenceService:
         Saves all trained model artifacts to the specified directory.
 
         Args:
-            artifacts (dict): A dictionary where keys are filenames (e.g., 'similarity_matrix')
-                              and values are the objects to save.
+            artifacts (dict): A dictionary where keys are filenames
+                              (e.g., 'similarity_matrix') and values are the
+                              objects to save.
         """
         for name, artifact in artifacts.items():
             path = os.path.join(self.model_dir, f"{name}.pkl")

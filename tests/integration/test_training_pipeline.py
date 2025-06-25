@@ -42,7 +42,8 @@ def test_run_training_pipeline_creates_all_artifacts(tmp_path):
     print("Pipeline execution finished. Verifying artifacts...")
 
     # --- ASSERTIONS ---
-    # 1. Check that the model directory was created (it should be, by run_training_pipeline).
+    # 1. Check that the model directory was created (it should be,
+    #    by run_training_pipeline).
     assert os.path.isdir(
         test_model_dir
     ), f"Model directory '{test_model_dir}' was not created."

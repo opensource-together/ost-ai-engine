@@ -76,7 +76,8 @@ class GithubScraper:
 
     def get_repositories_by_names(self, repo_names: list[str]):
         """
-        Fetches a list of specific repositories by their full names (e.g., 'owner/repo').
+        Fetches a list of specific repositories by their full names
+        (e.g., 'owner/repo').
 
         Args:
             repo_names (list[str]): A list of repository full names.

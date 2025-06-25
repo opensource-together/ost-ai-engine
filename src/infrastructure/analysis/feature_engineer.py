@@ -1,4 +1,3 @@
-
 import pandas as pd
 from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
@@ -26,10 +25,11 @@ class FeatureEngineer:
 
     def fit_transform(self, projects: list[Project]):
         """
-        Fits the vectorizers and scaler, and transforms the project data into a feature matrix.
+        Fits the vectorizers and scaler, and transforms the project data into a
+        feature matrix.
 
         Args:
-            projects (List[Project]): A list of project data from the database.
+            projects (list[Project]): A list of project data from the database.
 
         Returns:
             A tuple containing:
