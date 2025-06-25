@@ -17,7 +17,6 @@ venv.bak/
 
 # --- Poetry ---
 .poetry
-poetry.lock
 
 # --- IDEs / Editors ---
 .idea/
