@@ -5,8 +5,8 @@ FROM python:3.13-slim as builder
 # Set the working directory
 WORKDIR /app
 
-# Install poetry
-RUN pip install poetry
+# Install a specific, stable version of Poetry
+RUN pip install poetry==1.8.2
 
 # Copy only the files needed to install dependencies
 # This leverages Docker's layer caching. The layer will only be rebuilt
