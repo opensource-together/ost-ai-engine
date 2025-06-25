@@ -1,6 +1,6 @@
-import joblib
 import os
-from scipy.sparse import spmatrix
+
+import joblib
 
 
 class ModelPersistenceService:
@@ -45,4 +45,4 @@ class ModelPersistenceService:
                 path = os.path.join(self.model_dir, filename)
                 artifacts[name] = joblib.load(path)
         print(f"Model artifacts loaded from {self.model_dir}")
-        return artifacts 
+        return artifacts

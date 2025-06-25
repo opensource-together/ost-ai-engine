@@ -1,5 +1,6 @@
-from .celery_app import celery_app
 from src.application.use_cases.run_training_pipeline import run_training_pipeline
+
+from .celery_app import celery_app
 
 
 @celery_app.task

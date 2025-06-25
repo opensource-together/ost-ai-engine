@@ -1,7 +1,9 @@
 from src.application.services.project_data_loader import ProjectDataLoadingService
 from src.infrastructure.analysis.feature_engineer import FeatureEngineer
+from src.infrastructure.analysis.model_persistence_service import (
+    ModelPersistenceService,
+)
 from src.infrastructure.analysis.similarity_calculator import SimilarityCalculator
-from src.infrastructure.analysis.model_persistence_service import ModelPersistenceService
 
 
 def run_training_pipeline(output_dir: str = "models/"):
@@ -49,4 +51,4 @@ def run_training_pipeline(output_dir: str = "models/"):
 
 if __name__ == "__main__":
     # This allows the script to be run directly for testing or manual triggers.
-    run_training_pipeline() 
+    run_training_pipeline()

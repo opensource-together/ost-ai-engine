@@ -1,16 +1,18 @@
-import random
 import os
+import random
+
 from sqlalchemy.orm import Session
-from src.infrastructure.postgres.database import SessionLocal, engine
+
 from src.domain.models.schema import (
+    Application,
     Base,
-    User,
+    Contribution,
     Project,
     ProjectRole,
     TeamMember,
-    Contribution,
-    Application,
+    User,
 )
+from src.infrastructure.postgres.database import SessionLocal, engine
 from src.infrastructure.scraping.github_scraper import GithubScraper
 
 

@@ -1,6 +1,7 @@
 import os
-from github import Github, GithubException, RateLimitExceededException
+
 from dotenv import load_dotenv
+from github import Github, GithubException, RateLimitExceededException
 
 # Load environment variables at the module level
 load_dotenv()

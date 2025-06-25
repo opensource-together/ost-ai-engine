@@ -1,5 +1,6 @@
-from typing import List
+
 from sqlalchemy.orm import Session
+
 from src.domain.models.schema import Project
 from src.infrastructure.postgres.database import SessionLocal
 
@@ -18,7 +19,7 @@ class ProjectDataLoadingService:
         """
         self.db_session = db_session
 
-    def get_all_projects(self) -> List[Project]:
+    def get_all_projects(self) -> list[Project]:
         """
         Fetches all project records from the database.
 
@@ -29,4 +30,4 @@ class ProjectDataLoadingService:
             projects = self.db_session.query(Project).all()
             return projects
         finally:
-            self.db_session.close() 
+            self.db_session.close()

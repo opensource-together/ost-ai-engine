@@ -1,8 +1,9 @@
+
 import pandas as pd
-from typing import List
 from scipy.sparse import hstack
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.preprocessing import MultiLabelBinarizer, StandardScaler
+
 from src.domain.models.schema import Project
 
 
@@ -19,11 +20,11 @@ class FeatureEngineer:
         self.mlb = MultiLabelBinarizer()
         self.scaler = StandardScaler()
 
-    def _projects_to_dataframe(self, projects: List[Project]) -> pd.DataFrame:
+    def _projects_to_dataframe(self, projects: list[Project]) -> pd.DataFrame:
         """Converts a list of Project SQLAlchemy objects into a pandas DataFrame."""
         return pd.DataFrame([p.__dict__ for p in projects])
 
-    def fit_transform(self, projects: List[Project]):
+    def fit_transform(self, projects: list[Project]):
         """
         Fits the vectorizers and scaler, and transforms the project data into a feature matrix.
 
@@ -63,4 +64,4 @@ class FeatureEngineer:
         # hstack is used to horizontally stack the sparse and dense matrices
         combined_features = hstack([text_matrix, topics_matrix, numerical_matrix])
 
-        return combined_features, self.tfidf_vectorizer, self.mlb, self.scaler 
+        return combined_features, self.tfidf_vectorizer, self.mlb, self.scaler

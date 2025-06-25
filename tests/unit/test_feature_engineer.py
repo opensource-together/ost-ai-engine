@@ -1,8 +1,9 @@
-import pytest
 import pandas as pd
+import pytest
 from scipy.sparse import issparse
-from src.infrastructure.analysis.feature_engineer import FeatureEngineer
+
 from src.domain.models.schema import Project
+from src.infrastructure.analysis.feature_engineer import FeatureEngineer
 
 
 @pytest.fixture
@@ -89,4 +90,4 @@ def test_fit_transform_matrix_shape(mock_projects):
     # Unique topics from mock_projects are: 'ml', 'ai', 'python', 'web', 'javascript' -> 5
     assert num_topics_features == 5
     # The classes should be sorted alphabetically
-    assert all(mlb.classes_ == sorted(["ai", "javascript", "ml", "python", "web"])) 
+    assert all(mlb.classes_ == sorted(["ai", "javascript", "ml", "python", "web"]))

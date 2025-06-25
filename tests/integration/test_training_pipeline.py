@@ -1,8 +1,10 @@
 import os
+
 import pytest
+
 from src.application.use_cases.run_training_pipeline import run_training_pipeline
-from src.infrastructure.postgres.database import SessionLocal
 from src.domain.models.schema import Project
+from src.infrastructure.postgres.database import SessionLocal
 
 
 @pytest.fixture(scope="module", autouse=True)
@@ -60,4 +62,4 @@ def test_run_training_pipeline_creates_all_artifacts(tmp_path):
             file_path
         ), f"Expected artifact '{artifact}' was not found in {test_model_dir}."
 
-    print("All artifacts successfully verified in temporary directory.") 
+    print("All artifacts successfully verified in temporary directory.")

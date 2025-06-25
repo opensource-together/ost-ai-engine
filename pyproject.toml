@@ -9,15 +9,6 @@ target-version = "py313"
 # Same as Black.
 line-length = 88
 
-# Enable a subset of rules
-select = [
-    "F",  # Pyflakes
-    "E",  # pycodestyle errors
-    "W",  # pycodestyle warnings
-    "I",  # isort (import sorting)
-    "UP", # pyupgrade
-]
-
 # Exclude commonly ignored directories.
 exclude = [
     ".git",
@@ -27,7 +18,17 @@ exclude = [
     "venv",
 ]
 
-[tool.ruff.isort]
+[tool.ruff.lint]
+# Enable a subset of rules
+select = [
+    "F",  # Pyflakes
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "I",  # isort (import sorting)
+    "UP", # pyupgrade
+]
+
+[tool.ruff.lint.isort]
 # Tell isort where our own code is located
 known-first-party = ["src"]
 

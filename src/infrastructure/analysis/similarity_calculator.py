@@ -1,5 +1,5 @@
-from sklearn.metrics.pairwise import cosine_similarity
 from scipy.sparse import spmatrix
+from sklearn.metrics.pairwise import cosine_similarity
 
 
 class SimilarityCalculator:
@@ -20,4 +20,4 @@ class SimilarityCalculator:
         """
         # The resulting matrix will have a shape of (n_projects, n_projects)
         similarity_matrix = cosine_similarity(feature_matrix)
-        return similarity_matrix 
+        return similarity_matrix
