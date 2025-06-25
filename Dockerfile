@@ -14,9 +14,9 @@ RUN pip install poetry
 COPY poetry.lock pyproject.toml ./
 
 # Install dependencies into a virtual environment
-# --no-dev: Don't install development dependencies (like pytest) in the final image
+# --without dev: Don't install development dependencies (like pytest) in the final image
 # --no-root: Don't install the project itself, just the dependencies
-RUN poetry install --no-dev --no-root
+RUN poetry install --without dev --no-root
 
 # --- 2. Final Stage ---
 # This stage creates the final, lean production image.
