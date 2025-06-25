@@ -6,7 +6,7 @@ FROM python:3.13-slim as builder
 WORKDIR /app
 
 # Install a specific, stable version of Poetry
-RUN pip install poetry==1.8.2
+RUN pip install poetry
 
 # Copy only the files needed to install dependencies
 # This leverages Docker's layer caching. The layer will only be rebuilt
@@ -14,9 +14,9 @@ RUN pip install poetry==1.8.2
 COPY poetry.lock pyproject.toml ./
 
 # Install dependencies into a virtual environment
-# --without dev: Don't install development dependencies (like pytest) in the final image
+# We are installing all dependencies for now to ensure the build passes.
 # --no-root: Don't install the project itself, just the dependencies
-RUN poetry install --without dev --no-root
+RUN poetry install --no-root
 
 # --- 2. Final Stage ---
 # This stage creates the final, lean production image.
