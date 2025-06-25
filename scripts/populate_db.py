@@ -21,9 +21,17 @@ def populate_database(
     num_users: int = 50,
     num_projects_to_fetch: int = 20,
     num_actions: int = 100,
+    scraper=None,
 ):
     """
     Populates the database with simulated data.
+
+    Args:
+        db (Session): The database session.
+        num_users (int): The number of users to create.
+        num_projects_to_fetch (int): The number of projects to fetch.
+        num_actions (int): The number of user actions to simulate.
+        scraper: An optional scraper instance. If None, a real GithubScraper is used.
     """
     print("Dropping and recreating all tables...")
     Base.metadata.drop_all(bind=engine)
@@ -49,8 +57,13 @@ def populate_database(
     db.commit()
 
     # --- Fetch Real Projects from GitHub ---
-    print("Fetching projects from GitHub...")
-    scraper = GithubScraper()
+    print("Fetching projects...")
+    if scraper is None:
+        print("Using real GithubScraper...")
+        scraper = GithubScraper()
+    else:
+        print("Using provided mock scraper...")
+
     gh_projects = []
 
     repo_list_str = os.getenv("GITHUB_REPO_LIST")
