@@ -1,0 +1,43 @@
+# --- Git ---
+.git
+.gitignore
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# --- Poetry ---
+.poetry
+poetry.lock
+
+# --- IDEs / Editors ---
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# --- Testing ---
+.pytest_cache/
+.coverage
+htmlcov/
+tests/
+
+# --- Docker ---
+# Don't copy the local Dockerfile into the image itself
+Dockerfile
+
+# --- Environment ---
+.env
+
+# --- OS ---
+.DS_Store
+Thumbs.db 

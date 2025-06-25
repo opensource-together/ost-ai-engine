@@ -1,38 +1,18 @@
 ============================= test session starts ==============================
 platform darwin -- Python 3.13.5, pytest-8.4.1, pluggy-1.6.0
 rootdir: /Users/hich/Desktop/Bureau - MacbookAir HICHAM/PRO/GIT/data-engine
-configfile: pyproject.toml
+configfile: pytest.ini
 plugins: anyio-4.9.0, Faker-37.4.0, dotenv-0.5.2
-collected 4 items / 1 error
+collected 5 items
 
-==================================== ERRORS ====================================
-_________ ERROR collecting tests/integration/test_training_pipeline.py _________
-tests/integration/test_training_pipeline.py:3: in <module>
-    from src.application.use_cases.run_training_pipeline import run_training_pipeline
-src/application/use_cases/run_training_pipeline.py:1: in <module>
-    from src.application.services.project_data_loader import ProjectDataLoadingService
-src/application/services/project_data_loader.py:4: in <module>
-    from src.infrastructure.postgres.database import SessionLocal
-src/infrastructure/postgres/database.py:21: in <module>
-    engine = create_engine(DATABASE_URL)
-             ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-<string>:2: in create_engine
-    ???
-/opt/homebrew/Caskroom/miniconda/base/envs/data-engine-py13/lib/python3.13/site-packages/sqlalchemy/util/deprecations.py:281: in warned
-    return fn(*args, **kwargs)  # type: ignore[no-any-return]
-           ^^^^^^^^^^^^^^^^^^^
-/opt/homebrew/Caskroom/miniconda/base/envs/data-engine-py13/lib/python3.13/site-packages/sqlalchemy/engine/create.py:549: in create_engine
-    u = _url.make_url(url)
-        ^^^^^^^^^^^^^^^^^^
-/opt/homebrew/Caskroom/miniconda/base/envs/data-engine-py13/lib/python3.13/site-packages/sqlalchemy/engine/url.py:856: in make_url
-    return _parse_url(name_or_url)
-           ^^^^^^^^^^^^^^^^^^^^^^^
-/opt/homebrew/Caskroom/miniconda/base/envs/data-engine-py13/lib/python3.13/site-packages/sqlalchemy/engine/url.py:922: in _parse_url
-    raise exc.ArgumentError(
-E   sqlalchemy.exc.ArgumentError: Could not parse SQLAlchemy URL from given URL string
-------------------------------- Captured stdout --------------------------------
-DEBUG: DATABASE_URL is '"postgresql://user:password@localhost:5434/test_ost_db" # TEST env' (type: <class 'str'>)
-=========================== short test summary info ============================
-ERROR tests/integration/test_training_pipeline.py - sqlalchemy.exc.ArgumentEr...
-!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!
-=============================== 1 error in 1.10s ===============================
+tests/integration/test_training_pipeline.py .                            [ 20%]
+tests/unit/test_feature_engineer.py ....                                 [100%]
+
+=============================== warnings summary ===============================
+../../../../../../../opt/homebrew/Caskroom/miniconda/base/envs/data-engine-py13/lib/python3.13/site-packages/_pytest/config/__init__.py:1474
+  /opt/homebrew/Caskroom/miniconda/base/envs/data-engine-py13/lib/python3.13/site-packages/_pytest/config/__init__.py:1474: PytestConfigWarning: Unknown config option: dotenv_vars
+  
+    self._warn_or_fail_if_strict(f"Unknown config option: {key}\n")
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+========================= 5 passed, 1 warning in 1.12s =========================
