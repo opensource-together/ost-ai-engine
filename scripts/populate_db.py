@@ -1,6 +1,9 @@
+import argparse
 import os
 import random
+from datetime import datetime
 
+from faker import Faker
 from sqlalchemy.orm import Session
 
 from src.domain.models.schema import (
@@ -18,13 +21,44 @@ from src.infrastructure.postgres.database import SessionLocal, engine
 from src.infrastructure.scraping.github_scraper import GithubScraper
 
 
+class MockGithubScraper:
+    """A mock scraper that generates fake GitHub project data using Faker."""
+
+    def __init__(self):
+        self._faker = Faker()
+
+    def get_repositories_by_names(self, names):
+        """Generates a list of fake repositories from a list of names."""
+        return [self._generate_fake_project(name) for name in names]
+
+    def get_repositories(self, query, limit):
+        """Generates a list of fake repositories up to a given limit."""
+        return [self._generate_fake_project(f"repo-{i}") for i in range(limit)]
+
+    def _generate_fake_project(self, name):
+        """Generates a single fake project dictionary."""
+        return {
+            "title": name.replace("-", " ").title(),
+            "description": self._faker.sentence(),
+            "readme": self._faker.text(max_nb_chars=1000),
+            "language": self._faker.random_element(
+                elements=("Python", "JavaScript", "TypeScript", "Go", "Rust")
+            ),
+            "topics": self._faker.words(nb=random.randint(3, 7)),
+            "html_url": f"https://github.com/fake-org/{name}",
+            "stargazers_count": self._faker.random_int(min=10, max=5000),
+            "forks_count": self._faker.random_int(min=5, max=1000),
+            "open_issues_count": self._faker.random_int(min=0, max=100),
+            "pushed_at": datetime.utcnow(),
+        }
+
+
 def populate_database(
     db: Session,
     num_users: int = 50,
     num_projects_to_fetch: int = 20,
     num_actions: int = 100,
-    # If None, a real scraper is used. Pass a mock for testing.
-    scraper=None,
+    use_mock_scraper: bool = False,
 ):
     """
     Populates the database with simulated data.
@@ -34,7 +68,7 @@ def populate_database(
         num_users (int): The number of users to create.
         num_projects_to_fetch (int): The number of projects to fetch.
         num_actions (int): The number of user actions to simulate.
-        scraper: An optional scraper instance. If None, a real GithubScraper is used.
+        use_mock_scraper (bool): If True, use mock data instead of GitHub API.
     """
     log.info("Dropping and recreating all tables...")
     Base.metadata.drop_all(bind=engine)
@@ -59,23 +93,28 @@ def populate_database(
     db.add_all(users)
     db.commit()
 
-    # --- Fetch Real Projects from GitHub ---
+    # --- Fetch Projects ---
     log.info("Fetching projects...")
-    if scraper is None:
+    if use_mock_scraper:
+        log.info("Using MockGithubScraper for fake project data...")
+        scraper = MockGithubScraper()
+    else:
         log.info("Using real GithubScraper...")
         scraper = GithubScraper()
-    else:
-        log.info("Using provided mock scraper...")
 
     gh_projects = []
 
-    repo_list_str = settings.GITHUB_REPO_LIST
-    if repo_list_str:
-        log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
-        repo_names = [name.strip() for name in repo_list_str.split(",")]
-        gh_projects = scraper.get_repositories_by_names(repo_names)
-    else:
-        log.info("Searching for repositories using query variables...")
+    # Only check for GITHUB_REPO_LIST if not using the mock scraper
+    if not use_mock_scraper:
+        repo_list_str = settings.GITHUB_REPO_LIST
+        if repo_list_str:
+            log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
+            repo_names = [name.strip() for name in repo_list_str.split(",")]
+            gh_projects = scraper.get_repositories_by_names(repo_names)
+    
+    # If gh_projects is still empty, fetch using queries
+    if not gh_projects:
+        log.info("Searching for repositories using queries...")
         # Get queries from environment variables, with defaults
         python_query = os.getenv("GITHUB_PYTHON_QUERY", "language:python stars:>2000")
         js_query = os.getenv("GITHUB_JS_QUERY", "language:javascript stars:>2000")
@@ -178,12 +217,22 @@ def populate_database(
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        description="Populate the database with test data."
+    )
+    parser.add_argument(
+        "--mock",
+        action="store_true",
+        help="Use mock data instead of fetching from GitHub API.",
+    )
+    args = parser.parse_args()
+
     log.info("Starting database population script...")
     db_session = SessionLocal()
     try:
         # Before running, make sure your .env file is pointing to the TEST database
-        # and contains your GITHUB_ACCESS_TOKEN.
-        populate_database(db_session)
+        # and contains your GITHUB_ACCESS_TOKEN if not using --mock.
+        populate_database(db_session, use_mock_scraper=args.mock)
     finally:
         db_session.close()
         log.info("Script finished. Database session closed.")

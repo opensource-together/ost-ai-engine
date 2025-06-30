@@ -23,9 +23,7 @@ async def lifespan(app: FastAPI):
 
         with open(settings.VECTORIZER_PATH, "rb") as f:
             app.state.vectorizer = pickle.load(f)
-        log.info(
-            "Successfully loaded TF-IDF vectorizer from %s", settings.VECTORIZER_PATH
-        )
+        log.info("Successfully loaded vectorizer from %s", settings.VECTORIZER_PATH)
 
     except FileNotFoundError:
         log.warning(

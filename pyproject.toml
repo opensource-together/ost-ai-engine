@@ -41,6 +41,7 @@ ruff = "^0.12.0"
 pygithub = "^2.6.1"
 pytest = "^8.4.1"
 pytest-dotenv = "^0.5.2"
+faker = "^26.0.0"
 
 
 [project]
