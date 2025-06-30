@@ -41,6 +41,15 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -55,7 +64,11 @@ jobs:
     - name: Run Tests
       env:
         DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
+        CELERY_BROKER_URL: "redis://localhost:6379/0"
+        CELERY_RESULT_BACKEND: "redis://localhost:6379/0"
         GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPO_LIST: ""
+        LOG_LEVEL: "DEBUG"
       run: poetry run pytest
 
   build:
