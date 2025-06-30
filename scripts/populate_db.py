@@ -12,6 +12,7 @@ from src.domain.models.schema import (
     TeamMember,
     User,
 )
+from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import SessionLocal, engine
 from src.infrastructure.scraping.github_scraper import GithubScraper
 
@@ -33,11 +34,11 @@ def populate_database(
         num_actions (int): The number of user actions to simulate.
         scraper: An optional scraper instance. If None, a real GithubScraper is used.
     """
-    print("Dropping and recreating all tables...")
+    log.info("Dropping and recreating all tables...")
     Base.metadata.drop_all(bind=engine)
     Base.metadata.create_all(bind=engine)
 
-    print("Clearing old data...")
+    log.info("Clearing old data...")
     # Clear existing data to ensure a clean slate
     db.query(Application).delete()
     db.query(Contribution).delete()
@@ -48,7 +49,7 @@ def populate_database(
     db.commit()
 
     # --- Create Users ---
-    print(f"Creating {num_users} users...")
+    log.info(f"Creating {num_users} users...")
     users = []
     for i in range(num_users):
         user = User(username=f"testuser{i}", email=f"testuser{i}@example.com")
@@ -57,22 +58,22 @@ def populate_database(
     db.commit()
 
     # --- Fetch Real Projects from GitHub ---
-    print("Fetching projects...")
+    log.info("Fetching projects...")
     if scraper is None:
-        print("Using real GithubScraper...")
+        log.info("Using real GithubScraper...")
         scraper = GithubScraper()
     else:
-        print("Using provided mock scraper...")
+        log.info("Using provided mock scraper...")
 
     gh_projects = []
 
     repo_list_str = os.getenv("GITHUB_REPO_LIST")
     if repo_list_str:
-        print("Fetching repositories from GITHUB_REPO_LIST variable...")
+        log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
         repo_names = [name.strip() for name in repo_list_str.split(",")]
         gh_projects = scraper.get_repositories_by_names(repo_names)
     else:
-        print("Searching for repositories using query variables...")
+        log.info("Searching for repositories using query variables...")
         # Get queries from environment variables, with defaults
         python_query = os.getenv("GITHUB_PYTHON_QUERY", "language:python stars:>2000")
         js_query = os.getenv("GITHUB_JS_QUERY", "language:javascript stars:>2000")
@@ -87,11 +88,11 @@ def populate_database(
         gh_projects = gh_projects_py + gh_projects_js
 
     if not gh_projects:
-        print("Could not fetch any projects from GitHub. Aborting population.")
+        log.warning("Could not fetch any projects from GitHub. Aborting population.")
         return
 
     # --- Create Projects and Roles ---
-    print(f"Creating {len(gh_projects)} projects with roles in the database...")
+    log.info(f"Creating {len(gh_projects)} projects with roles in the database...")
     projects = []
     roles = []
     for gh_project in gh_projects:
@@ -125,7 +126,7 @@ def populate_database(
     db.commit()
 
     # --- Create "Strong Interest" Actions ---
-    print(f"Simulating {num_actions} user actions...")
+    log.info(f"Simulating {num_actions} user actions...")
     actions = []
     # Use a cache to prevent creating duplicate relationships in the same run
     team_member_cache = set()
@@ -166,16 +167,16 @@ def populate_database(
     db.add_all(actions)
     db.commit()
 
-    print("\nDatabase population complete!")
-    print(f"Total Users: {db.query(User).count()}")
-    print(f"Total Projects: {db.query(Project).count()}")
-    print(f"Total Team Memberships: {db.query(TeamMember).count()}")
-    print(f"Total Contributions: {db.query(Contribution).count()}")
-    print(f"Total Applications: {db.query(Application).count()}")
+    log.info("Database population complete!")
+    log.info(f"Total Users: {db.query(User).count()}")
+    log.info(f"Total Projects: {db.query(Project).count()}")
+    log.info(f"Total Team Memberships: {db.query(TeamMember).count()}")
+    log.info(f"Total Contributions: {db.query(Contribution).count()}")
+    log.info(f"Total Applications: {db.query(Application).count()}")
 
 
 if __name__ == "__main__":
-    print("Starting database population script...")
+    log.info("Starting database population script...")
     db_session = SessionLocal()
     try:
         # Before running, make sure your .env file is pointing to the TEST database
@@ -183,4 +184,4 @@ if __name__ == "__main__":
         populate_database(db_session)
     finally:
         db_session.close()
-        print("Script finished. Database session closed.")
+        log.info("Script finished. Database session closed.")
