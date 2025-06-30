@@ -47,3 +47,4 @@ class ModelPersistenceService:
                 artifacts[name] = joblib.load(path)
         print(f"Model artifacts loaded from {self.model_dir}")
         return artifacts
+ 

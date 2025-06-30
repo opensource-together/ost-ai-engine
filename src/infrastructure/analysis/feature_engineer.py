@@ -65,3 +65,4 @@ class FeatureEngineer:
         combined_features = hstack([text_matrix, topics_matrix, numerical_matrix])
 
         return combined_features, self.tfidf_vectorizer, self.mlb, self.scaler
+ 

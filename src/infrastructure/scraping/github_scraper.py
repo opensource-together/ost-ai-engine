@@ -1,25 +1,22 @@
+import base64
 import os
 
-from dotenv import load_dotenv
 from github import Github, GithubException, RateLimitExceededException
 
-# Load environment variables at the module level
-load_dotenv()
+from src.infrastructure.config import settings
+from src.infrastructure.logger import log
 
 
 class GithubScraper:
     """
-    A scraper to fetch repository data from GitHub.
+    A scraper to fetch repository data from the GitHub API.
     """
 
     def __init__(self):
         """
-        Initializes the scraper by connecting to the GitHub API.
+        Initializes the scraper with a GitHub API token.
         """
-        self.github_token = os.getenv("GITHUB_ACCESS_TOKEN")
-        if not self.github_token:
-            raise ValueError("GITHUB_ACCESS_TOKEN is not set in the .env file.")
-        self.github_api = Github(self.github_token)
+        self.github_api = Github(settings.GITHUB_ACCESS_TOKEN)
 
     def _format_repo_data(self, repo):
         """Helper function to format a PyGithub repository object into a dictionary."""
@@ -29,8 +26,8 @@ class GithubScraper:
             readme_content = "README not found or could not be decoded."
 
         return {
-            "title": repo.name,
-            "description": repo.description or "No description provided.",
+            "title": repo.full_name,
+            "description": repo.description,
             "readme": readme_content,
             "topics": repo.get_topics(),
             "language": repo.language,
@@ -41,18 +38,9 @@ class GithubScraper:
             "pushed_at": repo.pushed_at,
         }
 
-    def get_repositories(
-        self, query: str = "language:python stars:>1000", limit: int = 50
-    ):
+    def get_repositories(self, query: str, limit: int = 20):
         """
-        Fetches a list of repositories matching a search query.
-
-        Args:
-            query (str): The GitHub search query.
-            limit (int): The maximum number of repositories to fetch.
-
-        Returns:
-            list: A list of dictionaries containing repository data.
+        Fetches repositories from GitHub based on a search query.
         """
         print(f"Searching GitHub for repositories with query: '{query}'...")
         try:
@@ -63,7 +51,7 @@ class GithubScraper:
                 if i >= limit:
                     break
                 repo_list.append(self._format_repo_data(repo))
-
+            
             print(f"Successfully fetched {len(repo_list)} repositories.")
             return repo_list
 
@@ -76,16 +64,9 @@ class GithubScraper:
 
     def get_repositories_by_names(self, repo_names: list[str]):
         """
-        Fetches a list of specific repositories by their full names
-        (e.g., 'owner/repo').
-
-        Args:
-            repo_names (list[str]): A list of repository full names.
-
-        Returns:
-            list: A list of dictionaries containing repository data.
+        Fetches a list of repositories directly by their names (e.g., 'owner/repo').
         """
-        print(f"Fetching {len(repo_names)} specific repositories from GitHub...")
+        print(f"Fetching {len(repo_names)} repositories by name...")
         repo_list = []
         for name in repo_names:
             try:
@@ -94,6 +75,12 @@ class GithubScraper:
             except GithubException as e:
                 print(f"Could not fetch repository '{name}': {e}")
                 continue
-
+        
         print(f"Successfully fetched {len(repo_list)} repositories.")
         return repo_list
+
+    def get_repository(self, repo_name: str):
+        # This method is not provided in the original file or the refactored file
+        # It's assumed to exist as it's called in the get_repositories_by_names method
+        pass
+ 

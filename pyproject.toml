@@ -41,7 +41,6 @@ ruff = "^0.12.0"
 pygithub = "^2.6.1"
 pytest = "^8.4.1"
 pytest-dotenv = "^0.5.2"
-python-dotenv = "^1.0.1"
 
 
 [project]
@@ -60,7 +59,8 @@ dependencies = [
     "psycopg2-binary (>=2.9.10,<3.0.0)",
     "celery[redis] (>=5.5.3,<6.0.0)",
     "scikit-learn (>=1.7.0,<2.0.0)",
-    "pandas (>=2.3.0,<3.0.0)"
+    "pandas (>=2.3.0,<3.0.0)",
+    "pydantic-settings (>=2.4.0,<3.0.0)"
 ]
 
 
