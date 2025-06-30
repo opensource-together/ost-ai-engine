@@ -21,7 +21,7 @@ def populate_database(
     num_users: int = 50,
     num_projects_to_fetch: int = 20,
     num_actions: int = 100,
-    scraper=None,
+    scraper=None,  # If None, a real GithubScraper is used. Pass a mock scraper for testing.
 ):
     """
     Populates the database with simulated data.
