@@ -7,10 +7,26 @@ on:
     branches: [ "main" ]
 
 jobs:
-  build-and-test:
+  lint:
     runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Install dependencies
+      run: poetry install
+    - name: Run Linters
+      run: |
+        poetry run ruff check .
+        poetry run black --check .
 
-    # Define a PostgreSQL service container
+  test:
+    runs-on: ubuntu-latest
     services:
       postgres:
         image: postgres:15-alpine
@@ -20,40 +36,33 @@ jobs:
           POSTGRES_DB: test_db
         ports:
           - 5432:5432
-        # Add a health check to wait for the database to be ready
         options: >-
           --health-cmd pg_isready
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
-
     - name: Set up Python 3.13
       uses: actions/setup-python@v4
       with:
         python-version: "3.13"
-
     - name: Install Poetry
       run: pipx install poetry
-
     - name: Install dependencies
       run: poetry install
-
-    - name: Run Linters and Formatters
-      run: |
-        poetry run ruff check .
-        poetry run black --check .
-
     - name: Run Tests
-      # We provide the database connection details to the tests here.
-      # The host 'postgres' is automatically available because of the 'services' block.
       env:
         DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
         GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       run: poetry run pytest
 
+  build:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
     - name: Build Docker image
-      run: docker build . --file Dockerfile 
+      run: docker build . --file Dockerfile
