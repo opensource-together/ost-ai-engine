@@ -32,4 +32,4 @@ def setup_logger():
 
 
 # Create a default logger instance to be imported by other modules
-log = setup_logger() 
+log = setup_logger()

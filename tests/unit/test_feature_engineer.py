@@ -91,4 +91,3 @@ def test_fit_transform_matrix_shape(mock_projects):
     assert num_topics_features == 5
     # The classes should be sorted alphabetically
     assert all(mlb.classes_ == sorted(["ai", "javascript", "ml", "python", "web"]))
- 

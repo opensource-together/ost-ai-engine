@@ -17,12 +17,15 @@ async def lifespan(app: FastAPI):
     try:
         app.state.similarity_matrix = np.load(settings.SIMILARITY_MATRIX_PATH)
         log.info(
-            f"Successfully loaded similarity matrix from {settings.SIMILARITY_MATRIX_PATH}"
+            "Successfully loaded similarity matrix from %s",
+            settings.SIMILARITY_MATRIX_PATH,
         )
 
         with open(settings.VECTORIZER_PATH, "rb") as f:
             app.state.vectorizer = pickle.load(f)
-        log.info(f"Successfully loaded TF-IDF vectorizer from {settings.VECTORIZER_PATH}")
+        log.info(
+            "Successfully loaded TF-IDF vectorizer from %s", settings.VECTORIZER_PATH
+        )
 
     except FileNotFoundError:
         log.warning(
@@ -50,4 +53,4 @@ async def health_check():
     """
     Health check endpoint to ensure the API is running.
     """
-    return {"status": "ok"} 
+    return {"status": "ok"}

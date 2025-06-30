@@ -1,10 +1,7 @@
-import base64
-import os
 
 from github import Github, GithubException, RateLimitExceededException
 
 from src.infrastructure.config import settings
-from src.infrastructure.logger import log
 
 
 class GithubScraper:
@@ -51,7 +48,7 @@ class GithubScraper:
                 if i >= limit:
                     break
                 repo_list.append(self._format_repo_data(repo))
-            
+
             print(f"Successfully fetched {len(repo_list)} repositories.")
             return repo_list
 
@@ -75,7 +72,7 @@ class GithubScraper:
             except GithubException as e:
                 print(f"Could not fetch repository '{name}': {e}")
                 continue
-        
+
         print(f"Successfully fetched {len(repo_list)} repositories.")
         return repo_list
 
@@ -83,4 +80,3 @@ class GithubScraper:
         # This method is not provided in the original file or the refactored file
         # It's assumed to exist as it's called in the get_repositories_by_names method
         pass
- 

@@ -1,4 +1,3 @@
-from typing import Optional
 
 from pydantic_settings import BaseSettings
 
@@ -17,7 +16,7 @@ class Settings(BaseSettings):
 
     # --- GitHub API ---
     GITHUB_ACCESS_TOKEN: str = "your_github_token_here"
-    GITHUB_REPO_LIST: Optional[str] = None
+    GITHUB_REPO_LIST: str | None = None
 
     # --- Logging ---
     LOG_LEVEL: str = "INFO"
@@ -34,4 +33,4 @@ class Settings(BaseSettings):
 
 
 # Create a single, reusable instance of the settings
-settings = Settings() 
+settings = Settings()
