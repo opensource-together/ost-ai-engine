@@ -97,7 +97,7 @@ def test_run_training_pipeline_creates_all_artifacts(populated_db, tmp_path):
     # 2. Check that all expected artifact files exist inside the temp directory.
     expected_artifacts = [
         "projects.pkl",
-        "similarity_matrix.pkl",
+        "similarity_matrix.npy",
         "tfidf_vectorizer.pkl",
         "mlb_encoder.pkl",
         "scaler.pkl",
