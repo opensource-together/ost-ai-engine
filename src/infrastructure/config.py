@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic_settings import BaseSettings
 
 
@@ -15,6 +17,10 @@ class Settings(BaseSettings):
 
     # --- GitHub API ---
     GITHUB_ACCESS_TOKEN: str = "your_github_token_here"
+    GITHUB_REPO_LIST: Optional[str] = None
+
+    # --- Logging ---
+    LOG_LEVEL: str = "INFO"
 
     # --- Model Paths ---
     MODEL_DIR: str = "models"

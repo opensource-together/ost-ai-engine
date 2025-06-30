@@ -12,6 +12,7 @@ from src.domain.models.schema import (
     TeamMember,
     User,
 )
+from src.infrastructure.config import settings
 from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import SessionLocal, engine
 from src.infrastructure.scraping.github_scraper import GithubScraper
@@ -67,7 +68,7 @@ def populate_database(
 
     gh_projects = []
 
-    repo_list_str = os.getenv("GITHUB_REPO_LIST")
+    repo_list_str = settings.GITHUB_REPO_LIST
     if repo_list_str:
         log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
         repo_names = [name.strip() for name in repo_list_str.split(",")]
