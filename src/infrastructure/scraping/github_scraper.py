@@ -1,4 +1,3 @@
-
 from github import Github, GithubException, RateLimitExceededException
 
 from src.infrastructure.config import settings
