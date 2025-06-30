@@ -9,46 +9,17 @@ from src.domain.models.schema import Base
 from src.infrastructure.postgres.database import SessionLocal, engine
 
 
-class MockGithubScraper:
-    """A mock scraper that returns fake data without making network calls."""
-
-    def get_repositories(self, query: str, limit: int):
-        print(f"MOCK: Pretending to search for '{query}' with limit {limit}.")
-        fake_projects = []
-        for i in range(limit):
-            fake_projects.append(
-                {
-                    "title": f"Mock Project {i+1}",
-                    "description": f"A description for mock project {i+1}.",
-                    "readme": f"## Mock Readme {i+1}",
-                    "topics": [f"topic{i+1}", "mock"],
-                    "language": "Python" if i % 2 == 0 else "JavaScript",
-                    "html_url": f"http://github.com/mock/project{i+1}",
-                    "stargazers_count": (i + 1) * 100,
-                    "forks_count": (i + 1) * 10,
-                    "open_issues_count": i + 1,
-                    "pushed_at": datetime.now(UTC),
-                }
-            )
-        return fake_projects
-
-    def get_repositories_by_names(self, repo_names: list[str]):
-        # This can be simple for the test, as we primarily use the search query method
-        return self.get_repositories(query="mock_query", limit=len(repo_names))
-
-
 @pytest.fixture(scope="module")
 def populated_db():
     """
     A fixture that creates all tables, populates them with a small set of
-    test data using a MOCK scraper, and then drops them after the tests.
+    test data using the MOCK scraper flag, and then drops them after the tests.
     """
     # --- SETUP ---
     print("\nSetting up the test database with MOCK data...")
     Base.metadata.create_all(bind=engine)
 
     db_session = SessionLocal()
-    mock_scraper = MockGithubScraper()
 
     # Using smaller numbers and the mock scraper for a fast, reliable test run
     populate_database(
@@ -56,7 +27,7 @@ def populated_db():
         num_users=10,
         num_projects_to_fetch=4,
         num_actions=20,
-        scraper=mock_scraper,
+        use_mock_scraper=True,  # Use the mock flag
     )
     db_session.close()
     print("Test database setup complete.")
