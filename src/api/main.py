@@ -14,11 +14,8 @@ from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import SessionLocal
 
 # Global model storage (this persists across requests)
-MODEL_STORE = {
-    "similarity_matrix": None,
-    "vectorizer": None,
-    "projects": []
-}
+MODEL_STORE = {"similarity_matrix": None, "vectorizer": None, "projects": []}
+
 
 # Pydantic Models
 class RecommendationResponse(BaseModel):
@@ -90,9 +87,12 @@ async def startup_event():
         log.info("✅ Successfully loaded %d projects", len(MODEL_STORE["projects"]))
 
         # Final verification
-        if (MODEL_STORE["similarity_matrix"] is not None and
-            MODEL_STORE["vectorizer"] is not None and
-            MODEL_STORE["projects"] and len(MODEL_STORE["projects"]) > 0):
+        if (
+            MODEL_STORE["similarity_matrix"] is not None
+            and MODEL_STORE["vectorizer"] is not None
+            and MODEL_STORE["projects"]
+            and len(MODEL_STORE["projects"]) > 0
+        ):
             log.info("🎉 All models loaded successfully!")
         else:
             log.warning("⚠️ Some models failed to load properly")
@@ -242,6 +242,3 @@ async def get_recommendations(
             status_code=500,
             detail="An internal error occurred while generating recommendations.",
         )
-
-
-

@@ -30,6 +30,7 @@ class Settings(BaseSettings):
     def get_absolute_model_path(self, relative_path: str) -> str:
         """Get absolute path for model files."""
         import os
+
         # Get the project root (data-engine directory)
         current_file = os.path.abspath(__file__)  # This file is in src/infrastructure/
         project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
