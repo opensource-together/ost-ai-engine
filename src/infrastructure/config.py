@@ -25,7 +25,7 @@ class Settings(BaseSettings):
     # --- Model Paths ---
     MODEL_DIR: str = "models"
     SIMILARITY_MATRIX_PATH: str = f"{MODEL_DIR}/similarity_matrix.npy"
-    VECTORIZER_PATH: str = f"{MODEL_DIR}/vectorizer.pkl"
+    VECTORIZER_PATH: str = f"{MODEL_DIR}/tfidf_vectorizer.pkl"
 
     class Config:
         # This tells Pydantic to load settings from a .env file

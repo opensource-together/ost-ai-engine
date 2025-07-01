@@ -77,10 +77,17 @@ async def lifespan(app: FastAPI):
         app.state.projects = loader.get_all_projects()
         log.info("Successfully loaded %d projects", len(app.state.projects))
 
-    except FileNotFoundError:
+    except FileNotFoundError as e:
         log.warning(
-            "Model artifacts not found. API is starting without models. "
-            "Run the training pipeline to generate them."
+            "Model artifacts not found: %s. API is starting without models. "
+            "Run the training pipeline to generate them.", str(e)
+        )
+        app.state.similarity_matrix = None
+        app.state.vectorizer = None
+        app.state.projects = []
+    except Exception as e:
+        log.error(
+            "Error loading models or projects: %s. API is starting without models.", str(e)
         )
         app.state.similarity_matrix = None
         app.state.vectorizer = None
