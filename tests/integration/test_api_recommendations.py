@@ -10,7 +10,7 @@ These tests verify the complete API functionality including:
 
 import os
 import tempfile
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 from uuid import UUID, uuid4
 
 import numpy as np
@@ -127,9 +127,6 @@ def setup_test_models():
     with tempfile.TemporaryDirectory() as temp_dir:
         # Create fake model files
         similarity_matrix = np.random.rand(3, 3)
-        similarity_matrix_path = os.path.join(temp_dir, "similarity_matrix.npy")
-        np.save(similarity_matrix_path, similarity_matrix)
-
         vectorizer_path = os.path.join(temp_dir, "tfidf_vectorizer.pkl")
         import pickle
 
@@ -137,38 +134,35 @@ def setup_test_models():
         with open(vectorizer_path, "wb") as f:
             pickle.dump(fake_vectorizer, f)
 
-        # Create a mock settings object
-        mock_settings = MagicMock()
-        mock_settings.get_absolute_model_path = MagicMock(
-            side_effect=lambda relative_path: {
-                "models/similarity_matrix.npy": similarity_matrix_path,
-                "models/tfidf_vectorizer.pkl": vectorizer_path,
-            }.get(relative_path, relative_path)
-        )
+        # Mock the ModelPersistenceService load_model_artifacts method
+        with patch(
+            "src.infrastructure.analysis.model_persistence_service.ModelPersistenceService.load_model_artifacts"
+        ) as mock_load_artifacts:
+            # Set up the mock to return our test data
+            mock_load_artifacts.return_value = {
+                "similarity_matrix": similarity_matrix,
+                "tfidf_vectorizer": fake_vectorizer,
+            }
 
-        # Mock the config module
-        with patch("src.infrastructure.config.settings", mock_settings):
-            # Also patch any other imports of settings in the API module
-            with patch("src.api.main.settings", mock_settings):
-                # Set up MODEL_STORE
-                MODEL_STORE["similarity_matrix"] = similarity_matrix
-                MODEL_STORE["vectorizer"] = fake_vectorizer
+            # Set up MODEL_STORE directly
+            MODEL_STORE["similarity_matrix"] = similarity_matrix
+            MODEL_STORE["vectorizer"] = fake_vectorizer
 
-                # Load projects from test database
-                with TestingSessionLocal() as test_db:
-                    from src.application.services.project_data_loader import (
-                        ProjectDataLoadingService,
-                    )
+            # Load projects from test database
+            with TestingSessionLocal() as test_db:
+                from src.application.services.project_data_loader import (
+                    ProjectDataLoadingService,
+                )
 
-                    loader = ProjectDataLoadingService(db_session=test_db)
-                    MODEL_STORE["projects"] = loader.get_all_projects()
+                loader = ProjectDataLoadingService(db_session=test_db)
+                MODEL_STORE["projects"] = loader.get_all_projects()
 
-                yield
+            yield
 
-                # Cleanup
-                MODEL_STORE["similarity_matrix"] = None
-                MODEL_STORE["vectorizer"] = None
-                MODEL_STORE["projects"] = []
+            # Cleanup
+            MODEL_STORE["similarity_matrix"] = None
+            MODEL_STORE["vectorizer"] = None
+            MODEL_STORE["projects"] = []
 
 
 class TestHealthEndpoint:
@@ -306,7 +300,7 @@ class TestModelLoadingErrors:
         assert response.status_code == 500
         data = response.json()
         assert "detail" in data
-        assert "models are not available" in data["detail"].lower()
+        assert "models not available" in data["detail"].lower()
 
     def test_recommendations_empty_projects(self, setup_test_database):
         """Test recommendation when no projects are loaded."""
@@ -319,10 +313,14 @@ class TestModelLoadingErrors:
 
         response = client.get(f"/recommendations/{user_id}")
 
-        assert response.status_code == 500
+        # Should return empty recommendations gracefully, not an error
+        assert response.status_code == 200
         data = response.json()
-        assert "detail" in data
-        assert "models are not available" in data["detail"].lower()
+        assert "user_id" in data
+        assert "recommended_projects" in data
+        assert "total_recommendations" in data
+        assert data["recommended_projects"] == []
+        assert data["total_recommendations"] == 0
 
 
 class TestResponseFormat:

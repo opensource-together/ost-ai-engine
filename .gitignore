@@ -118,3 +118,9 @@ postgres-data/
 # Model artifacts
 models/
 model/
+
+# Scripts
+*.sh
+
+# DB test
+test_api.db

@@ -156,9 +156,9 @@ def populate_database(
         for i in range(random.randint(1, 3)):
             role = ProjectRole(
                 project=project,
-                title=f"Developer Role {i+1}",
+                title=f"Developer Role {i + 1}",
                 description=(
-                    f"A sample description for role {i+1} on project {project.title}."
+                    f"A sample description for role {i + 1} on project {project.title}."
                 ),
             )
             roles.append(role)
