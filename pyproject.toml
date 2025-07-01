@@ -42,6 +42,7 @@ pygithub = "^2.6.1"
 pytest = "^8.4.1"
 pytest-dotenv = "^0.5.2"
 faker = "^26.0.0"
+httpx = "^0.28.1"
 
 
 [project]
