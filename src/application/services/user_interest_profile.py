@@ -60,4 +60,3 @@ class UserInterestProfileService:
         interested_project_ids.update(pid[0] for pid in application_project_ids)
 
         return interested_project_ids
- 

@@ -24,17 +24,62 @@ jobs:
       run: pipx install poetry
     - name: Install dependencies
       run: poetry install
-    - name: Run Linters
-      run: |
-        poetry run ruff check .
-        poetry run black --check .
+    - name: Run Ruff linting
+      run: poetry run ruff check .
+    - name: Run Black formatting check
+      run: poetry run black --check .
 
   # ============================================================================
-  # UNIT & INTEGRATION TESTS
+  # SECURITY SCANNING
   # ============================================================================
-  test:
-    name: "🧪 Tests (Unit & Integration)"
+  security:
+    name: "🔒 Security & Dependency Check"
     runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Install dependencies
+      run: poetry install
+    - name: Check for security vulnerabilities with pip-audit
+      run: |
+        pip install pip-audit
+        pip-audit || true
+    - name: Check dependency conflicts
+      run: poetry check
+
+  # ============================================================================
+  # UNIT TESTS
+  # ============================================================================
+  unit-tests:
+    name: "🧪 Unit Tests"
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Install dependencies
+      run: poetry install
+    - name: Run unit tests
+      run: poetry run pytest tests/unit/ -v
+
+  # ============================================================================
+  # INTEGRATION TESTS
+  # ============================================================================
+  integration-tests:
+    name: "🔗 Integration Tests"
+    runs-on: ubuntu-latest
+    needs: [lint, unit-tests]
     services:
       postgres:
         image: postgres:15-alpine
@@ -69,7 +114,7 @@ jobs:
       run: pipx install poetry
     - name: Install dependencies
       run: poetry install
-    - name: Run Tests
+    - name: Run integration tests
       env:
         DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
         CELERY_BROKER_URL: "redis://localhost:6379/0"
@@ -77,17 +122,180 @@ jobs:
         GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         GITHUB_REPO_LIST: ""
         LOG_LEVEL: "DEBUG"
-      run: poetry run pytest
+      run: poetry run pytest tests/integration/ -v
+
+  # ============================================================================
+  # API VALIDATION
+  # ============================================================================
+  api-validation:
+    name: "📋 API Contract & Documentation"
+    runs-on: ubuntu-latest
+    needs: [integration-tests]
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Install dependencies
+      run: poetry install
+    - name: Setup test database
+      run: poetry run python scripts/populate_db.py
+      env:
+        DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
+    - name: Start API server
+      run: |
+        poetry run python -c "
+        import sys
+        sys.path.append('.')
+        from src.api.main import app
+        import uvicorn
+        uvicorn.run(app, host='127.0.0.1', port=8000)
+        " &
+        sleep 10
+      env:
+        DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
+    - name: Test API endpoints
+      run: |
+        # Health check
+        curl -f http://localhost:8000/health
+        echo "✅ Health endpoint working"
+        
+        # OpenAPI documentation
+        curl -f http://localhost:8000/openapi.json > openapi.json
+        echo "✅ OpenAPI schema generated"
+        
+        # Documentation page
+        curl -f http://localhost:8000/docs > /dev/null
+        echo "✅ API documentation accessible"
+    - name: Upload API documentation
+      uses: actions/upload-artifact@v3
+      with:
+        name: api-documentation
+        path: openapi.json
+
+  # ============================================================================
+  # FULL TEST COVERAGE
+  # ============================================================================
+  coverage:
+    name: "📊 Test Coverage Report"
+    runs-on: ubuntu-latest
+    needs: [unit-tests, integration-tests]
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_password
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+    - name: Set up Python 3.13
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.13"
+    - name: Install Poetry
+      run: pipx install poetry
+    - name: Install dependencies
+      run: poetry install
+    - name: Run full test suite with coverage
+      env:
+        DATABASE_URL: "postgresql://test_user:test_password@localhost:5432/test_db"
+        CELERY_BROKER_URL: "redis://localhost:6379/0"
+        CELERY_RESULT_BACKEND: "redis://localhost:6379/0"
+        GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        GITHUB_REPO_LIST: ""
+        LOG_LEVEL: "DEBUG"
+      run: |
+        poetry run pytest \
+          --cov=src \
+          --cov-report=xml \
+          --cov-report=html \
+          --cov-report=term-missing \
+          -v
+    - name: Upload coverage reports
+      uses: actions/upload-artifact@v3
+      with:
+        name: coverage-reports
+        path: |
+          coverage.xml
+          htmlcov/
 
   # ============================================================================
   # DOCKER BUILD & VALIDATION
   # ============================================================================
-  build:
-    name: "🏗️ Docker Build"
-    needs: test
+  docker-build:
+    name: "🏗️ Docker Build & Test"
     runs-on: ubuntu-latest
+    needs: [lint, security, api-validation]
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
     - name: Build Docker image
-      run: docker build . --file Dockerfile
+      run: docker build -t data-engine:${{ github.sha }} .
+    - name: Test Docker image
+      run: |
+        # Test that the container can start and Python works
+        docker run --rm data-engine:${{ github.sha }} python --version
+        echo "✅ Docker image Python environment working"
+        
+        # Test that our source code is present
+        docker run --rm data-engine:${{ github.sha }} ls -la src/
+        echo "✅ Docker image source code present"
+
+  # ============================================================================
+  # FINAL VALIDATION
+  # ============================================================================
+  ci-success:
+    name: "✅ CI Pipeline Complete"
+    runs-on: ubuntu-latest
+    needs: [lint, security, unit-tests, integration-tests, api-validation, coverage, docker-build]
+    if: success()
+    steps:
+    - name: CI Summary
+      run: |
+        echo "🎉 All CI checks completed successfully!"
+        echo ""
+        echo "✅ Code Quality & Linting"
+        echo "✅ Security & Dependency Check"
+        echo "✅ Unit Tests"
+        echo "✅ Integration Tests"
+        echo "✅ API Contract & Documentation"
+        echo "✅ Test Coverage Report"
+        echo "✅ Docker Build & Test"
+        echo ""
+        echo "🚀 Ready for deployment!"

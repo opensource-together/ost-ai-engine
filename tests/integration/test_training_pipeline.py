@@ -80,4 +80,3 @@ def test_run_training_pipeline_creates_all_artifacts(populated_db, tmp_path):
         ), f"Expected artifact '{artifact}' was not found in {test_model_dir}."
 
     print("All artifacts successfully verified in temporary directory.")
- 
