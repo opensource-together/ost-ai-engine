@@ -37,31 +37,31 @@ class RecommendationService:
 
         # Create a mapping from project ID to index in the similarity matrix
         project_id_to_index = {project.id: idx for idx, project in enumerate(projects)}
-        
+
         # Find indices of user's interested projects
         interested_indices = []
         for project_id in interested_project_ids:
             if project_id in project_id_to_index:
                 interested_indices.append(project_id_to_index[project_id])
-        
+
         if not interested_indices:
             return []
-        
+
         # Calculate aggregated similarity scores
         # For each project, sum its similarity with all interested projects
         aggregated_scores = np.zeros(len(projects))
         for idx in interested_indices:
             aggregated_scores += similarity_matrix[idx]
-        
+
         # Set similarity scores of already interested projects to 0
         # (we don't want to recommend projects they're already interested in)
         for idx in interested_indices:
             aggregated_scores[idx] = 0
-        
+
         # Get top N recommendations
         top_indices = np.argsort(aggregated_scores)[::-1][:top_n]
-        
+
         # Convert indices back to project IDs
         recommended_project_ids = [projects[idx].id for idx in top_indices]
-        
+
         return recommended_project_ids
