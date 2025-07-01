@@ -20,12 +20,12 @@ class UserInterestProfileService:
         """
         self._db = db
 
-    def get_user_interest_profile(self, user_id: int) -> set[UUID]:
+    def get_user_interest_profile(self, user_id: UUID) -> set[UUID]:
         """
         Retrieves a unique set of project IDs for a given user.
 
         Args:
-            user_id (int): The ID of the user.
+            user_id (UUID): The ID of the user.
 
                     Returns:
             set[UUID]: A set of unique project IDs.

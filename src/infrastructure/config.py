@@ -27,6 +27,14 @@ class Settings(BaseSettings):
     SIMILARITY_MATRIX_PATH: str = f"{MODEL_DIR}/similarity_matrix.npy"
     VECTORIZER_PATH: str = f"{MODEL_DIR}/tfidf_vectorizer.pkl"
 
+    def get_absolute_model_path(self, relative_path: str) -> str:
+        """Get absolute path for model files."""
+        import os
+        # Get the project root (data-engine directory)
+        current_file = os.path.abspath(__file__)  # This file is in src/infrastructure/
+        project_root = os.path.dirname(os.path.dirname(os.path.dirname(current_file)))
+        return os.path.join(project_root, relative_path)
+
     class Config:
         # This tells Pydantic to load settings from a .env file
         env_file = ".env"

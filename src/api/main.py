@@ -1,5 +1,4 @@
 import pickle
-from contextlib import asynccontextmanager
 from uuid import UUID
 
 import numpy as np
@@ -14,12 +13,18 @@ from src.infrastructure.config import settings
 from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import SessionLocal
 
+# Global model storage (this persists across requests)
+MODEL_STORE = {
+    "similarity_matrix": None,
+    "vectorizer": None,
+    "projects": []
+}
 
 # Pydantic Models
 class RecommendationResponse(BaseModel):
     """Response model for project recommendations."""
 
-    user_id: int = Field(
+    user_id: UUID = Field(
         ..., description="The user ID for whom recommendations were generated"
     )
     recommended_projects: list[UUID] = Field(
@@ -55,47 +60,53 @@ def get_db():
         db.close()
 
 
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    """
-    Manages the application's lifespan events for model loading.
-    """
+async def startup_event():
+    """Load models on startup."""
     log.info("Starting API and loading models...")
+
     try:
-        app.state.similarity_matrix = np.load(settings.SIMILARITY_MATRIX_PATH)
+        # Load similarity matrix
+        log.info("Loading similarity matrix...")
+        similarity_matrix_path = settings.get_absolute_model_path(
+            settings.SIMILARITY_MATRIX_PATH
+        )
+        MODEL_STORE["similarity_matrix"] = np.load(similarity_matrix_path)
         log.info(
-            "Successfully loaded similarity matrix from %s",
-            settings.SIMILARITY_MATRIX_PATH,
+            "✅ Successfully loaded similarity matrix: shape %s",
+            MODEL_STORE["similarity_matrix"].shape,
         )
 
-        with open(settings.VECTORIZER_PATH, "rb") as f:
-            app.state.vectorizer = pickle.load(f)
-        log.info("Successfully loaded vectorizer from %s", settings.VECTORIZER_PATH)
+        # Load vectorizer
+        log.info("Loading vectorizer...")
+        vectorizer_path = settings.get_absolute_model_path(settings.VECTORIZER_PATH)
+        with open(vectorizer_path, "rb") as f:
+            MODEL_STORE["vectorizer"] = pickle.load(f)
+        log.info("✅ Successfully loaded vectorizer")
 
-        # Load the projects list (needed for recommendations)
+        # Load projects
+        log.info("Loading projects...")
         loader = ProjectDataLoadingService()
-        app.state.projects = loader.get_all_projects()
-        log.info("Successfully loaded %d projects", len(app.state.projects))
+        MODEL_STORE["projects"] = loader.get_all_projects()
+        log.info("✅ Successfully loaded %d projects", len(MODEL_STORE["projects"]))
+
+        # Final verification
+        if (MODEL_STORE["similarity_matrix"] is not None and
+            MODEL_STORE["vectorizer"] is not None and
+            MODEL_STORE["projects"] and len(MODEL_STORE["projects"]) > 0):
+            log.info("🎉 All models loaded successfully!")
+        else:
+            log.warning("⚠️ Some models failed to load properly")
 
     except FileNotFoundError as e:
-        log.warning(
-            "Model artifacts not found: %s. API is starting without models. "
-            "Run the training pipeline to generate them.", str(e)
-        )
-        app.state.similarity_matrix = None
-        app.state.vectorizer = None
-        app.state.projects = []
+        log.warning("❌ Model artifacts not found: %s", str(e))
+        MODEL_STORE["similarity_matrix"] = None
+        MODEL_STORE["vectorizer"] = None
+        MODEL_STORE["projects"] = []
     except Exception as e:
-        log.error(
-            "Error loading models or projects: %s. API is starting without models.", str(e)
-        )
-        app.state.similarity_matrix = None
-        app.state.vectorizer = None
-        app.state.projects = []
-
-    yield
-    # Cleanup logic can go here if needed on shutdown
-    log.info("API shutting down.")
+        log.error("❌ Error loading models or projects: %s", str(e))
+        MODEL_STORE["similarity_matrix"] = None
+        MODEL_STORE["vectorizer"] = None
+        MODEL_STORE["projects"] = []
 
 
 app = FastAPI(
@@ -105,8 +116,10 @@ app = FastAPI(
         "to users based on their interests and activities."
     ),
     version="0.1.0",
-    lifespan=lifespan,
 )
+
+# Register startup event
+app.add_event_handler("startup", startup_event)
 
 
 @app.get(
@@ -144,8 +157,8 @@ async def health_check():
     ),
 )
 async def get_recommendations(
-    user_id: int = Path(
-        ..., description="The ID of the user to get recommendations for"
+    user_id: UUID = Path(
+        ..., description="The UUID of the user to get recommendations for"
     ),
     top_n: int = Query(
         default=10,
@@ -163,7 +176,7 @@ async def get_recommendations(
     projects that the user might be interested in.
 
     Args:
-        user_id: The ID of the user to get recommendations for
+        user_id: The UUID of the user to get recommendations for
         top_n: Number of recommendations to return (default: 10, max: 50)
         db: Database session (injected dependency)
 
@@ -173,11 +186,11 @@ async def get_recommendations(
     Raises:
         HTTPException: 404 if user has no interest profile or 500 if models unavailable
     """
-    # Check if models are loaded
+    # Check if models are loaded from startup
     if (
-        app.state.similarity_matrix is None
-        or app.state.projects is None
-        or len(app.state.projects) == 0
+        MODEL_STORE["similarity_matrix"] is None
+        or MODEL_STORE["projects"] is None
+        or len(MODEL_STORE["projects"]) == 0
     ):
         raise HTTPException(
             status_code=500,
@@ -186,6 +199,10 @@ async def get_recommendations(
                 "Please run the training pipeline first."
             ),
         )
+
+    # Use models from startup
+    similarity_matrix = MODEL_STORE["similarity_matrix"]
+    projects = MODEL_STORE["projects"]
 
     try:
         # Get user's interest profile
@@ -205,8 +222,8 @@ async def get_recommendations(
         recommendation_service = RecommendationService()
         recommended_project_ids = recommendation_service.get_recommendations(
             interested_project_ids=interested_project_ids,
-            projects=app.state.projects,
-            similarity_matrix=app.state.similarity_matrix,
+            projects=projects,
+            similarity_matrix=similarity_matrix,
             top_n=top_n,
         )
 
@@ -225,3 +242,6 @@ async def get_recommendations(
             status_code=500,
             detail="An internal error occurred while generating recommendations.",
         )
+
+
+
