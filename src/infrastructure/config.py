@@ -1,3 +1,5 @@
+from functools import lru_cache
+
 from pydantic_settings import BaseSettings
 
 
@@ -7,7 +9,7 @@ class Settings(BaseSettings):
     """
 
     # --- Database ---
-    DATABASE_URL: str = "postgresql://user:password@localhost:5432/db"
+    DATABASE_URL: str = "postgresql://user:password@localhost:5434/ost_db"
 
     # --- Celery ---
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
@@ -31,5 +33,21 @@ class Settings(BaseSettings):
         env_file_encoding = "utf-8"
 
 
-# Create a single, reusable instance of the settings
+@lru_cache
+def get_settings() -> Settings:
+    """
+    Get application settings with lazy loading.
+
+    This function uses functools.lru_cache to ensure that the Settings
+    object is created only once, providing a singleton pattern while
+    allowing for lazy loading during testing or when configuration
+    needs to be loaded at a specific time.
+
+    Returns:
+        Settings: The application settings instance
+    """
+    return Settings()
+
+
+# Create a single, reusable instance of the settings for backward compatibility
 settings = Settings()
