@@ -32,19 +32,14 @@ jobs:
         
     - name: Install Poetry
       run: pipx install poetry==${{ env.POETRY_VERSION }}
-      
-    - name: Configure Poetry
-      run: |
-        poetry config virtualenvs.create true
-        poetry config virtualenvs.in-project true
         
     - name: Cache Poetry dependencies
       uses: actions/cache@v3
       with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
+        path: ~/.cache/pypoetry
+        key: poetry-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}
         restore-keys: |
-          venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-
+          poetry-${{ runner.os }}-${{ env.PYTHON_VERSION }}-
           
     - name: Install dependencies
       run: poetry install --no-interaction --no-ansi
@@ -58,7 +53,7 @@ jobs:
       id: setup-info
       run: |
         echo "python-version=${{ env.PYTHON_VERSION }}" >> $GITHUB_OUTPUT
-        echo "poetry-cache-key=venv-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}" >> $GITHUB_OUTPUT
+        echo "poetry-cache-key=poetry-${{ runner.os }}-${{ env.PYTHON_VERSION }}-${{ hashFiles('**/poetry.lock') }}" >> $GITHUB_OUTPUT
 
   # ============================================================================
   # CODE QUALITY & LINTING
@@ -82,7 +77,7 @@ jobs:
     - name: Restore Poetry cache
       uses: actions/cache@v3
       with:
-        path: .venv
+        path: ~/.cache/pypoetry
         key: ${{ needs.setup.outputs.poetry-cache-key }}
         
     - name: Install dependencies
@@ -119,7 +114,7 @@ jobs:
     - name: Restore Poetry cache
       uses: actions/cache@v3
       with:
-        path: .venv
+        path: ~/.cache/pypoetry
         key: ${{ needs.setup.outputs.poetry-cache-key }}
         
     - name: Install dependencies
@@ -177,7 +172,7 @@ jobs:
     - name: Restore Poetry cache
       uses: actions/cache@v3
       with:
-        path: .venv
+        path: ~/.cache/pypoetry
         key: ${{ needs.setup.outputs.poetry-cache-key }}
         
     - name: Install dependencies
@@ -263,7 +258,7 @@ jobs:
     - name: Restore Poetry cache
       uses: actions/cache@v3
       with:
-        path: .venv
+        path: ~/.cache/pypoetry
         key: ${{ needs.setup.outputs.poetry-cache-key }}
         
     - name: Install dependencies
