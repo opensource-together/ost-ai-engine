@@ -1,3 +1,5 @@
+from uuid import UUID
+
 from sqlalchemy.orm import Session
 
 from src.domain.models.schema import Application, Contribution, ProjectRole, TeamMember
@@ -18,15 +20,15 @@ class UserInterestProfileService:
         """
         self._db = db
 
-    def get_user_interest_profile(self, user_id: int) -> set[int]:
+    def get_user_interest_profile(self, user_id: int) -> set[UUID]:
         """
         Retrieves a unique set of project IDs for a given user.
 
         Args:
             user_id (int): The ID of the user.
 
-        Returns:
-            set[int]: A set of unique project IDs.
+                    Returns:
+            set[UUID]: A set of unique project IDs.
         """
         # --- Query 1: Projects from TeamMember ---
         team_project_ids = (
