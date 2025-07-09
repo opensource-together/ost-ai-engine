@@ -133,6 +133,13 @@ jobs:
         python-version: "3.13"
     - name: Install Poetry
       run: pipx install poetry
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
     - name: Install dependencies
       run: poetry install
     - name: Run integration tests
@@ -175,6 +182,13 @@ jobs:
         python-version: "3.13"
     - name: Install Poetry
       run: pipx install poetry
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
     - name: Install dependencies
       run: poetry install
     - name: Setup test database
@@ -251,6 +265,13 @@ jobs:
         python-version: "3.13"
     - name: Install Poetry
       run: pipx install poetry
+    - name: Cache Poetry dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pypoetry
+        key: ${{ runner.os }}-poetry-${{ hashFiles('**/poetry.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-poetry-
     - name: Install dependencies
       run: poetry install
     - name: Run full test suite with coverage
