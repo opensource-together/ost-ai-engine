@@ -170,8 +170,8 @@ def main():
     # Limit to requested count
     final_repos = unique_repos[:args.count]
     
-    # Format output
-    repo_list_string = ", ".join(final_repos)
+    # Format output (no spaces after commas)
+    repo_list_string = ",".join(final_repos)
     
     print("\n" + "="*50)
     print(f"FOUND {len(final_repos)} REPOSITORIES")
