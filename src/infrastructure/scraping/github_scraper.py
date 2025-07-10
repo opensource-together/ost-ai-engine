@@ -38,7 +38,7 @@ class GithubScraper:
         """
         Fetches repositories from GitHub based on a search query.
         """
-        print(f"Searching GitHub for repositories with query: '{query}'...")
+        print(f"Searching GitHub for repositories with query: '{query}' (limit: {limit})...")
         try:
             repos = self.github_api.search_repositories(query=query)
 
@@ -46,6 +46,7 @@ class GithubScraper:
             for i, repo in enumerate(repos):
                 if i >= limit:
                     break
+                print(f"Scraping repository {i+1}/{limit}: {repo.full_name}")
                 repo_list.append(self._format_repo_data(repo))
 
             print(f"Successfully fetched {len(repo_list)} repositories.")
@@ -62,17 +63,20 @@ class GithubScraper:
         """
         Fetches a list of repositories directly by their names (e.g., 'owner/repo').
         """
-        print(f"Fetching {len(repo_names)} repositories by name...")
+        total_repos = len(repo_names)
+        print(f"Fetching {total_repos} repositories by name...")
         repo_list = []
-        for name in repo_names:
+        
+        for i, name in enumerate(repo_names, 1):
             try:
+                print(f"Scraping repository {i}/{total_repos}: {name}")
                 repo = self.github_api.get_repo(name)
                 repo_list.append(self._format_repo_data(repo))
             except GithubException as e:
                 print(f"Could not fetch repository '{name}': {e}")
                 continue
 
-        print(f"Successfully fetched {len(repo_list)} repositories.")
+        print(f"Successfully fetched {len(repo_list)}/{total_repos} repositories.")
         return repo_list
 
     def get_repository(self, repo_name: str):

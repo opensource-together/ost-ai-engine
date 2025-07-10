@@ -29,11 +29,28 @@ class MockGithubScraper:
 
     def get_repositories_by_names(self, names):
         """Generates a list of fake repositories from a list of names."""
-        return [self._generate_fake_project(name) for name in names]
+        total_repos = len(names)
+        print(f"Generating {total_repos} fake repositories by name...")
+        
+        repos = []
+        for i, name in enumerate(names, 1):
+            print(f"Generating fake repository {i}/{total_repos}: {name}")
+            repos.append(self._generate_fake_project(name))
+        
+        print(f"Successfully generated {len(repos)}/{total_repos} fake repositories.")
+        return repos
 
     def get_repositories(self, query, limit):
         """Generates a list of fake repositories up to a given limit."""
-        return [self._generate_fake_project(f"repo-{i}") for i in range(limit)]
+        print(f"Generating {limit} fake repositories for query: '{query}'...")
+        
+        repos = []
+        for i in range(limit):
+            print(f"Generating fake repository {i+1}/{limit}: repo-{i}")
+            repos.append(self._generate_fake_project(f"repo-{i}"))
+        
+        print(f"Successfully generated {len(repos)} fake repositories.")
+        return repos
 
     def _generate_fake_project(self, name):
         """Generates a single fake project dictionary."""

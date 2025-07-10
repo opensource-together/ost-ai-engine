@@ -411,3 +411,4 @@ class TestPerformance:
             data = response.json()
             assert "user_id" in data
             assert "recommended_projects" in data
+ 
