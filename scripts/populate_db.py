@@ -87,12 +87,12 @@ def populate_database(
         num_actions (int): The number of user actions to simulate.
         use_mock_scraper (bool): If True, use mock data instead of GitHub API.
     """
-    log.info("Dropping and recreating all tables...")
-    Base.metadata.drop_all(bind=engine)
+    log.info("Creating tables if they don't exist...")
+    # SAFE: Only creates tables that don't exist, doesn't drop anything
     Base.metadata.create_all(bind=engine)
 
-    log.info("Clearing old data...")
-    # Clear existing data to ensure a clean slate
+    log.info("Clearing data only from tables we'll populate...")
+    # SAFE: Only clear specific tables we're about to populate, leave others untouched
     db.query(Application).delete()
     db.query(Contribution).delete()
     db.query(TeamMember).delete()
@@ -100,6 +100,7 @@ def populate_database(
     db.query(Project).delete()
     db.query(User).delete()
     db.commit()
+    log.info("✅ Cleared only tables we'll populate")
 
     # --- Create Users ---
     log.info(f"Creating {num_users} users...")
