@@ -7,7 +7,7 @@ class SimilarityCalculator:
     Calculates the similarity between items based on their feature matrix.
     """
 
-    def calculate(self, feature_matrix: spmatrix) -> spmatrix:
+    def compute_similarity(self, feature_matrix: spmatrix) -> spmatrix:
         """
         Computes the cosine similarity matrix from a feature matrix.
 
