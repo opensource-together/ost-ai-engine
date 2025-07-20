@@ -63,6 +63,27 @@ class Project(Base):
     contributions = relationship("Contribution", back_populates="project")
 
 
+class ProjectTraining(Base):
+    """
+    Model for preprocessed project data used in ML training pipeline.
+    This table contains cleaned and balanced data from the original PROJECT table.
+    """
+    __tablename__ = "PROJECT_training"
+
+    id = Column(UUID(as_uuid=True), primary_key=True)
+    title = Column(String(100), nullable=False)
+    description = Column(Text)  # Contains combined cleaned text (title + description)
+    readme = Column(Text)
+    language = Column(Text)
+    topics = Column(Text)  # Comma-separated cleaned topics
+    html_url = Column(Text)
+    stargazers_count = Column(Integer)
+    forks_count = Column(Integer)
+    open_issues_count = Column(Integer)
+    pushed_at = Column(DateTime(timezone=True))
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
+
+
 class ProjectRole(Base):
     __tablename__ = "PROJECT_ROLE"
 

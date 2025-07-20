@@ -32,11 +32,8 @@ class FeatureEngineer:
             projects (list[Project]): A list of project data from the database.
 
         Returns:
-            A tuple containing:
-            - The sparse feature matrix.
-            - The fitted TF-IDF vectorizer.
-            - The fitted MultiLabelBinarizer for topics.
-            - The fitted StandardScaler for numerical features.
+            scipy.sparse matrix: The combined feature matrix for all projects.
+            The fitted models are stored as instance variables.
         """
         df = self._projects_to_dataframe(projects)
 
@@ -64,4 +61,8 @@ class FeatureEngineer:
         # hstack is used to horizontally stack the sparse and dense matrices
         combined_features = hstack([text_matrix, topics_matrix, numerical_matrix])
 
-        return combined_features, self.tfidf_vectorizer, self.mlb, self.scaler
+        # Store fitted models as instance variables (they're already fitted)
+        self.topic_encoder = self.mlb  # Alias for backward compatibility
+        self.numerical_features = ["stargazers_count", "open_issues_count"]
+
+        return combined_features
