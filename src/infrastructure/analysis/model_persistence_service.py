@@ -61,7 +61,7 @@ class ModelPersistenceService:
 
         print(f"Model artifacts loaded from {self.model_dir}")
         return artifacts
-
+ 
     def save_model(self, training_data: dict, model_name: str) -> str:
         """
         Saves a trained model with a specific name.
