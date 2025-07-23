@@ -11,46 +11,48 @@ Usage:
 import argparse
 import random
 from datetime import datetime, timedelta
+import os
+import sys
+import time
 
+from dotenv import load_dotenv
 from github import Github, GithubException, RateLimitExceededException
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from src.infrastructure.config import settings
 
 
-def fetch_repositories_by_language(github_api, language: str, count: int, min_stars: int = 100):
-    """Fetch repositories for a specific language."""
-    repos = []
+def fetch_repositories_by_language(github_api, language, count, min_stars):
+    """Fetches a list of repository names for a given language."""
+    print(f"Searching: language:{language} stars:>{min_stars}")
+    query = f"language:{language} stars:>{min_stars}"
+
     try:
-        # Randomize star count range for variety
-        star_ranges = [
-            f"stars:{min_stars}..500",
-            f"stars:500..2000", 
-            f"stars:2000..10000",
-            f"stars:>10000"
-        ]
-        
-        for star_range in star_ranges:
-            if len(repos) >= count:
-                break
-                
-            query = f"language:{language} {star_range}"
-            print(f"Searching: {query}")
-            
-            search_results = github_api.search_repositories(query=query)
-            
-            # Take a random sample from results
-            repo_list = list(search_results[:min(200, count * 2)])  # Get more than needed
-            random.shuffle(repo_list)
-            
-            for repo in repo_list[:count//len(star_ranges) + 5]:
-                if len(repos) >= count:
-                    break
-                repos.append(repo.full_name)
-                
-    except (GithubException, RateLimitExceededException) as e:
-        print(f"Error fetching {language} repos: {e}")
-    
-    return repos
+        search_results = github_api.search_repositories(query=query, sort="stars", order="desc")
+        # Get more than needed to allow for filtering duplicates later
+        repo_list = list(search_results[:count])
+    except GithubException as e:
+        if e.status == 403:
+            print(
+                f"WARN: GitHub API rate limit hit for query '{query}'. "
+                "The script will continue, but the total number of repos might be lower. "
+                "Waiting 60s before next request..."
+            )
+            time.sleep(60)
+            return []  # Return empty list for this language
+        else:
+            print(f"ERROR: An unexpected GitHub API error occurred: {e}")
+            return []
+    except IndexError:
+        # This can happen if the API returns an empty result set after a 403
+        print(f"WARN: Caught an IndexError, likely from an empty API response for query '{query}'.")
+        return []
+
+    if len(repo_list) < count:
+        print(f"Warning: Found only {len(repo_list)} repositories for {language} (less than requested {count}).")
+
+    return [repo.full_name for repo in repo_list]
 
 
 def fetch_repositories_by_topic(github_api, topic: str, count: int, min_stars: int = 50):
@@ -177,24 +179,18 @@ def main():
     print(f"FOUND {len(final_repos)} REPOSITORIES")
     print("="*50)
     
-    output = f"GITHUB_REPO_LIST=\"{repo_list_string}\""
+    output_content = "\n".join(final_repos)
+    output_filename = args.output_file if args.output_file else "data/repo_list.txt"
     
-    if args.output_file:
-        with open(args.output_file, "w") as f:
-            f.write(output)
-        print(f"Repository list saved to: {args.output_file}")
-        print("\nTo use this list, copy the content to your .env file:")
-        print(f"cat {args.output_file}")
-    else:
-        print("\nCopy this line to your .env file:")
-        print(output)
+    # Ensure the directory exists
+    os.makedirs(os.path.dirname(output_filename), exist_ok=True)
     
-    print(f"\nFirst 10 repositories as example:")
-    for i, repo in enumerate(final_repos[:10], 1):
-        print(f"{i:2d}. {repo}")
-    
-    if len(final_repos) > 10:
-        print(f"    ... and {len(final_repos) - 10} more")
+    with open(output_filename, "w") as f:
+        f.write(output_content)
+        
+    print(f"Repository list saved to: {output_filename}")
+    print(f"\nThis file can now be used with populate_db.py using the --repo-file argument.")
+    print(f"Example: python scripts/populate_db.py --repo-file {output_filename}")
 
 
 if __name__ == "__main__":

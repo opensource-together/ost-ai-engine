@@ -76,6 +76,7 @@ def populate_database(
     num_projects_to_fetch: int = 20,
     num_actions: int = 100,
     use_mock_scraper: bool = False,
+    repo_file: str = None,
 ):
     """
     Populates the database with simulated data.
@@ -86,6 +87,7 @@ def populate_database(
         num_projects_to_fetch (int): The number of projects to fetch.
         num_actions (int): The number of user actions to simulate.
         use_mock_scraper (bool): If True, use mock data instead of GitHub API.
+        repo_file (str): Path to a file containing a list of repositories to scrape.
     """
     log.info("Creating tables if they don't exist...")
     # SAFE: Only creates tables that don't exist, doesn't drop anything
@@ -122,15 +124,22 @@ def populate_database(
 
     gh_projects = []
 
-    # Only check for GITHUB_REPO_LIST if not using the mock scraper
+    # --- Determine repository source ---
+    # Priority: 1. Repo file, 2. Environment variable, 3. Default queries
     if not use_mock_scraper:
-        repo_list_str = settings.GITHUB_REPO_LIST
-        if repo_list_str:
-            log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
-            repo_names = [name.strip() for name in repo_list_str.split(",")]
+        if repo_file and os.path.exists(repo_file):
+            log.info(f"Fetching repositories from file: {repo_file}...")
+            with open(repo_file, "r") as f:
+                repo_names = [line.strip() for line in f if line.strip()]
             gh_projects = scraper.get_repositories_by_names(repo_names)
+        else:
+            repo_list_str = settings.GITHUB_REPO_LIST
+            if repo_list_str:
+                log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
+                repo_names = [name.strip() for name in repo_list_str.split(",")]
+                gh_projects = scraper.get_repositories_by_names(repo_names)
 
-    # If gh_projects is still empty, fetch using queries
+    # If gh_projects is still empty, fall back to fetching using queries
     if not gh_projects:
         log.info("Searching for repositories using queries...")
         # Get queries from environment variables, with defaults
@@ -243,6 +252,12 @@ if __name__ == "__main__":
         action="store_true",
         help="Use mock data instead of fetching from GitHub API.",
     )
+    parser.add_argument(
+        "--repo-file",
+        type=str,
+        default=None,
+        help="Path to a file containing a list of repositories to scrape (one per line).",
+    )
     args = parser.parse_args()
 
     log.info("Starting database population script...")
@@ -250,7 +265,7 @@ if __name__ == "__main__":
     try:
         # Before running, make sure your .env file is pointing to the TEST database
         # and contains your GITHUB_ACCESS_TOKEN if not using --mock.
-        populate_database(db_session, use_mock_scraper=args.mock)
+        populate_database(db_session, use_mock_scraper=args.mock, repo_file=args.repo_file)
     finally:
         db_session.close()
         log.info("Script finished. Database session closed.")
