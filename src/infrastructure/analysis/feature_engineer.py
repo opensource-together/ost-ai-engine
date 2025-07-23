@@ -15,7 +15,7 @@ class FeatureEngineer:
         """
         Initializes the FeatureEngineer with vectorizers and a scaler.
         """
-        self.tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=5000)
+        self.tfidf_vectorizer = TfidfVectorizer(stop_words="english", max_features=10000, ngram_range=(1, 2))
         self.mlb = MultiLabelBinarizer()
         self.scaler = StandardScaler()
 
