@@ -133,11 +133,11 @@ def populate_database(
                 repo_names = [line.strip() for line in f if line.strip()]
             gh_projects = scraper.get_repositories_by_names(repo_names)
         else:
-            repo_list_str = settings.GITHUB_REPO_LIST
-            if repo_list_str:
-                log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
-                repo_names = [name.strip() for name in repo_list_str.split(",")]
-                gh_projects = scraper.get_repositories_by_names(repo_names)
+        repo_list_str = settings.GITHUB_REPO_LIST
+        if repo_list_str:
+            log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
+            repo_names = [name.strip() for name in repo_list_str.split(",")]
+            gh_projects = scraper.get_repositories_by_names(repo_names)
 
     # If gh_projects is still empty, fall back to fetching using queries
     if not gh_projects:

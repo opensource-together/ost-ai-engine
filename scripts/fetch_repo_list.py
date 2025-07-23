@@ -51,7 +51,7 @@ def fetch_repositories_by_language(github_api, language, count, min_stars):
 
     if len(repo_list) < count:
         print(f"Warning: Found only {len(repo_list)} repositories for {language} (less than requested {count}).")
-
+    
     return [repo.full_name for repo in repo_list]
 
 
