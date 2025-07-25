@@ -133,11 +133,11 @@ def populate_database(
                 repo_names = [line.strip() for line in f if line.strip()]
             gh_projects = scraper.get_repositories_by_names(repo_names)
         else:
-        repo_list_str = settings.GITHUB_REPO_LIST
-        if repo_list_str:
-            log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
-            repo_names = [name.strip() for name in repo_list_str.split(",")]
-            gh_projects = scraper.get_repositories_by_names(repo_names)
+            repo_list_str = settings.GITHUB_REPO_LIST
+            if repo_list_str:
+                log.info("Fetching repositories from GITHUB_REPO_LIST variable...")
+                repo_names = [name.strip() for name in repo_list_str.split(",")]
+                gh_projects = scraper.get_repositories_by_names(repo_names)
 
     # If gh_projects is still empty, fall back to fetching using queries
     if not gh_projects:
@@ -169,11 +169,9 @@ def populate_database(
             description=gh_project["description"],
             readme=gh_project["readme"],
             language=gh_project["language"],
-            topics=",".join(
-                gh_project["topics"]
-            ),  # Store topics as a comma-separated string
-            html_url=gh_project["html_url"],
-            stargazers_count=gh_project["stargazers_count"],
+            topics=",".join(gh_project["topics"]),  # Store topics as a comma-separated string
+            github_main_repo=gh_project.get("html_url", None),
+            stars_count=gh_project["stargazers_count"],  # <-- Map stargazers_count to stars_count
             forks_count=gh_project["forks_count"],
             open_issues_count=gh_project["open_issues_count"],
             pushed_at=gh_project["pushed_at"],

@@ -2,6 +2,7 @@ import datetime
 import uuid
 
 from sqlalchemy import (
+    Boolean,
     Column,
     DateTime,
     ForeignKey,
@@ -43,11 +44,19 @@ class Project(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     title = Column(String(100), nullable=False)
     description = Column(Text)
+    vision = Column(Text)  # Project vision from docs
+    github_main_repo = Column(Text)  # Main GitHub repo URL
+    website_url = Column(Text)  # Project website
+    difficulty = Column(String(20))  # "easy", "medium", "hard"
+    status = Column(String(20), default="active")  # "active", "paused", "completed", "archived"
+    is_seeking_contributors = Column(Boolean, default=True)
+    project_type = Column(String(50))  # "web_app", "api", "cli", "mobile_app", "library"
+    license = Column(String(50))  # "MIT", "Apache-2.0", "GPL-3.0", "custom"
+    stars_count = Column(Integer, default=0)  # Renamed from stargazers_count
+    language = Column(String(50))  # Primary programming language
+    topics = Column(Text)  # Comma-separated topics
+    # Legacy fields for compatibility with current data
     readme = Column(Text)
-    language = Column(Text)
-    topics = Column(Text)
-    html_url = Column(Text)
-    stargazers_count = Column(Integer)
     forks_count = Column(Integer)
     open_issues_count = Column(Integer)
     pushed_at = Column(DateTime(timezone=True))
@@ -73,11 +82,19 @@ class ProjectTraining(Base):
     id = Column(UUID(as_uuid=True), primary_key=True)
     title = Column(String(100), nullable=False)
     description = Column(Text)  # Contains combined cleaned text (title + description)
-    readme = Column(Text)
-    language = Column(Text)
+    vision = Column(Text)  # Project vision
+    github_main_repo = Column(Text)  # Main GitHub repo URL
+    website_url = Column(Text)  # Project website
+    difficulty = Column(String(20))  # "easy", "medium", "hard"
+    status = Column(String(20), default="active")
+    is_seeking_contributors = Column(Boolean, default=True)
+    project_type = Column(String(50))  # "web_app", "api", "cli", "mobile_app", "library"
+    license = Column(String(50))  # License type
+    stars_count = Column(Integer, default=0)  # Renamed from stargazers_count
+    language = Column(String(50))  # Primary programming language
     topics = Column(Text)  # Comma-separated cleaned topics
-    html_url = Column(Text)
-    stargazers_count = Column(Integer)
+    # Legacy fields for ML compatibility
+    readme = Column(Text)
     forks_count = Column(Integer)
     open_issues_count = Column(Integer)
     pushed_at = Column(DateTime(timezone=True))

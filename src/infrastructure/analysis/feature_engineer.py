@@ -43,8 +43,6 @@ class FeatureEngineer:
             df["title"].fillna("")
             + " "
             + df["description"].fillna("")
-            + " "
-            + df["readme"].fillna("")
         )
         text_matrix = self.tfidf_vectorizer.fit_transform(df["text_features"])
 
@@ -54,7 +52,7 @@ class FeatureEngineer:
         topics_matrix = self.mlb.fit_transform(df["topics_list"])
 
         # --- Numerical Features (Standard Scaling) ---
-        numerical_features = df[["stargazers_count", "open_issues_count"]].values
+        numerical_features = df[["stars_count", "open_issues_count"]].values
         numerical_matrix = self.scaler.fit_transform(numerical_features)
 
         # --- Combine Features ---
@@ -63,6 +61,6 @@ class FeatureEngineer:
 
         # Store fitted models as instance variables (they're already fitted)
         self.topic_encoder = self.mlb  # Alias for backward compatibility
-        self.numerical_features = ["stargazers_count", "open_issues_count"]
+        self.numerical_features = ["stars_count", "open_issues_count"]
 
         return combined_features
