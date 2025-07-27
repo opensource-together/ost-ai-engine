@@ -44,6 +44,7 @@ class ModelPersistenceService:
         """
         Loads all model artifacts from the specified directory.
         Handles both .pkl and .npy files.
+        Extracts tfidf_vectorizer from feature_engineer if needed.
 
         Returns:
             dict: A dictionary containing the loaded model artifacts.
@@ -58,6 +59,16 @@ class ModelPersistenceService:
             elif ext == ".pkl":
                 with open(path, "rb") as f:
                     artifacts[name] = pickle.load(f)
+
+        # Extract tfidf_vectorizer from feature_engineer if it exists
+        if "feature_engineer" in artifacts and "tfidf_vectorizer" not in artifacts:
+            try:
+                feature_engineer = artifacts["feature_engineer"]
+                if hasattr(feature_engineer, 'tfidf_vectorizer'):
+                    artifacts["tfidf_vectorizer"] = feature_engineer.tfidf_vectorizer
+                    print("✅ Extracted tfidf_vectorizer from feature_engineer")
+            except Exception as e:
+                print(f"⚠️ Could not extract vectorizer from feature_engineer: {e}")
 
         print(f"Model artifacts loaded from {self.model_dir}")
         return artifacts

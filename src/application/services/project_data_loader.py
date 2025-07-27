@@ -30,3 +30,17 @@ class ProjectDataLoadingService:
             return projects
         finally:
             self.db_session.close()
+    
+    def get_training_projects(self) -> list[Project]:
+        """
+        Fetches all project records from PROJECT_training table.
+
+        Returns:
+            List[Project]: A list of all ProjectTraining objects.
+        """
+        try:
+            from src.domain.models.schema import ProjectTraining
+            projects = self.db_session.query(ProjectTraining).all()
+            return projects
+        finally:
+            self.db_session.close()

@@ -14,6 +14,7 @@ from sqlalchemy.orm import Session
 
 from src.application.services.recommendation import RecommendationService
 from src.application.services.user_interest_profile import UserInterestProfileService
+from src.domain.models.schema import Project
 from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import SessionLocal
 
@@ -173,7 +174,7 @@ async def startup_event():
         # Initialize services
         model_service = ModelPersistenceService()
 
-        # Load all model artifacts
+        # Load all model artifacts from models/ directory
         artifacts = model_service.load_model_artifacts()
         similarity_matrix = artifacts.get("similarity_matrix")
         vectorizer = artifacts.get("tfidf_vectorizer")
@@ -181,7 +182,7 @@ async def startup_event():
         # Load project data for mapping and validation
         with SessionLocal() as db:
             project_service_with_db = ProjectDataLoadingService(db_session=db)
-            projects = project_service_with_db.get_all_projects()
+            projects = project_service_with_db.get_training_projects()
 
         # Store in global cache for fast access
         MODEL_STORE["similarity_matrix"] = similarity_matrix
@@ -404,7 +405,7 @@ async def get_recommendations(
     user_id: UUID = Path(
         ...,
         description="UUID of the user to generate recommendations for",
-        example="a75337f8-f424-4f0c-90c2-2d7026b5bce8",
+        example="a75337f8-f424-4a1e-9ecc-93ed384b836b",
     ),
     top_n: int = Query(
         default=10,
@@ -489,19 +490,23 @@ async def get_recommendations(
     try:
         # Check if models are loaded
         if MODEL_STORE["similarity_matrix"] is None:
+            log.error("[API] Models not loaded in memory.")
             raise HTTPException(
                 status_code=500,
                 detail="Models not available. Run training pipeline first.",
             )
-
+        log.info(f"[API] Request for user {user_id} top_n={top_n}")
+        log.info(f"[API] Loaded projects: {len(MODEL_STORE['projects'])}")
+        log.info(f"[API] Similarity matrix shape: {MODEL_STORE['similarity_matrix'].shape if MODEL_STORE['similarity_matrix'] is not None else 'None'}")
         # Initialize services with correct parameters
         user_service = UserInterestProfileService(db)
         recommendation_service = RecommendationService()
-
-        # Get user's interest profile
+        # Get user's interest profile from PROJECT_training table
         try:
-            interest_profile = user_service.get_user_interest_profile(user_id)
+            interest_profile = user_service.get_user_interest_profile_from_training(user_id)
+            log.info(f"[API] User {user_id} interest profile: {list(interest_profile)[:5]}{'...' if len(interest_profile) > 5 else ''}")
             if not interest_profile:
+                log.warning(f"[API] No interest profile for user {user_id}")
                 raise HTTPException(
                     status_code=404,
                     detail=f"No interest profile found for user {user_id}.",
@@ -512,30 +517,28 @@ async def get_recommendations(
                 status_code=404,
                 detail=f"No interest profile found for user {user_id}.",
             )
-
         # Get recommendations using the loaded models
         try:
+            log.info(f"[API] Generating recommendations for user {user_id}")
             recommended_project_ids = recommendation_service.get_recommendations(
                 interested_project_ids=interest_profile,
                 projects=MODEL_STORE["projects"],
                 similarity_matrix=MODEL_STORE["similarity_matrix"],
                 top_n=top_n,
             )
-
+            log.info(f"[API] Recommendations: {recommended_project_ids}")
             if not recommended_project_ids:
-                log.warning(f"⚠️ No recommendations generated for user {user_id}")
+                log.warning(f"[API] No recommendations generated for user {user_id}")
                 return RecommendationResponse(
                     user_id=user_id, recommended_projects=[], total_recommendations=0
                 )
-
             count = len(recommended_project_ids)
-            log.info(f"✅ Generated {count} recommendations for user {user_id}")
+            log.info(f"[API] Generated {count} recommendations for user {user_id}")
             return RecommendationResponse(
                 user_id=user_id,
                 recommended_projects=recommended_project_ids,
                 total_recommendations=len(recommended_project_ids),
             )
-
         except Exception as e:
             log.error(
                 f"❌ Error generating recommendations for user {user_id}: {str(e)}"
@@ -544,7 +547,6 @@ async def get_recommendations(
                 status_code=500,
                 detail="Error generating recommendations. Please try again later.",
             )
-
     except HTTPException:
         # Re-raise HTTP exceptions as-is
         raise

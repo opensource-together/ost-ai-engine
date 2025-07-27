@@ -2,7 +2,8 @@ from uuid import UUID
 
 from sqlalchemy.orm import Session
 
-from src.domain.models.schema import Application, Contribution, ProjectRole, TeamMember
+from src.domain.models.schema import Application, Contribution, ProjectRole, TeamMember, ProjectTraining
+from src.infrastructure.logger import log
 
 
 class UserInterestProfileService:
@@ -59,5 +60,39 @@ class UserInterestProfileService:
         interested_project_ids.update(pid[0] for pid in contribution_project_ids)
         interested_project_ids.update(pid[0] for pid in application_project_ids)
 
+        log.info(f"[InterestProfile] User {user_id} - Team: {len(team_project_ids)}, Contributions: {len(contribution_project_ids)}, Applications: {len(application_project_ids)}")
+        log.info(f"[InterestProfile] Raw project IDs: {list(interested_project_ids)[:10]}{'...' if len(interested_project_ids) > 10 else ''}")
         return interested_project_ids
+    
+    def get_user_interest_profile_from_training(self, user_id: UUID) -> set[UUID]:
+        """
+        Retrieves a unique set of project IDs from PROJECT_training for a given user.
+        Maps PROJECT IDs to PROJECT_training IDs by title.
+
+        Args:
+            user_id (UUID): The ID of the user.
+
+        Returns:
+            set[UUID]: A set of unique project IDs from PROJECT_training.
+        """
+        # Get project IDs from PROJECT table
+        project_ids = self.get_user_interest_profile(user_id)
+        log.info(f"[InterestProfile] User {user_id} - {len(project_ids)} project IDs from PROJECT")
+        # Get all training projects
+        training_projects = self._db.query(ProjectTraining).all()
+        title_to_training_id = {project.title: project.id for project in training_projects}
+        log.info(f"[InterestProfile] {len(training_projects)} projects in PROJECT_training")
+        from src.domain.models.schema import Project
+        training_project_ids = set()
+        missing_titles = set()
+        for project_id in project_ids:
+            project = self._db.query(Project).filter(Project.id == project_id).first()
+            if project and project.title in title_to_training_id:
+                training_project_ids.add(title_to_training_id[project.title])
+            else:
+                missing_titles.add(getattr(project, 'title', None))
+        log.info(f"[InterestProfile] {len(training_project_ids)} mapped to PROJECT_training. Missing: {len(missing_titles)}")
+        if missing_titles:
+            log.warning(f"[InterestProfile] Titles not found in PROJECT_training: {list(missing_titles)[:5]}{'...' if len(missing_titles) > 5 else ''}")
+        return training_project_ids
  
