@@ -29,6 +29,8 @@ from src.infrastructure.postgres.database import SessionLocal
 # ============================================================================
 
 
+
+
 class RecommendationResponse(BaseModel):
     """
     Response model for project recommendations.
@@ -255,6 +257,8 @@ All endpoints return JSON with standardized error handling:
 - `404`: Resource not found (user has no interactions)
 - `422`: Invalid request parameters
 - `500`: Internal server error (models not loaded)
+
+
 """,
     version="1.0.0",
     contact={
@@ -270,7 +274,7 @@ All endpoints return JSON with standardized error handling:
             "description": "API health and status endpoints",
         },
         {
-            "name": "Recommendations",
+            "name": "Recommendations", 
             "description": "Personalized project recommendation endpoints",
         },
     ],
@@ -282,6 +286,8 @@ app.add_event_handler("startup", startup_event)
 # ============================================================================
 # API ENDPOINTS
 # ============================================================================
+
+
 
 # ----------------------------------------------------------------------------
 # HEALTH CHECK ENDPOINT

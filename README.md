@@ -94,17 +94,39 @@ FLOWER_PORT=5555
 
 ### Exécution des Tests
 
+#### Tests Unitaires de l'Infrastructure (76 tests)
 ```bash
-# Exécuter tous les tests
-pytest
+# Tous les tests d'infrastructure
+poetry run pytest tests/unit/infrastructure/ -v
 
-# Exécuter tests avec couverture
-pytest --cov=src --cov-report=html
-
-# Exécuter catégories spécifiques de tests
-pytest tests/unit/          # Tests unitaires seulement
-pytest tests/integration/   # Tests d'intégration seulement
+# Tests spécifiques par composant
+poetry run pytest tests/unit/infrastructure/postgres/ -v      # Database (22 tests)
+poetry run pytest tests/unit/infrastructure/scraping/ -v      # GitHub Scraper (12 tests)
+poetry run pytest tests/unit/infrastructure/test_config.py -v # Configuration (18 tests)
+poetry run pytest tests/unit/infrastructure/analysis/ -v      # Model Persistence (22 tests)
 ```
+
+#### Tests d'Intégration
+```bash
+# Tests d'intégration complets
+poetry run pytest tests/integration/ -v
+
+# Tests avec couverture
+poetry run pytest --cov=src --cov-report=html
+```
+
+#### Validation Pré-commit
+```bash
+# Qualité du code
+poetry run ruff check .
+poetry run black --check .
+
+# Tests critiques
+poetry run pytest tests/unit/infrastructure/ -v
+```
+
+**📊 Statut des Tests**: ✅ **76/76 tests d'infrastructure passent**
+**📖 Documentation**: Voir [docs/testing_strategy.md](docs/testing_strategy.md) pour les détails
 
 ### Étendre les Collecteurs
 

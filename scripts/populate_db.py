@@ -20,6 +20,12 @@ from src.domain.models.schema import (
     ProjectSkill,
     ProjectTechnology,
     ProjectDomainCategory,
+    ProjectRoleSkill,
+    ProjectRoleTechnology,
+    IssueSkill,
+    IssueTechnology,
+    LinkedRepository,
+    GoodFirstIssue,
     Skill,
     Technology,
     DomainCategory,
@@ -109,6 +115,19 @@ def populate_database(
     db.query(Contribution).delete()
     db.query(TeamMember).delete()
     db.query(ProjectRole).delete()
+    
+    # Clear project-entity linking tables
+    db.query(ProjectSkill).delete()
+    db.query(ProjectTechnology).delete()
+    db.query(ProjectDomainCategory).delete()
+    db.query(ProjectRoleSkill).delete()
+    db.query(ProjectRoleTechnology).delete()
+    db.query(IssueSkill).delete()
+    db.query(IssueTechnology).delete()
+    db.query(LinkedRepository).delete()
+    db.query(GoodFirstIssue).delete()
+    
+    # Now safe to delete projects
     db.query(Project).delete()
     
     # Clear user-related data that might reference users
@@ -210,7 +229,7 @@ def populate_database(
     log.info(f"✅ Created {len(projects)} projects")
     
 
-    
+
     # Now create roles with valid project IDs
     roles = []
     for project in projects:
@@ -335,7 +354,8 @@ def link_projects_to_entities(db: Session, projects: list[Project]):
     
     for project in projects:
         # Link to 2-5 random skills (UNIQUE)
-        selected_skills = random.sample(skills, min(random.randint(2, 5), len(skills)))
+        num_skills = min(random.randint(2, 5), len(skills))
+        selected_skills = random.sample(skills, num_skills) if num_skills > 0 else []
         project_skills.extend([
             ProjectSkill(
                 project_id=project.id,
@@ -345,7 +365,8 @@ def link_projects_to_entities(db: Session, projects: list[Project]):
         ])
         
         # Link to 3-8 random technologies (UNIQUE)
-        selected_technologies = random.sample(technologies, min(random.randint(3, 8), len(technologies)))
+        num_technologies = min(random.randint(3, 8), len(technologies))
+        selected_technologies = random.sample(technologies, num_technologies) if num_technologies > 0 else []
         project_technologies.extend([
             ProjectTechnology(
                 project_id=project.id,
@@ -355,7 +376,8 @@ def link_projects_to_entities(db: Session, projects: list[Project]):
         ])
         
         # Link to 1-3 random domains (UNIQUE)
-        selected_domains = random.sample(domains, min(random.randint(1, 3), len(domains)))
+        num_domains = min(random.randint(1, 3), len(domains))
+        selected_domains = random.sample(domains, num_domains) if num_domains > 0 else []
         project_domains.extend([
             ProjectDomainCategory(
                 project_id=project.id,
@@ -389,7 +411,8 @@ def create_user_profiles(db: Session, users: list[User]):
     
     for user in users:
         # Give each user 3-8 skills with proficiency levels (UNIQUE)
-        selected_skills = random.sample(skills, min(random.randint(3, 8), len(skills)))
+        num_skills = min(random.randint(3, 8), len(skills))
+        selected_skills = random.sample(skills, num_skills) if num_skills > 0 else []
         user_skills.extend([
             UserSkill(
                 user_id=user.id,
@@ -400,7 +423,8 @@ def create_user_profiles(db: Session, users: list[User]):
         ])
         
         # Give each user 4-10 technologies with proficiency levels (UNIQUE)
-        selected_technologies = random.sample(technologies, min(random.randint(4, 10), len(technologies)))
+        num_technologies = min(random.randint(4, 10), len(technologies))
+        selected_technologies = random.sample(technologies, num_technologies) if num_technologies > 0 else []
         user_technologies.extend([
             UserTechnology(
                 user_id=user.id,

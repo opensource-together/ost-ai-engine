@@ -30,7 +30,7 @@ class ProjectDataLoadingService:
             return projects
         finally:
             self.db_session.close()
-    
+
     def get_training_projects(self) -> list[Project]:
         """
         Fetches all project records from PROJECT_training table.

@@ -64,15 +64,28 @@ def fetch_repositories_by_topic(github_api, topic: str, count: int, min_stars: i
         
         search_results = github_api.search_repositories(query=query)
         
-        # Take a random sample from results
-        repo_list = list(search_results[:min(200, count * 3)])
+        # Get available results (handle case where there are fewer results than requested)
+        available_results = list(search_results)
+        if len(available_results) == 0:
+            print(f"No repositories found for topic '{topic}'")
+            return repos
+            
+        # Take a random sample from available results
+        max_available = min(len(available_results), min(200, count * 3))
+        repo_list = available_results[:max_available]
         random.shuffle(repo_list)
         
-        for repo in repo_list[:count]:
+        # Take up to count repositories
+        actual_count = min(len(repo_list), count)
+        for repo in repo_list[:actual_count]:
             repos.append(repo.full_name)
+            
+        print(f"Found {len(repos)} repositories for topic '{topic}' (requested: {count})")
             
     except (GithubException, RateLimitExceededException) as e:
         print(f"Error fetching {topic} repos: {e}")
+    except IndexError as e:
+        print(f"IndexError for topic '{topic}': {e}")
     
     return repos
 
