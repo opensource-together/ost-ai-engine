@@ -14,6 +14,15 @@ from src.domain.models.schema import (
     ProjectRole,
     TeamMember,
     User,
+    UserSkill,
+    UserTechnology,
+    CommunityMember,
+    ProjectSkill,
+    ProjectTechnology,
+    ProjectDomainCategory,
+    Skill,
+    Technology,
+    DomainCategory,
 )
 from src.infrastructure.config import settings
 from src.infrastructure.logger import log
@@ -73,8 +82,8 @@ class MockGithubScraper:
 def populate_database(
     db: Session,
     num_users: int = 50,
-    num_projects_to_fetch: int = 20,
-    num_actions: int = 100,
+    num_projects_to_fetch: int = 5000,  # Augmenté pour 5K projets
+    num_actions: int = 1000,  # Plus d'actions pour plus de données
     use_mock_scraper: bool = False,
     repo_file: str = None,
 ):
@@ -95,11 +104,19 @@ def populate_database(
 
     log.info("Clearing data only from tables we'll populate...")
     # SAFE: Only clear specific tables we're about to populate, leave others untouched
+    # Delete in correct order to respect foreign key constraints
     db.query(Application).delete()
     db.query(Contribution).delete()
     db.query(TeamMember).delete()
     db.query(ProjectRole).delete()
     db.query(Project).delete()
+    
+    # Clear user-related data that might reference users
+    db.query(UserSkill).delete()
+    db.query(UserTechnology).delete()
+    db.query(CommunityMember).delete()
+    
+    # Now safe to delete users
     db.query(User).delete()
     db.commit()
     log.info("✅ Cleared only tables we'll populate")
@@ -164,6 +181,9 @@ def populate_database(
     projects = []
     roles = []
     for gh_project in gh_projects:
+        # Get a random user as owner
+        owner = random.choice(users) if users else None
+        
         project = Project(
             title=gh_project["title"],
             description=gh_project["description"],
@@ -175,21 +195,44 @@ def populate_database(
             forks_count=gh_project["forks_count"],
             open_issues_count=gh_project["open_issues_count"],
             pushed_at=gh_project["pushed_at"],
+            owner_id=owner.id if owner else None,
+            status="active",
+            is_seeking_contributors=True,
+            project_type=random.choice(["library", "application", "tool", "framework", "other"]),
+            difficulty=random.choice(["easy", "medium", "hard"]),
+            license=random.choice(["MIT", "Apache-2.0", "GPL-3.0", "custom", "other"])
         )
         projects.append(project)
+    
+    # First commit projects to get their IDs
+    db.add_all(projects)
+    db.commit()
+    log.info(f"✅ Created {len(projects)} projects")
+    
+
+    
+    # Now create roles with valid project IDs
+    roles = []
+    for project in projects:
         # Create 1-3 fake roles for each project
         for i in range(random.randint(1, 3)):
             role = ProjectRole(
-                project=project,
+                project_id=project.id,  # Now project.id is valid!
                 title=f"Developer Role {i + 1}",
                 description=(
                     f"A sample description for role {i + 1} on project {project.title}."
                 ),
+                responsibility_level=random.choice(["contributor", "maintainer", "lead"]),
+                time_commitment=random.choice(["few_hours", "part_time", "full_time"]),
+                slots_available=random.randint(1, 3),
+                slots_filled=0,
+                experience_required=random.choice(["none", "some", "experienced"])
             )
             roles.append(role)
-    db.add_all(projects)
+    
     db.add_all(roles)
     db.commit()
+    log.info(f"✅ Created {len(roles)} project roles")
 
     # --- Create "Strong Interest" Actions ---
     log.info(f"Simulating {num_actions} user actions...")
@@ -208,37 +251,170 @@ def populate_database(
             if (user.id, project.id) not in team_member_cache and not db.query(
                 TeamMember
             ).filter_by(user_id=user.id, project_id=project.id).first():
-                actions.append(TeamMember(user=user, project=project))
-                team_member_cache.add((user.id, project.id))
+                # Get a random role for this project
+                project_role = db.query(ProjectRole).filter_by(project_id=project.id).first()
+                if project_role:
+                    actions.append(TeamMember(
+                        user_id=user.id,
+                        project_id=project.id,
+                        project_role_id=project_role.id,
+                        status="active",
+                        contributions_count=random.randint(0, 5)
+                    ))
+                    team_member_cache.add((user.id, project.id))
 
         elif action_type == "contribution":
             actions.append(
                 Contribution(
-                    user=user,
-                    project=project,
+                    user_id=user.id,
+                    project_id=project.id,
+                    type=random.choice(["code", "design", "documentation", "bug_fix", "feature"]),
                     title=f"Sample contribution on {project.title}",
+                    description=f"User contribution to project {project.title}",
+                    status=random.choice(["submitted", "reviewed", "merged"])
                 )
             )
 
         elif action_type == "application":
-            if project.roles:
-                role = random.choice(project.roles)
+            # Get roles for this project from DB
+            project_roles = db.query(ProjectRole).filter_by(project_id=project.id).all()
+            if project_roles:
+                role = random.choice(project_roles)
                 # Check cache and DB to avoid violating the unique constraint
                 if (user.id, role.id) not in application_cache and not db.query(
                     Application
                 ).filter_by(user_id=user.id, project_role_id=role.id).first():
-                    actions.append(Application(user=user, role=role))
+                    actions.append(Application(
+                        user_id=user.id,
+                        project_role_id=role.id,
+                        portfolio_links='["https://github.com/user", "https://linkedin.com/user"]',
+                        availability=random.choice(["immediate", "within_week", "within_month"]),
+                        status=random.choice(["pending", "accepted", "rejected"])
+                    ))
                     application_cache.add((user.id, role.id))
 
     db.add_all(actions)
     db.commit()
 
+    # --- Link Projects to Skills, Technologies, and Domains ---
+    log.info("Linking projects to skills, technologies, and domains...")
+    link_projects_to_entities(db, projects)
+    
+    # --- Create User Skills and Technologies ---
+    log.info("Creating user skills and technologies...")
+    create_user_profiles(db, users)
+    
     log.info("Database population complete!")
     log.info(f"Total Users: {db.query(User).count()}")
     log.info(f"Total Projects: {db.query(Project).count()}")
     log.info(f"Total Team Memberships: {db.query(TeamMember).count()}")
     log.info(f"Total Contributions: {db.query(Contribution).count()}")
     log.info(f"Total Applications: {db.query(Application).count()}")
+    log.info(f"Total Project-Skill links: {db.query(ProjectSkill).count()}")
+    log.info(f"Total Project-Technology links: {db.query(ProjectTechnology).count()}")
+    log.info(f"Total User-Skill links: {db.query(UserSkill).count()}")
+    log.info(f"Total User-Technology links: {db.query(UserTechnology).count()}")
+
+
+def link_projects_to_entities(db: Session, projects: list[Project]):
+    """Link projects to skills, technologies, and domains for coherence."""
+    log.info("Linking projects to entities...")
+    
+    # Get existing entities
+    skills = db.query(Skill).all()
+    technologies = db.query(Technology).all()
+    domains = db.query(DomainCategory).all()
+    
+    if not skills or not technologies or not domains:
+        log.warning("Missing skills, technologies, or domains. Run migrate_schema_v3.py first.")
+        return
+    
+    project_skills = []
+    project_technologies = []
+    project_domains = []
+    
+    for project in projects:
+        # Link to 2-5 random skills (UNIQUE)
+        selected_skills = random.sample(skills, min(random.randint(2, 5), len(skills)))
+        project_skills.extend([
+            ProjectSkill(
+                project_id=project.id,
+                skill_id=skill.id,
+                is_primary=random.choice([True, False])
+            ) for skill in selected_skills
+        ])
+        
+        # Link to 3-8 random technologies (UNIQUE)
+        selected_technologies = random.sample(technologies, min(random.randint(3, 8), len(technologies)))
+        project_technologies.extend([
+            ProjectTechnology(
+                project_id=project.id,
+                technology_id=tech.id,
+                is_primary=random.choice([True, False])
+            ) for tech in selected_technologies
+        ])
+        
+        # Link to 1-3 random domains (UNIQUE)
+        selected_domains = random.sample(domains, min(random.randint(1, 3), len(domains)))
+        project_domains.extend([
+            ProjectDomainCategory(
+                project_id=project.id,
+                domain_category_id=domain.id,
+                is_primary=random.choice([True, False])
+            ) for domain in selected_domains
+        ])
+    
+    db.add_all(project_skills)
+    db.add_all(project_technologies)
+    db.add_all(project_domains)
+    db.commit()
+    
+    log.info(f"Linked {len(project_skills)} skills, {len(project_technologies)} technologies, {len(project_domains)} domains to projects")
+
+
+def create_user_profiles(db: Session, users: list[User]):
+    """Create comprehensive user profiles with skills and technologies."""
+    log.info("Creating user profiles...")
+    
+    # Get existing entities
+    skills = db.query(Skill).all()
+    technologies = db.query(Technology).all()
+    
+    if not skills or not technologies:
+        log.warning("Missing skills or technologies. Run migrate_schema_v3.py first.")
+        return
+    
+    user_skills = []
+    user_technologies = []
+    
+    for user in users:
+        # Give each user 3-8 skills with proficiency levels (UNIQUE)
+        selected_skills = random.sample(skills, min(random.randint(3, 8), len(skills)))
+        user_skills.extend([
+            UserSkill(
+                user_id=user.id,
+                skill_id=skill.id,
+                proficiency_level=random.choice(["learning", "basic", "intermediate", "advanced", "expert"]),
+                is_primary=random.choice([True, False])
+            ) for skill in selected_skills
+        ])
+        
+        # Give each user 4-10 technologies with proficiency levels (UNIQUE)
+        selected_technologies = random.sample(technologies, min(random.randint(4, 10), len(technologies)))
+        user_technologies.extend([
+            UserTechnology(
+                user_id=user.id,
+                technology_id=tech.id,
+                proficiency_level=random.choice(["learning", "basic", "intermediate", "advanced", "expert"]),
+                is_primary=random.choice([True, False])
+            ) for tech in selected_technologies
+        ])
+    
+    db.add_all(user_skills)
+    db.add_all(user_technologies)
+    db.commit()
+    
+    log.info(f"Created {len(user_skills)} user skills and {len(user_technologies)} user technologies")
 
 
 if __name__ == "__main__":
@@ -256,6 +432,12 @@ if __name__ == "__main__":
         default=None,
         help="Path to a file containing a list of repositories to scrape (one per line).",
     )
+    parser.add_argument(
+        "--num-projects",
+        type=int,
+        default=5000,
+        help="Number of projects to fetch and populate (default: 5000).",
+    )
     args = parser.parse_args()
 
     log.info("Starting database population script...")
@@ -263,7 +445,12 @@ if __name__ == "__main__":
     try:
         # Before running, make sure your .env file is pointing to the TEST database
         # and contains your GITHUB_ACCESS_TOKEN if not using --mock.
-        populate_database(db_session, use_mock_scraper=args.mock, repo_file=args.repo_file)
+        populate_database(
+            db_session, 
+            num_projects_to_fetch=args.num_projects,
+            use_mock_scraper=args.mock, 
+            repo_file=args.repo_file
+        )
     finally:
         db_session.close()
         log.info("Script finished. Database session closed.")
