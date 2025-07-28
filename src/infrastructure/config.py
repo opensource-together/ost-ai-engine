@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     # --- Celery ---
     CELERY_BROKER_URL: str = "redis://localhost:6379/0"
     CELERY_RESULT_BACKEND: str = "redis://localhost:6379/0"
+    
+    # --- Redis ---
+    REDIS_URL: str = "redis://localhost:6379/0"
 
     # --- GitHub API ---
     GITHUB_ACCESS_TOKEN: str = "your_github_token_here"
