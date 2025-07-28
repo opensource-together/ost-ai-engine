@@ -258,6 +258,19 @@ All endpoints return JSON with standardized error handling:
 - `422`: Invalid request parameters
 - `500`: Internal server error (models not loaded)
 
+### 🚀 Quick Start
+
+```bash
+# Health check
+curl -X GET "http://localhost:8000/health"
+
+# Get recommendations
+curl -X GET "http://localhost:8000/recommendations/a75337f8-f424-4f0c-90c2-2d7026b5bce8?top_n=5"
+
+# Test error handling
+curl -X GET "http://localhost:8000/recommendations/invalid-uuid"
+```
+
 
 """,
     version="1.0.0",
@@ -370,7 +383,16 @@ async def health_check():
             "description": "User not found or has no interaction history",
             "content": {
                 "application/json": {
-                    "example": {"detail": "No interest profile found for user."}
+                    "examples": {
+                        "no_interactions": {
+                            "summary": "User has no interaction history",
+                            "value": {"detail": "No interest profile found for user."}
+                        },
+                        "user_not_found": {
+                            "summary": "User does not exist",
+                            "value": {"detail": "User not found in database."}
+                        }
+                    }
                 }
             },
         },
@@ -381,7 +403,7 @@ async def health_check():
                 "application/json": {
                     "examples": {
                         "invalid_uuid": {
-                            "summary": "Invalid UUID",
+                            "summary": "Invalid UUID format",
                             "value": {
                                 "detail": "Invalid UUID format for user_id parameter"
                             },
@@ -389,6 +411,14 @@ async def health_check():
                         "invalid_top_n": {
                             "summary": "Invalid top_n parameter",
                             "value": {"detail": "Value must be between 1 and 50"},
+                        },
+                        "top_n_too_low": {
+                            "summary": "top_n below minimum",
+                            "value": {"detail": "Value must be greater than or equal to 1"},
+                        },
+                        "top_n_too_high": {
+                            "summary": "top_n above maximum", 
+                            "value": {"detail": "Value must be less than or equal to 50"},
                         },
                     }
                 }
@@ -399,8 +429,25 @@ async def health_check():
             "description": "Internal server error or models not available",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "Models not available. Run training pipeline first."
+                    "examples": {
+                        "models_not_loaded": {
+                            "summary": "ML models not available",
+                            "value": {
+                                "detail": "Models not available. Run training pipeline first."
+                            }
+                        },
+                        "database_error": {
+                            "summary": "Database connection error",
+                            "value": {
+                                "detail": "Database connection failed. Please try again later."
+                            }
+                        },
+                        "internal_error": {
+                            "summary": "Unexpected server error",
+                            "value": {
+                                "detail": "Unexpected error occurred. Please contact support."
+                            }
+                        }
                     }
                 }
             },
@@ -488,10 +535,19 @@ async def get_recommendations(
         recommendations = response.json()
     ```
 
-    **cURL Command:**
+    **cURL Commands:**
     ```bash
+    # Basic request
     curl -X GET "http://localhost:8000/recommendations/a75337f8-f424-4f0c-90c2-2d7026b5bce8?top_n=5"
+    
+    # With verbose output
+    curl -v -X GET "http://localhost:8000/recommendations/a75337f8-f424-4f0c-90c2-2d7026b5bce8?top_n=10"
+    
+    # Test error cases
+    curl -X GET "http://localhost:8000/recommendations/invalid-uuid"
+    curl -X GET "http://localhost:8000/recommendations/a75337f8-f424-4f0c-90c2-2d7026b5bce8?top_n=100"
     ```
+
     """
     try:
         # Check if models are loaded
