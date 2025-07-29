@@ -52,52 +52,191 @@ class CoherentDataGenerator:
         
         # Define skill-technology mappings for coherence
         self.skill_tech_mapping = {
-            "Python": ["Python", "Django", "Flask", "FastAPI", "Pandas", "NumPy"],
-            "JavaScript": ["JavaScript", "React", "Vue.js", "Node.js", "TypeScript"],
-            "Java": ["Java", "Spring", "Android Development"],
-            "Go": ["Go", "Docker", "Kubernetes"],
-            "Rust": ["Rust", "Systems Programming"],
-            "PHP": ["PHP", "Laravel", "WordPress"],
-            "UI Design": ["Figma", "Adobe Creative Suite", "Sketch"],
-            "UX Design": ["Figma", "Adobe Creative Suite", "User Research"],
-            "DevOps": ["Docker", "Kubernetes", "AWS", "CI/CD", "Linux"],
-            "Data Science": ["Python", "Pandas", "Machine Learning", "SQL"],
-            "Mobile Development": ["React Native", "Flutter", "iOS Development", "Android Development"],
+            # Frontend Development
+            "React": ["React", "JavaScript", "TypeScript", "CSS", "HTML", "Redux", "Next.js", "Material-UI"],
+            "Vue.js": ["Vue.js", "JavaScript", "TypeScript", "CSS", "HTML", "Vuex", "Nuxt.js", "Vuetify"],
+            "Angular": ["Angular", "TypeScript", "JavaScript", "CSS", "HTML", "RxJS", "Angular Material"],
+            "TypeScript": ["TypeScript", "JavaScript", "React", "Vue.js", "Angular", "Node.js"],
+            "CSS": ["CSS", "Sass", "Less", "Tailwind CSS", "Bootstrap", "HTML"],
+            "HTML": ["HTML", "CSS", "JavaScript", "Semantic HTML", "Accessibility"],
+            
+            # Backend Development
+            "Python": ["Python", "Django", "Flask", "FastAPI", "Pandas", "NumPy", "SQLAlchemy", "Celery"],
+            "Node.js": ["Node.js", "JavaScript", "Express.js", "NestJS", "Socket.io", "PM2"],
+            "Java": ["Java", "Spring Boot", "Spring Security", "Maven", "Gradle", "JUnit"],
+            "Go": ["Go", "Gin", "Echo", "Docker", "Kubernetes", "Microservices"],
+            "C#": ["C#", ".NET", "ASP.NET Core", "Entity Framework", "LINQ", "Visual Studio"],
+            "PHP": ["PHP", "Laravel", "Symfony", "WordPress", "Composer", "MySQL"],
+            "Ruby": ["Ruby", "Ruby on Rails", "Sinatra", "RSpec", "Bundler"],
+            
+            # Database & ORM
+            "PostgreSQL": ["PostgreSQL", "SQL", "Python", "Node.js", "Django", "Sequelize"],
+            "MySQL": ["MySQL", "SQL", "PHP", "Laravel", "WordPress", "Node.js"],
+            "MongoDB": ["MongoDB", "NoSQL", "Node.js", "Mongoose", "Python", "PyMongo"],
+            "Redis": ["Redis", "Caching", "Node.js", "Python", "Session Management"],
+            
+            # DevOps & Infrastructure
+            "Docker": ["Docker", "Containerization", "Kubernetes", "CI/CD", "DevOps"],
+            "Kubernetes": ["Kubernetes", "Container Orchestration", "Docker", "Helm", "Microservices"],
+            "AWS": ["AWS", "Cloud Computing", "EC2", "S3", "Lambda", "RDS", "DevOps"],
+            "Azure": ["Azure", "Cloud Computing", "DevOps", "C#", ".NET", "PowerShell"],
+            "GCP": ["GCP", "Cloud Computing", "Kubernetes", "BigQuery", "DevOps"],
+            "Terraform": ["Terraform", "Infrastructure as Code", "AWS", "Azure", "GCP"],
+            "Jenkins": ["Jenkins", "CI/CD", "DevOps", "Automation", "Pipeline"],
+            "GitHub Actions": ["GitHub Actions", "CI/CD", "DevOps", "Automation"],
+            
+            # Data Science & ML
+            "Machine Learning": ["Python", "Scikit-learn", "TensorFlow", "PyTorch", "Pandas", "NumPy"],
+            "Data Analysis": ["Python", "Pandas", "NumPy", "Matplotlib", "Seaborn", "Jupyter"],
+            "Deep Learning": ["Python", "TensorFlow", "PyTorch", "Keras", "GPU Computing"],
+            "NLP": ["Python", "NLTK", "spaCy", "Transformers", "BERT", "GPT"],
+            "Computer Vision": ["Python", "OpenCV", "TensorFlow", "PyTorch", "Image Processing"],
+            
+            # Mobile Development
+            "React Native": ["React Native", "JavaScript", "React", "Mobile Development", "iOS", "Android"],
+            "Flutter": ["Flutter", "Dart", "Mobile Development", "iOS", "Android", "Cross-platform"],
+            "iOS Development": ["Swift", "Objective-C", "Xcode", "iOS", "Mobile Development", "UIKit"],
+            "Android Development": ["Kotlin", "Java", "Android Studio", "Android", "Mobile Development"],
+            
+            # Testing & Quality
+            "Unit Testing": ["Jest", "JUnit", "PyTest", "Mocha", "Testing", "TDD"],
+            "Integration Testing": ["Postman", "Newman", "API Testing", "End-to-End Testing"],
+            "E2E Testing": ["Cypress", "Selenium", "Playwright", "End-to-End Testing"],
+            
+            # Design & UX
+            "UI Design": ["Figma", "Adobe XD", "Sketch", "InVision", "Prototyping", "Design Systems"],
+            "UX Design": ["Figma", "User Research", "Usability Testing", "Wireframing", "Prototyping"],
+            "Graphic Design": ["Adobe Photoshop", "Adobe Illustrator", "InDesign", "Creative Suite"],
+            
+            # Security
+            "Cybersecurity": ["Security", "Penetration Testing", "OWASP", "Authentication", "Authorization"],
+            "Authentication": ["OAuth", "JWT", "OpenID Connect", "Security", "Identity Management"],
+            
+            # Blockchain & Web3
+            "Blockchain": ["Solidity", "Ethereum", "Web3", "Smart Contracts", "DApps"],
+            "Web3": ["Web3", "Ethereum", "Solidity", "MetaMask", "DApps"],
+            
+            # Game Development
+            "Game Development": ["Unity", "C#", "Unreal Engine", "C++", "Game Design"],
+            "Unity": ["Unity", "C#", "Game Development", "3D Graphics", "Game Design"],
+            
+            # AI & Automation
+            "AI": ["Python", "Machine Learning", "Deep Learning", "NLP", "Computer Vision"],
+            "RPA": ["Automation", "UiPath", "Blue Prism", "Process Automation"],
+            
+            # Communication & Collaboration
+            "Slack": ["Slack", "Communication", "Team Collaboration", "API Integration"],
+            "Discord": ["Discord", "Communication", "Bot Development", "API Integration"],
+            "Notion": ["Notion", "Documentation", "Project Management", "Knowledge Base"],
+            
+            # Version Control & Git
+            "Git": ["Git", "GitHub", "GitLab", "Version Control", "Collaboration"],
+            "GitHub": ["GitHub", "Git", "Version Control", "CI/CD", "Open Source"],
         }
         
         # Define domain interest patterns
         self.domain_patterns = {
-            "Frontend": ["Education", "E-commerce", "Social", "Productivity"],
-            "Backend": ["Finance", "DevTools", "E-commerce", "Social"],
-            "Mobile": ["Gaming", "Social", "E-commerce", "Education"],
-            "Data Science": ["Finance", "Santé", "Education", "DevTools"],
-            "DevOps": ["DevTools", "Finance", "E-commerce"],
+            # Frontend Development
+            "React": ["E-commerce", "Social", "Productivity", "Education", "Entertainment"],
+            "Vue.js": ["E-commerce", "Social", "Productivity", "Education", "Business"],
+            "Angular": ["Enterprise", "Business", "Finance", "Healthcare", "Education"],
+            "TypeScript": ["Enterprise", "Business", "Finance", "DevTools", "Productivity"],
+            "CSS": ["Design", "E-commerce", "Social", "Entertainment", "Education"],
+            "HTML": ["Web Development", "E-commerce", "Social", "Education", "Business"],
+            
+            # Backend Development
+            "Python": ["Data Science", "Finance", "Healthcare", "Education", "DevTools", "E-commerce"],
+            "Node.js": ["Social", "E-commerce", "Entertainment", "Productivity", "DevTools"],
+            "Java": ["Enterprise", "Finance", "Healthcare", "Government", "Education"],
+            "Go": ["DevTools", "Infrastructure", "Finance", "Microservices", "Cloud"],
+            "C#": ["Enterprise", "Gaming", "Healthcare", "Finance", "Government"],
+            "PHP": ["E-commerce", "Social", "CMS", "Business", "Education"],
+            "Ruby": ["Startups", "E-commerce", "Social", "Productivity", "Education"],
+            
+            # Database & ORM
+            "PostgreSQL": ["Enterprise", "Finance", "Healthcare", "E-commerce", "Analytics"],
+            "MySQL": ["E-commerce", "CMS", "Social", "Business", "Education"],
+            "MongoDB": ["Social", "Content Management", "Analytics", "IoT", "Mobile"],
+            "Redis": ["Caching", "Session Management", "Real-time", "Social", "Gaming"],
+            
+            # DevOps & Infrastructure
+            "Docker": ["DevOps", "Cloud", "Microservices", "CI/CD", "Infrastructure"],
+            "Kubernetes": ["Cloud", "Microservices", "DevOps", "Infrastructure", "Enterprise"],
+            "AWS": ["Cloud", "Enterprise", "Startups", "DevOps", "Infrastructure"],
+            "Azure": ["Enterprise", "Cloud", "Government", "Healthcare", "Finance"],
+            "GCP": ["Cloud", "Data Science", "AI/ML", "Analytics", "Enterprise"],
+            "Terraform": ["DevOps", "Infrastructure", "Cloud", "Automation", "Enterprise"],
+            "Jenkins": ["DevOps", "CI/CD", "Automation", "Enterprise", "Infrastructure"],
+            "GitHub Actions": ["DevOps", "CI/CD", "Open Source", "Automation", "Collaboration"],
+            
+            # Data Science & ML
+            "Machine Learning": ["Finance", "Healthcare", "E-commerce", "Education", "Research"],
+            "Data Analysis": ["Finance", "Healthcare", "E-commerce", "Education", "Business"],
+            "Deep Learning": ["AI/ML", "Computer Vision", "NLP", "Research", "Healthcare"],
+            "NLP": ["AI/ML", "Social", "Customer Service", "Education", "Healthcare"],
+            "Computer Vision": ["AI/ML", "Healthcare", "Security", "Automotive", "Retail"],
+            
+            # Mobile Development
+            "React Native": ["Social", "E-commerce", "Entertainment", "Productivity", "Education"],
+            "Flutter": ["Social", "E-commerce", "Entertainment", "Productivity", "Education"],
+            "iOS Development": ["Social", "Entertainment", "Productivity", "Education", "Healthcare"],
+            "Android Development": ["Social", "Entertainment", "Productivity", "Education", "Business"],
+            
+            # Testing & Quality
+            "Unit Testing": ["Quality Assurance", "DevOps", "Enterprise", "Finance", "Healthcare"],
+            "Integration Testing": ["Quality Assurance", "DevOps", "Enterprise", "API Development"],
+            "E2E Testing": ["Quality Assurance", "E-commerce", "Social", "Enterprise", "Healthcare"],
+            
+            # Design & UX
+            "UI Design": ["E-commerce", "Social", "Entertainment", "Education", "Productivity"],
+            "UX Design": ["E-commerce", "Social", "Healthcare", "Education", "Productivity"],
+            "Graphic Design": ["Marketing", "Entertainment", "E-commerce", "Education", "Media"],
+            
+            # Security
+            "Cybersecurity": ["Finance", "Healthcare", "Government", "Enterprise", "Infrastructure"],
+            "Authentication": ["Enterprise", "Finance", "Healthcare", "Social", "E-commerce"],
+            
+            # Blockchain & Web3
+            "Blockchain": ["Finance", "Gaming", "Social", "Supply Chain", "Identity"],
+            "Web3": ["Finance", "Gaming", "Social", "Art", "Identity"],
+            
+            # Game Development
+            "Game Development": ["Gaming", "Entertainment", "Education", "Social", "VR/AR"],
+            "Unity": ["Gaming", "Entertainment", "Education", "VR/AR", "Simulation"],
+            
+            # AI & Automation
+            "AI": ["Finance", "Healthcare", "E-commerce", "Education", "Automation"],
+            "RPA": ["Enterprise", "Finance", "Healthcare", "Manufacturing", "Automation"],
+            
+            # Communication & Collaboration
+            "Slack": ["Communication", "Enterprise", "Startups", "Remote Work", "Collaboration"],
+            "Discord": ["Gaming", "Social", "Education", "Entertainment", "Community"],
+            "Notion": ["Productivity", "Education", "Business", "Documentation", "Collaboration"],
+            
+            # Version Control & Git
+            "Git": ["Development", "Collaboration", "Open Source", "DevOps", "Version Control"],
+            "GitHub": ["Open Source", "Collaboration", "Development", "DevOps", "Community"],
         }
     
     def create_coherent_user_profile(self, user_id: str, skill_category: str) -> dict:
         """Create a user profile with coherent skills and interests."""
         
-        # Select skills based on category
-        if skill_category == "Frontend":
-            skills = ["React", "Vue.js", "TypeScript", "CSS", "HTML", "UI Design"]
-            technologies = ["React", "Vue.js", "TypeScript", "CSS", "HTML", "Figma"]
+        # Get the skill-technology mapping for this category
+        if skill_category in self.skill_tech_mapping:
+            technologies = self.skill_tech_mapping[skill_category]
+            # Use the main skill as the primary skill
+            skills = [skill_category] + [tech for tech in technologies if tech != skill_category][:5]
+        else:
+            # Fallback for unknown categories
+            skills = [skill_category]
+            technologies = [skill_category]
+        
+        # Get domain patterns for this category
+        if skill_category in self.domain_patterns:
+            domains = self.domain_patterns[skill_category]
+        else:
+            # Fallback domains
             domains = ["Education", "E-commerce", "Social"]
-        elif skill_category == "Backend":
-            skills = ["Python", "Node.js", "Java", "Go", "Database Design", "API Design"]
-            technologies = ["Python", "Node.js", "Java", "Go", "PostgreSQL", "Docker"]
-            domains = ["Finance", "DevTools", "E-commerce"]
-        elif skill_category == "Mobile":
-            skills = ["React Native", "Flutter", "iOS Development", "Android Development"]
-            technologies = ["React Native", "Flutter", "Git", "GitHub"]
-            domains = ["Gaming", "Social", "E-commerce"]
-        elif skill_category == "Data Science":
-            skills = ["Python", "Machine Learning", "Data Analysis", "SQL", "Pandas"]
-            technologies = ["Python", "Pandas", "PostgreSQL", "GitHub"]
-            domains = ["Finance", "Santé", "Education"]
-        else:  # DevOps
-            skills = ["Docker", "Kubernetes", "AWS", "CI/CD", "Linux", "Security"]
-            technologies = ["Docker", "Kubernetes", "AWS", "Git", "Linux"]
-            domains = ["DevTools", "Finance", "E-commerce"]
         
         return {
             "user_id": user_id,
@@ -370,7 +509,11 @@ class ProjectScraper:
         """Create users with coherent profiles."""
         log.info(f"Creating {num_users} users with coherent profiles...")
         
-        user_categories = ["Frontend", "Backend", "Mobile", "Data Science", "DevOps"]
+        user_categories = [
+            "React", "Vue.js", "Angular", "TypeScript", "Python", "Node.js", "Java", "Go", 
+            "C#", "PHP", "PostgreSQL", "MySQL", "Docker", "Kubernetes", "AWS", "Machine Learning", 
+            "Data Analysis", "React Native", "Flutter", "UI Design", "UX Design", "Git", "GitHub"
+        ]
         
         users = []
         user_profiles = []
@@ -502,6 +645,9 @@ class ProjectScraper:
         for user, profile in zip(users, user_profiles):
             # Find projects that match user's profile
             matching_projects = self.generator.find_matching_projects(profile, projects, self.db)
+            
+            # Update profile with actual user.id
+            profile["user_id"] = user.id
             
             # Generate coherent interactions for this user
             user_interactions = self.generator.simulate_coherent_interactions(
