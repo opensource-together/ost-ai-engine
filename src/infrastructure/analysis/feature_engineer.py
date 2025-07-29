@@ -43,17 +43,21 @@ class FeatureEngineer:
         """Calculate derived features for better ML performance."""
         df = df.copy()
         
-        # Convert dates to datetime
-        df['created_at'] = pd.to_datetime(df['created_at'])
-        df['pushed_at'] = pd.to_datetime(df['pushed_at'])
+        # Convert dates to datetime with error handling
+        df['created_at'] = pd.to_datetime(df['created_at'], errors='coerce')
+        df['pushed_at'] = pd.to_datetime(df['pushed_at'], errors='coerce')
         
         # Project age in days
-        df['project_age_days'] = (pd.Timestamp.now() - df['created_at']).dt.days
-        df['project_age_days'] = df['project_age_days'].clip(1)  # Avoid division by zero
+        # Use timezone-aware now() to match database timestamps
+        now_tz = pd.Timestamp.now(tz='UTC')
+        
+        # Handle cases where dates might be None or NaT
+        df['project_age_days'] = (now_tz - df['created_at']).dt.days
+        df['project_age_days'] = df['project_age_days'].fillna(365).clip(1)  # Default to 1 year if missing
         
         # Last activity in days
-        df['last_activity_days'] = (pd.Timestamp.now() - df['pushed_at']).dt.days
-        df['last_activity_days'] = df['last_activity_days'].clip(0)
+        df['last_activity_days'] = (now_tz - df['pushed_at']).dt.days
+        df['last_activity_days'] = df['last_activity_days'].fillna(0).clip(0)
         
         # Engagement metrics
         df['engagement_ratio'] = (df['stars_count'] + df['forks_count']) / df['project_age_days']
