@@ -223,6 +223,7 @@ class UserSimulator:
                                 project_role_id=role.id,
                                 project_role_title=role.title,
                                 project_description=project.description,
+                                user_id=user.id,  # ADDED missing field
                                 status=random.choice(["pending", "accepted", "rejected"]),
                                 motivation_letter=f"I'm interested in contributing to {project.title} as a {role.title}.",
                                 applied_at=self._faker.date_time_between(
@@ -255,9 +256,13 @@ class UserSimulator:
         """Find projects that match user's profile."""
         matching_projects = []
         
-        # Get user's tech stacks
-        user_tech_stacks = self.db.query(UserTechStack).filter_by(user_id=user.id).all()
-        tech_names = [uts.tech_stack.name for uts in user_tech_stacks if uts.tech_stack]
+        # Get user's tech stacks with a join
+        from sqlalchemy.orm import joinedload
+        user_tech_stacks = self.db.query(UserTechStack, TechStack).join(
+            TechStack, UserTechStack.tech_stack_id == TechStack.id
+        ).filter(UserTechStack.user_id == user.id).all()
+        
+        tech_names = [tech_stack.name for _, tech_stack in user_tech_stacks]
         
         for project in projects:
             # Simple matching based on project description and tech stacks

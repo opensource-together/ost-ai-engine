@@ -1,0 +1,5 @@
+me115/design_patterns
+SciSharp/LLamaSharp
+bbc/wraith
+dalance/procs
+estatico/scala-newtype

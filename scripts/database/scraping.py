@@ -17,6 +17,8 @@ from sqlalchemy.orm import Session
 from src.domain.models.schema import (
     Project,
     ProjectRole,
+    ProjectRoleApplication,
+    TeamMember,
     ProjectTechStack,
     ProjectCategory,
     ProjectRoleTechStack,
@@ -207,8 +209,10 @@ class ProjectScraper:
         log.info("Clearing existing project data...")
         
         # Delete in correct order to respect foreign key constraints
+        self.db.query(ProjectRoleApplication).delete()
         self.db.query(ProjectRoleTechStack).delete()
         self.db.query(ProjectRole).delete()
+        self.db.query(TeamMember).delete()
         self.db.query(ProjectTechStack).delete()
         self.db.query(ProjectCategory).delete()
         self.db.query(KeyFeature).delete()
@@ -260,23 +264,26 @@ class ProjectScraper:
             log.warning("Could not fetch any projects from GitHub. Aborting population.")
             return []
 
-        # Create a default owner for projects
-        default_owner = User(
-            username="github_owner",
-            email="owner@github.com",
-            login="github_owner",
-            bio="Default owner for scraped projects",
-            created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
-        )
-        self.db.add(default_owner)
-        self.db.flush()  # Get the ID without committing
+        # Create a default owner for projects or get existing one
+        default_owner = self.db.query(User).filter_by(username="github_owner").first()
+        if not default_owner:
+            default_owner = User(
+                username="github_owner",
+                email="owner@github.com",
+                login="github_owner",
+                bio="Default owner for scraped projects",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
+            )
+            self.db.add(default_owner)
+            self.db.flush()  # Get the ID without committing
         
         # Create Project objects
         projects = []
         for gh_project in gh_projects:
             project = Project(
                 author_id=default_owner.id,
+                owner_id=default_owner.id,  # ADDED: map owner_id from Prisma schema
                 title=gh_project["title"],
                 description=gh_project["description"],
                 short_description=gh_project.get("short_description", gh_project["description"][:100]),
@@ -334,57 +341,86 @@ class ProjectScraper:
         project_role_tech_stacks = []
         
         for project in projects:
-            # Link based on project description and random assignment
-            # We'll use project description and random assignment for now
-            if "python" in project.description.lower() or "data" in project.description.lower():
+            # Link based on project description and language from GitHub data
+            # Use more intelligent matching based on actual project data
+            description_lower = project.description.lower()
+            title_lower = project.title.lower()
+            
+            # Determine project type based on description and title
+            if any(keyword in description_lower or keyword in title_lower for keyword in ["python", "data", "ml", "ai", "machine learning"]):
                 # Python/Data projects
                 matching_techs = [t for t in tech_stacks if t.name in ["Python", "Pandas", "PostgreSQL", "GitHub"]]
                 matching_categories = [c for c in categories if c.name in ["Data Science", "AI/ML", "DevTools"]]
-            elif "react" in project.description.lower() or "frontend" in project.description.lower():
+            elif any(keyword in description_lower or keyword in title_lower for keyword in ["react", "frontend", "ui", "vue", "angular"]):
                 # Frontend projects
                 matching_techs = [t for t in tech_stacks if t.name in ["React", "Vue.js", "TypeScript", "CSS", "HTML"]]
                 matching_categories = [c for c in categories if c.name in ["Web Development", "Social", "E-commerce"]]
-            elif "mobile" in project.description.lower() or "app" in project.description.lower():
+            elif any(keyword in description_lower or keyword in title_lower for keyword in ["mobile", "ios", "android", "app", "flutter"]):
                 # Mobile projects
                 matching_techs = [t for t in tech_stacks if t.name in ["React Native", "Flutter", "Swift", "Kotlin"]]
                 matching_categories = [c for c in categories if c.name in ["Mobile Development", "Gaming", "Social"]]
-            elif "backend" in project.description.lower() or "api" in project.description.lower():
+            elif any(keyword in description_lower or keyword in title_lower for keyword in ["backend", "api", "server", "database"]):
                 # Backend projects
                 matching_techs = [t for t in tech_stacks if t.name in ["Node.js", "Java", "Go", "PostgreSQL", "Docker"]]
                 matching_categories = [c for c in categories if c.name in ["DevTools", "Finance", "E-commerce"]]
+            elif any(keyword in description_lower or keyword in title_lower for keyword in ["game", "gaming", "unity"]):
+                # Gaming projects
+                matching_techs = [t for t in tech_stacks if t.name in ["C++", "Unity", "Git", "GitHub"]]
+                matching_categories = [c for c in categories if c.name in ["Gaming", "Entertainment"]]
+            elif any(keyword in description_lower or keyword in title_lower for keyword in ["blockchain", "crypto", "web3"]):
+                # Blockchain projects
+                matching_techs = [t for t in tech_stacks if t.name in ["Rust", "Go", "JavaScript", "Git"]]
+                matching_categories = [c for c in categories if c.name in ["Finance", "DevTools"]]
             else:
-                # Default projects
-                matching_techs = [t for t in tech_stacks if t.name in ["Python", "Git", "GitHub"]]
+                # Default projects - try to match based on common tech keywords
+                default_techs = []
+                if any(tech.name.lower() in description_lower for tech in tech_stacks):
+                    default_techs = [t for t in tech_stacks if t.name.lower() in description_lower]
+                else:
+                    default_techs = [t for t in tech_stacks if t.name in ["Python", "Git", "GitHub"]]
+                
+                matching_techs = default_techs
                 matching_categories = [c for c in categories if c.name in ["DevTools", "Web Development"]]
+            
+            # Add tech stacks and categories (avoiding duplicates)
+            selected_techs = set()
+            selected_categories = set()
             
             # Add primary tech stacks and categories
             for tech in matching_techs[:3]:  # Limit to 3 primary techs
+                selected_techs.add(tech.id)
                 project_tech_stacks.append(ProjectTechStack(
                     project_id=project.id,
                     tech_stack_id=tech.id
                 ))
             
             for category in matching_categories[:2]:  # Limit to 2 primary categories
+                selected_categories.add(category.id)
                 project_categories.append(ProjectCategory(
                     project_id=project.id,
                     category_id=category.id
                 ))
             
-            # Add some random secondary links
-            num_secondary_techs = min(random.randint(1, 3), len(tech_stacks))
-            num_secondary_categories = min(random.randint(1, 2), len(categories))
+            # Add some random secondary links (avoiding duplicates)
+            available_techs = [t for t in tech_stacks if t.id not in selected_techs]
+            available_categories = [c for c in categories if c.id not in selected_categories]
             
-            secondary_techs = random.sample(tech_stacks, num_secondary_techs)
-            secondary_categories = random.sample(categories, num_secondary_categories)
+            num_secondary_techs = min(random.randint(1, 3), len(available_techs))
+            num_secondary_categories = min(random.randint(1, 2), len(available_categories))
             
-            project_tech_stacks.extend([
-                ProjectTechStack(project_id=project.id, tech_stack_id=t.id)
-                for t in secondary_techs
-            ])
-            project_categories.extend([
-                ProjectCategory(project_id=project.id, category_id=c.id)
-                for c in secondary_categories
-            ])
+            if available_techs and num_secondary_techs > 0:
+                secondary_techs = random.sample(available_techs, num_secondary_techs)
+                project_tech_stacks.extend([
+                    ProjectTechStack(project_id=project.id, tech_stack_id=t.id)
+                    for t in secondary_techs
+                ])
+            
+            if available_categories and num_secondary_categories > 0:
+                secondary_categories = random.sample(available_categories, num_secondary_categories)
+                project_categories.extend([
+                    ProjectCategory(project_id=project.id, category_id=c.id)
+                    for c in secondary_categories
+                ])
             
             # Link project roles to tech stacks
             project_roles = self.db.query(ProjectRole).filter_by(project_id=project.id).all()
