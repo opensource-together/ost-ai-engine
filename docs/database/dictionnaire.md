@@ -1,338 +1,308 @@
-# 📘 Dictionnaire de Données — Open Source Together (Version 3.0)
+# 📘 Dictionnaire de Données — Open Source Together
 
-## 🎯 Segmentation MVP vs Future
+## 🎯 Vue d'ensemble
 
-Ce dictionnaire présente la structure de données complète d'OST avec trois niveaux de priorité :
-
-- **🔴 MVP (Minimum Viable Product)** : Entités et champs essentiels pour le lancement
-- **🔵 Future** : Fonctionnalités avancées à implémenter plus tard
-- **🟡 À Discuter** : Points nécessitant une validation équipe avant implémentation
-
-Les étiquettes 🟡🔴 ou 🟡🔵 indiquent les décisions à prendre collectivement entre MVP et Future.
+Ce dictionnaire décrit la structure complète de la base de données d'OST, alignée sur le schema de production Prisma. Chaque entité est documentée avec ses champs, contraintes et relations.
 
 ---
 
-## 🎯 Entités Principales
+## 🏗️ Entités Principales
 
-### 🔴 **User** — Utilisateur
+### **User** — Utilisateur
 
-| Nom                | Type       | Description                             | Valeurs possibles                      | Contraintes                  | Priorité |
-| ------------------ | ---------- | --------------------------------------- | -------------------------------------- | ---------------------------- | -------- |
-| id                 | UUID       | Identifiant unique utilisateur          | UUID                                   | PK, unique                   | 🔴 MVP   |
-| username           | Texte      | Nom d'utilisateur affiché               | Max 30 caractères                      | Obligatoire, unique          | 🔴 MVP   |
-| email              | Texte      | Adresse email                           | Format email                           | Obligatoire, unique          | 🔴 MVP   |
-| bio                | Texte      | Bio de l'utilisateur                    | Max 500 caractères                     | Optionnel                    | 🔴 MVP   |
-| github_username    | Texte      | Nom d'utilisateur GitHub                | Max 39 caractères                      | Optionnel, unique si présent | 🔴 MVP   |
-| linkedin_url       | Texte      | URL du profil LinkedIn                  | Format URL                             | Optionnel                    | 🔴 MVP   |
-| portfolio_url      | Texte      | URL du portfolio personnel              | Format URL                             | Optionnel                    | 🔴 MVP   |
-| contribution_score | Entier     | Score basé sur les contributions        | ≥ 0                                    | Automatique, calculé         | 🔴 MVP   |
-| level              | Texte      | Niveau d'expérience                     | "beginner", "intermediate", "advanced" | Enum, défaut: "beginner"     | 🔴 MVP   |
-| is_open_to_hire    | Booléen    | Ouvert aux opportunités de contribution | true/false                             | Défaut: false                | 🔴 MVP   |
-| location           | Texte      | Localisation géographique               | Max 100 caractères                     | Optionnel                    | 🔴 MVP   |
-| timezone           | Texte      | Fuseau horaire                          | Format IANA (ex: "Europe/Paris")       | Optionnel                    | 🔴 MVP   |
-| created_at         | Date/Heure | Date de création du compte              | ISO 8601                               | Automatique                  | 🔴 MVP   |
-| updated_at         | Date/Heure | Dernière mise à jour                    | ISO 8601                               | Automatique                  | 🔴 MVP   |
+| Nom         | Type       | Description                    | Valeurs possibles                      | Contraintes                  | Priorité |
+| ----------- | ---------- | ------------------------------ | -------------------------------------- | ---------------------------- | -------- |
+| id          | UUID       | Identifiant unique utilisateur | UUID                                   | PK, unique                   | MVP      |
+| username    | String(30) | Nom d'utilisateur affiché      | Max 30 caractères                      | Obligatoire, unique          | MVP      |
+| email       | String(255)| Adresse email                  | Format email                           | Obligatoire, unique          | MVP      |
+| login       | String(100)| GitHub login                   | Nom d'utilisateur GitHub               | Optionnel                    | MVP      |
+| avatar_url  | Text       | GitHub avatar URL              | URL de l'avatar GitHub                 | Optionnel                    | MVP      |
+| location    | String(100)| Localisation géographique      | Max 100 caractères                     | Optionnel                    | MVP      |
+| company     | String(100)| Nom de l'entreprise            | Max 100 caractères                     | Optionnel                    | MVP      |
+| bio         | Text       | Bio de l'utilisateur           | Max 500 caractères                     | Optionnel                    | MVP      |
+| created_at  | DateTime   | Date de création du compte     | ISO 8601                               | Automatique                  | MVP      |
+| updated_at  | DateTime   | Dernière mise à jour           | ISO 8601                               | Automatique                  | MVP      |
 
-### 🔴 **Project** — Projet
+**Relations :**
+- `User` → `UserGitHubCredentials` (1:1)
+- `User` → `Project` (1:N) // Projets créés
+- `User` → `TeamMember` (1:N) // Appartenance aux équipes
+- `User` → `ProjectRoleApplication` (1:N) // Candidatures
+- `User` → `UserSocialLink` (1:N) // Liens sociaux
+- `User` ↔ `TechStack` (N:N) via `UserTechStack`
 
-| Nom                     | Type       | Description                          | Valeurs possibles                               | Contraintes               | Priorité |
-| ----------------------- | ---------- | ------------------------------------ | ----------------------------------------------- | ------------------------- | -------- |
-| id                      | UUID       | Identifiant du projet                | UUID                                            | PK, unique                | 🔴 MVP   |
-| owner_id                | UUID       | Propriétaire du projet               | Référence User                                  | FK vers User, obligatoire | 🔴 MVP   |
-| title                   | Texte      | Titre du projet                      | Max 100 caractères                              | Obligatoire               | 🔴 MVP   |
-| description             | Texte      | Description complète du projet       | Max 2000 caractères                             | Obligatoire               | 🔴 MVP   |
-| vision                  | Texte      | Vision et objectifs du projet        | Max 1000 caractères                             | Obligatoire               | 🔴 MVP   |
-| github_main_repo        | Texte      | Repository principal GitHub          | URL                                             | Obligatoire               | 🔴 MVP   |
-| website_url             | Texte      | Site web du projet                   | URL                                             | Optionnel                 | 🔴 MVP   |
-| difficulty              | Texte      | Niveau de difficulté global          | "easy", "medium", "hard"                        | Enum, obligatoire         | 🔴 MVP   |
-| status                  | Texte      | État du projet                       | "active", "paused", "completed", "archived"     | Enum, obligatoire         | 🔴 MVP   |
-| is_seeking_contributors | Booléen    | Cherche activement des contributeurs | true/false                                      | Défaut: true              | 🔴 MVP   |
-| project_type            | Texte      | Format technique du projet           | "web_app", "api", "cli", "mobile_app", "other"  | Enum                      | 🟡🔴     |
-| license                 | Texte      | Licence du projet                    | "MIT", "Apache-2.0", "GPL-3.0", "custom"       | Enum                      | 🔴 MVP   |
-| stars_count             | Entier     | Nombre d'étoiles GitHub              | ≥ 0                                             | Automatique, synchronisé  | 🔴 MVP   |
-| created_at              | Date/Heure | Date de création                     | ISO 8601                                        | Automatique               | 🔴 MVP   |
-| updated_at              | Date/Heure | Dernière mise à jour                 | ISO 8601                                        | Automatique               | 🔴 MVP   |
+### **Project** — Projet
 
-### 🟡🔴 **DomainCategory** — Catégorie de Domaine
+| Nom                 | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ------------------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id                  | UUID       | Identifiant du projet          | UUID                                   | PK, unique                | MVP      |
+| author_id           | UUID       | Auteur du projet               | Référence User                         | FK vers User              | MVP      |
+| title               | String(100)| Titre du projet                | Max 100 caractères                     | Obligatoire               | MVP      |
+| description         | Text       | Description complète du projet | Max 2000 caractères                   | Optionnel                 | MVP      |
+| short_description   | Text       | Description courte             | Max 500 caractères                    | Optionnel                 | MVP      |
+| image               | Text       | URL de l'image du projet       | URL de l'image                         | Optionnel                 | MVP      |
+| cover_images        | Text       | Array d'URLs d'images          | JSON array d'URLs (1-4 images)        | Optionnel                 | MVP      |
+| readme              | Text       | Contenu README GitHub          | Contenu du README.md                   | Optionnel                 | MVP      |
+| created_at          | DateTime   | Date de création               | ISO 8601                               | Automatique               | MVP      |
+| updated_at          | DateTime   | Dernière mise à jour           | ISO 8601                               | Automatique               | MVP      |
 
-| Nom         | Type       | Description                    | Valeurs possibles                                          | Contraintes         | Priorité |
-| ----------- | ---------- | ------------------------------ | ---------------------------------------------------------- | ------------------- | -------- |
-| id          | UUID       | Identifiant de la catégorie    | UUID                                                       | PK, unique          | 🟡🔴     |
-| name        | Texte      | Nom du domaine                 | "Education", "Santé", "Finance", "Gaming", "DevTools"     | Obligatoire, unique | 🟡🔴     |
-| description | Texte      | Description du domaine         | Max 500 caractères                                         | Optionnel           | 🟡🔴     |
-| icon_url    | Texte      | URL de l'icône du domaine      | Format URL                                                 | Optionnel           | 🟡🔴     |
-| created_at  | Date/Heure | Date de création               | ISO 8601                                                   | Automatique         | 🟡🔴     |
-| updated_at  | Date/Heure | Dernière mise à jour           | ISO 8601                                                   | Automatique         | 🟡🔴     |
+**Relations :**
+- `Project` → `User` (N:1) // Auteur
+- `Project` → `ProjectExternalLink` (1:N) // Liens externes
+- `Project` → `ProjectRole` (1:N) // Rôles disponibles
+- `Project` → `TeamMember` (1:N) // Membres d'équipe
+- `Project` → `KeyFeature` (1:N) // Fonctionnalités
+- `Project` → `ProjectGoal` (1:N) // Objectifs
+- `Project` → `ProjectRoleApplication` (1:N) // Candidatures
+- `Project` ↔ `TechStack` (N:N) via `ProjectTechStack`
+- `Project` ↔ `Category` (N:N) via `ProjectCategory`
 
-### 🟡🔴 **Skill** — Compétence Métier
+### **TechStack** — Technologies
 
-| Nom         | Type       | Description                  | Valeurs possibles                                                       | Contraintes         | Priorité |
-| ----------- | ---------- | ---------------------------- | ----------------------------------------------------------------------- | ------------------- | -------- |
-| id          | UUID       | Identifiant de la compétence | UUID                                                                    | PK, unique          | 🟡🔴     |
-| name        | Texte      | Nom de la compétence         | "Product Management", "Marketing", "SEO", "Community Management"       | Obligatoire, unique | 🟡🔴     |
-| description | Texte      | Description de la compétence | Max 500 caractères                                                      | Optionnel           | 🟡🔴     |
-| icon_url    | Texte      | URL de l'icône               | Format URL                                                              | Optionnel           | 🟡🔴     |
-| created_at  | Date/Heure | Date de création             | ISO 8601                                                                | Automatique         | 🟡🔴     |
-| updated_at  | Date/Heure | Dernière mise à jour         | ISO 8601                                                                | Automatique         | 🟡🔴     |
+| Nom         | Type       | Description                    | Valeurs possibles                      | Contraintes         | Priorité |
+| ----------- | ---------- | ------------------------------ | -------------------------------------- | ------------------- | -------- |
+| id          | UUID       | Identifiant de la technologie  | UUID                                   | PK, unique          | MVP      |
+| name        | String(100)| Nom de la technologie          | "React", "Python", "Docker", etc.      | Obligatoire, unique | MVP      |
+| icon_url    | Text       | URL de l'icône                 | URL de l'icône                         | Optionnel           | MVP      |
+| type        | String(20) | Type de technologie            | "LANGUAGE" ou "TECH"                   | Enum                | MVP      |
+| created_at  | DateTime   | Date de création               | ISO 8601                               | Automatique         | MVP      |
 
-### 🔴 **Technology** — Technologie/Outil
+**Relations :**
+- `TechStack` ↔ `User` (N:N) via `UserTechStack`
+- `TechStack` ↔ `Project` (N:N) via `ProjectTechStack`
+- `TechStack` ↔ `ProjectRole` (N:N) via `ProjectRoleTechStack`
 
-| Nom         | Type       | Description                      | Valeurs possibles                                                | Contraintes         | Priorité |
-| ----------- | ---------- | -------------------------------- | ---------------------------------------------------------------- | ------------------- | -------- |
-| id          | UUID       | Identifiant de la technologie    | UUID                                                             | PK, unique          | 🔴 MVP   |
-| name        | Texte      | Nom de la technologie/outil      | "React", "Python", "Figma", "Docker", "Slack", "Notion"        | Obligatoire, unique | 🔴 MVP   |
-| description | Texte      | Description de la technologie    | Max 500 caractères                                               | Optionnel           | 🔴 MVP   |
-| icon_url    | Texte      | URL de l'icône                   | Format URL                                                       | Optionnel           | 🔴 MVP   |
-| category    | Texte      | Catégorie de technologie         | "frontend", "backend", "design", "devops", "business", "other"  | Enum                | 🔵 Future |
-| created_at  | Date/Heure | Date de création                 | ISO 8601                                                         | Automatique         | 🔴 MVP   |
-| updated_at  | Date/Heure | Dernière mise à jour             | ISO 8601                                                         | Automatique         | 🔴 MVP   |
+### **Category** — Catégories
 
-### 🔴 **ProjectRole** — Rôle Projet
+| Nom         | Type       | Description                    | Valeurs possibles                      | Contraintes         | Priorité |
+| ----------- | ---------- | ------------------------------ | -------------------------------------- | ------------------- | -------- |
+| id          | UUID       | Identifiant de la catégorie    | UUID                                   | PK, unique          | MVP      |
+| name        | String(100)| Nom de la catégorie            | "Education", "Finance", "Gaming", etc. | Obligatoire, unique | MVP      |
+| created_at  | DateTime   | Date de création               | ISO 8601                               | Automatique         | MVP      |
 
-| Nom                  | Type       | Description                        | Valeurs possibles                     | Contraintes             | Priorité |
-| -------------------- | ---------- | ---------------------------------- | ------------------------------------- | ----------------------- | -------- |
-| id                   | UUID       | Identifiant du rôle dans un projet | UUID                                  | PK, unique              | 🔴 MVP   |
-| project_id           | UUID       | Projet concerné                    | Référence Project                     | FK vers Project         | 🔴 MVP   |
-| title                | Texte      | Titre du rôle                      | "Frontend Lead", "UX Designer"        | Obligatoire             | 🔴 MVP   |
-| description          | Texte      | Description détaillée du rôle      | Max 1000 caractères                   | Obligatoire             | 🔴 MVP   |
-| responsibility_level | Texte      | Niveau de responsabilité           | "contributor", "maintainer", "lead"   | Enum                    | 🔴 MVP   |
-| time_commitment      | Texte      | Engagement temps estimé            | "few_hours", "part_time", "full_time" | Enum                    | 🔴 MVP   |
-| slots_available      | Entier     | Nombre de places disponibles       | ≥ 0                                   | Obligatoire             | 🔴 MVP   |
-| slots_filled         | Entier     | Nombre de places occupées          | ≥ 0                                   | Calculé automatiquement | 🔴 MVP   |
-| experience_required  | Texte      | Expérience requise                 | "none", "some", "experienced"         | Enum                    | 🔴 MVP   |
-| created_at           | Date/Heure | Date de création du rôle           | ISO 8601                              | Automatique             | 🔴 MVP   |
+**Relations :**
+- `Category` ↔ `Project` (N:N) via `ProjectCategory`
 
-### 🔴 **GoodFirstIssue**  
+### **ProjectRole** — Rôle de Projet
 
-| Nom              | Type       | Description                   | Valeurs possibles                                        | Contraintes             | Priorité |
-| ---------------- | ---------- | ----------------------------- | -------------------------------------------------------- | ----------------------- | -------- |
-| id               | UUID       | Identifiant de l'issue        | UUID                                                     | PK, unique              | 🔴 MVP   |
-| project_id       | UUID       | Projet concerné               | Référence Project                                        | FK vers Project         | 🔴 MVP   |
-| created_by       | UUID       | Mainteneur qui a créé l'issue | Référence User                                           | FK vers User            | 🔴 MVP   |
-| title            | Texte      | Titre de l'issue              | Max 200 caractères                                       | Obligatoire             | 🔴 MVP   |
-| description      | Texte      | Description détaillée         | Max 2000 caractères                                      | Obligatoire             | 🔴 MVP   |
-| github_issue_url | Texte      | Lien vers l'issue GitHub      | URL                                                      | Optionnel               | 🔴 MVP   |
-| estimated_time   | Texte      | Temps estimé                  | "30min", "1h", "2h", "4h", "1day"                        | Enum                    | 🔵 Future   |
-| difficulty       | Texte      | Difficulté de l'issue         | "very_easy", "easy", "medium"                            | Enum                    | 🔴 MVP   |
-| status           | Texte      | État de l'issue               | "open", "assigned", "in_progress", "completed", "closed" | Enum                    | 🔴 MVP   |
-| assigned_to      | UUID       | Utilisateur assigné           | Référence User                                           | FK vers User, optionnel | 🔴 MVP   |
-| is_ai_generated  | Booléen    | Issue générée par IA          | true/false                                               | Défaut: false           | 🔴 MVP   |
-| created_at       | Date/Heure | Date de création              | ISO 8601                                                 | Automatique             | 🔴 MVP   |
-| completed_at     | Date/Heure | Date de completion            | ISO 8601                                                 | Optionnel               | 🔴 MVP   |
+| Nom         | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ----------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id          | UUID       | Identifiant du rôle            | UUID                                   | PK, unique                | MVP      |
+| project_id  | UUID       | Projet concerné                | Référence Project                      | FK vers Project, obligatoire | MVP   |
+| title       | String(100)| Titre du rôle                  | "Frontend Lead", "UX Designer", etc.   | Obligatoire               | MVP      |
+| description | Text       | Description du rôle            | Max 1000 caractères                   | Optionnel                 | MVP      |
+| is_filled   | Boolean    | Rôle pourvu ou non             | true/false                             | Défaut: false             | MVP      |
+| created_at  | DateTime   | Date de création               | ISO 8601                               | Automatique               | MVP      |
+| updated_at  | DateTime   | Dernière mise à jour           | ISO 8601                               | Automatique               | MVP      |
 
-### 🔴 **Contribution** — Contribution
+**Relations :**
+- `ProjectRole` → `Project` (N:1)
+- `ProjectRole` → `ProjectRoleApplication` (1:N) // Candidatures
+- `ProjectRole` ↔ `TechStack` (N:N) via `ProjectRoleTechStack`
+- `ProjectRole` ↔ `TeamMember` (N:N) via `TeamMemberProjectRole`
 
-| Nom             | Type       | Description                    | Valeurs possibles                                                | Contraintes     | Priorité |
-| --------------- | ---------- | ------------------------------ | ---------------------------------------------------------------- | --------------- | -------- |
-| id              | UUID       | Identifiant de la contribution | UUID                                                             | PK, unique      | 🔴 MVP   |
-| user_id         | UUID       | Contributeur                   | Référence User                                                   | FK vers User    | 🔴 MVP   |
-| project_id      | UUID       | Projet concerné                | Référence Project                                                | FK vers Project | 🔴 MVP   |
-| issue_id        | UUID       | Issue liée (si applicable)     | Référence GoodFirstIssue                                         | FK, optionnel   | 🔴 MVP   |
-| type            | Texte      | Type de contribution           | "code", "design", "documentation", "bug_fix", "feature", "other" | Enum            | 🔴 MVP   |
-| title           | Texte      | Titre de la contribution       | Max 200 caractères                                               | Obligatoire     | 🔴 MVP   |
-| description     | Texte      | Description de la contribution | Max 1000 caractères                                              | Optionnel       | 🔴 MVP   |
-| github_pr_url   | Texte      | URL de la Pull Request         | URL                                                              | Optionnel       | 🔴 MVP   |
-| status          | Texte      | Statut de la contribution      | "submitted", "reviewed", "merged", "rejected"                    | Enum            | 🔴 MVP   |
-| reviewed_by     | UUID       | Reviewer                       | Référence User                                                   | FK, optionnel   | 🔴 MVP   |
-| submitted_at    | Date/Heure | Date de soumission             | ISO 8601                                                         | Automatique     | 🔴 MVP   |
-| merged_at       | Date/Heure | Date de merge                  | ISO 8601                                                         | Optionnel       | 🔴 MVP   |
+### **TeamMember** — Membre d'Équipe
 
-### 🟡🔴 **LinkedRepository** — Repository Lié
+| Nom         | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ----------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id          | UUID       | Identifiant du membre          | UUID                                   | PK, unique                | MVP      |
+| user_id     | UUID       | Utilisateur membre             | Référence User                         | FK vers User, obligatoire  | MVP      |
+| project_id  | UUID       | Projet concerné                | Référence Project                      | FK vers Project, obligatoire | MVP   |
+| joined_at   | DateTime   | Date d'entrée dans l'équipe    | ISO 8601                               | Automatique               | MVP      |
 
-| Nom         | Type       | Description                    | Valeurs possibles            | Contraintes     | Priorité |
-| ----------- | ---------- | ------------------------------ | ---------------------------- | --------------- | -------- |
-| id          | UUID       | Identifiant                    | UUID                         | PK, unique      | 🟡🔴     |
-| project_id  | UUID       | Projet parent                  | Référence Project            | FK vers Project | 🟡🔴     |
-| github_url  | Texte      | URL du repository              | URL GitHub                   | Obligatoire     | 🟡🔴     |
-| name        | Texte      | Nom du repository              | Max 100 caractères           | Obligatoire     | 🟡🔴     |
-| description | Texte      | Description du repo            | Max 500 caractères           | Optionnel       | 🟡🔴     |
-| is_main     | Booléen    | Repository principal du projet | true/false                   | Défaut: false   | 🟡🔴     |
-| language    | Texte      | Langage principal              | "JavaScript", "Python", etc. | Optionnel       | 🟡🔴     |
-| stars_count | Entier     | Nombre d'étoiles               | ≥ 0                          | Synchronisé     | 🟡🔴     |
-| last_sync   | Date/Heure | Dernière synchronisation       | ISO 8601                     | Automatique     | 🟡🔴     |
+**Relations :**
+- `TeamMember` → `User` (N:1)
+- `TeamMember` → `Project` (N:1)
+- `TeamMember` ↔ `ProjectRole` (N:N) via `TeamMemberProjectRole`
 
 ---
 
-## 🔗 Entités de Liaison
+## 🔗 Entités de Support
 
-### 🔴 **UserSkill** — Compétences Utilisateur
+### **UserGitHubCredentials** — Credentials GitHub
 
-| Nom               | Type    | Description           | Valeurs possibles                                         | Contraintes   | Priorité |
-| ----------------- | ------- | --------------------- | --------------------------------------------------------- | ------------- | -------- |
-| id                | UUID    | Identifiant           | UUID                                                      | PK, unique    | 🔴 MVP   |
-| user_id           | UUID    | Utilisateur           | Référence User                                            | FK vers User  | 🔴 MVP   |
-| skill_id          | UUID    | Compétence            | Référence Skill                                           | FK vers Skill | 🔴 MVP   |
-| proficiency_level | Texte   | Niveau de maîtrise    | "learning", "basic", "intermediate", "advanced", "expert" | Enum          | 🔴 MVP   |
-| is_primary        | Booléen | Compétence principale | true/false                                                | Défaut: false | 🔴 MVP   |
-| created_at        | Date    | Date d'ajout          | ISO 8601                                                  | Automatique   | 🔴 MVP   |
+| Nom                | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ------------------ | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| user_id            | UUID       | Utilisateur concerné           | Référence User                         | FK vers User, PK          | MVP      |
+| github_access_token| Text       | Token d'accès GitHub           | Token OAuth GitHub                     | Optionnel                 | MVP      |
+| github_user_id     | String(100)| ID utilisateur GitHub          | ID numérique GitHub                    | Optionnel                 | MVP      |
+| created_at         | DateTime   | Date de création               | ISO 8601                               | Automatique               | MVP      |
+| updated_at         | DateTime   | Dernière mise à jour           | ISO 8601                               | Automatique               | MVP      |
 
-### 🔴 **UserTechnology** — Technologies Utilisateur
+**Relations :**
+- `UserGitHubCredentials` → `User` (1:1)
 
-| Nom               | Type    | Description              | Valeurs possibles                                         | Contraintes        | Priorité |
-| ----------------- | ------- | ------------------------ | --------------------------------------------------------- | ------------------ | -------- |
-| id                | UUID    | Identifiant              | UUID                                                      | PK, unique         | 🔴 MVP   |
-| user_id           | UUID    | Utilisateur              | Référence User                                            | FK vers User       | 🔴 MVP   |
-| technology_id     | UUID    | Technologie              | Référence Technology                                      | FK vers Technology | 🔴 MVP   |
-| proficiency_level | Texte   | Niveau de maîtrise       | "learning", "basic", "intermediate", "advanced", "expert" | Enum               | 🔴 MVP   |
-| is_primary        | Booléen | Technologie principale   | true/false                                                | Défaut: false      | 🔴 MVP   |
-| created_at        | Date    | Date d'ajout             | ISO 8601                                                  | Automatique        | 🔴 MVP   |
+### **ProjectExternalLink** — Liens Externes
 
-### 🔴 **Application** — Candidature
+| Nom        | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ---------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id         | UUID       | Identifiant du lien            | UUID                                   | PK, unique                | MVP      |
+| project_id | UUID       | Projet concerné                | Référence Project                      | FK vers Project, obligatoire | MVP   |
+| type       | String(50) | Type de lien                   | "github", "website", "documentation"   | Optionnel                 | MVP      |
+| url        | Text       | URL du lien                    | URL valide                             | Obligatoire               | MVP      |
 
-| Nom              | Type       | Description                     | Valeurs possibles                              | Contraintes             | Priorité |
-| ---------------- | ---------- | ------------------------------- | ---------------------------------------------- | ----------------------- | -------- |
-| id               | UUID       | Identifiant de la candidature   | UUID                                           | PK, unique              | 🔴 MVP   |
-| user_id          | UUID       | Utilisateur qui postule         | Référence User                                 | FK vers User            | 🔴 MVP   |
-| project_role_id  | UUID       | Rôle auquel il postule          | Référence ProjectRole                          | FK vers ProjectRole     | 🔴 MVP   |
-| motivation_message | Texte    | Message de motivation du candidat | Max 1000 caractères                          | Optionnel               | 🟡🔴     |
-| availability     | Texte      | Disponibilité                   | "immediate", "within_week", "within_month"     | Enum                    | 🔴 MVP   |
-| status           | Texte      | Statut de la candidature        | "pending", "accepted", "rejected", "withdrawn" | Enum, obligatoire       | 🔴 MVP   |
-| reviewed_by      | UUID       | Qui a évalué la candidature     | Référence User                                 | FK vers User, optionnel | 🔴 MVP   |
-| review_message   | Texte      | Message de retour               | Max 500 caractères                             | Optionnel               | 🔴 MVP   |
-| applied_at       | Date/Heure | Date de postulation             | ISO 8601                                       | Automatique             | 🔴 MVP   |
-| reviewed_at      | Date/Heure | Date d'évaluation               | ISO 8601                                       | Optionnel               | 🔴 MVP   |
+**Relations :**
+- `ProjectExternalLink` → `Project` (N:1)
 
-### 🔴 **TeamMember** — Membre d'Équipe
+### **KeyFeature** — Fonctionnalités Clés
 
-| Nom                 | Type       | Description                    | Valeurs possibles            | Contraintes             | Priorité |
-| ------------------- | ---------- | ------------------------------ | ---------------------------- | ----------------------- | -------- |
-| id                  | UUID       | Identifiant du membre          | UUID                         | PK, unique              | 🔴 MVP   |
-| user_id             | UUID       | Utilisateur membre             | Référence User               | FK vers User            | 🔴 MVP   |
-| project_id          | UUID       | Projet concerné                | Référence Project            | FK vers Project         | 🔴 MVP   |
-| project_role_id     | UUID       | Rôle dans le projet            | Référence ProjectRole        | FK vers ProjectRole     | 🔴 MVP   |
-| status              | Texte      | Statut dans l'équipe           | "active", "inactive", "left" | Enum                    | 🔴 MVP   |
-| contributions_count | Entier     | Nombre de contributions        | ≥ 0                          | Calculé automatiquement | 🔴 MVP   |
-| joined_at           | Date/Heure | Date d'entrée dans l'équipe    | ISO 8601                     | Automatique             | 🔴 MVP   |
-| left_at             | Date/Heure | Date de sortie (si applicable) | ISO 8601                     | Optionnel               | 🔴 MVP   |
+| Nom        | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ---------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id         | UUID       | Identifiant de la fonctionnalité | UUID                                 | PK, unique                | MVP      |
+| project_id | UUID       | Projet concerné                | Référence Project                      | FK vers Project, obligatoire | MVP   |
+| feature    | String(200)| Nom de la fonctionnalité       | Max 200 caractères                     | Obligatoire               | MVP      |
 
-### 🔵 **CommunityMember** — Membre Communauté
+**Relations :**
+- `KeyFeature` → `Project` (N:1)
+- `KeyFeature` ↔ `ProjectRoleApplication` (N:N) via `ProjectRoleApplicationKeyFeature`
 
-| Nom                   | Type       | Description                | Valeurs possibles | Contraintes     | Priorité    |
-| --------------------- | ---------- | -------------------------- | ----------------- | --------------- | ----------- |
-| id                    | UUID       | Identifiant                | UUID              | PK, unique      | 🔵 Future   |
-| user_id               | UUID       | Utilisateur follower       | Référence User    | FK vers User    | 🔵 Future   |
-| project_id            | UUID       | Projet suivi               | Référence Project | FK vers Project | 🔵 Future   |
-| followed_at           | Date/Heure | Date de début de suivi     | ISO 8601          | Automatique     | 🔵 Future   |
-| notifications_enabled | Booléen    | Notifications activées     | true/false        | Défaut: true    | 🔵 Future   |
+### **ProjectGoal** — Objectifs de Projet
 
-### 🟡🔵 **ProjectDomainCategory** — Domaines Projet
+| Nom        | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ---------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id         | UUID       | Identifiant de l'objectif      | UUID                                   | PK, unique                | MVP      |
+| project_id | UUID       | Projet concerné                | Référence Project                      | FK vers Project, obligatoire | MVP   |
+| goal       | String(200)| Description de l'objectif      | Max 200 caractères                     | Obligatoire               | MVP      |
 
-| Nom                | Type    | Description                    | Valeurs possibles       | Contraintes              | Priorité    |
-| ------------------ | ------- | ------------------------------ | ----------------------- | ------------------------ | ----------- |
-| id                 | UUID    | Identifiant                    | UUID                    | PK, unique               | 🟡🔵        |
-| project_id         | UUID    | Projet concerné                | Référence Project       | FK vers Project          | 🟡🔵        |
-| domain_category_id | UUID    | Catégorie de domaine           | Référence DomainCategory | FK vers DomainCategory   | 🟡🔵        |
-| is_primary         | Booléen | Domaine principal du projet    | true/false              | Défaut: false            | 🟡🔵        |
+**Relations :**
+- `ProjectGoal` → `Project` (N:1)
+- `ProjectGoal` ↔ `ProjectRoleApplication` (N:N) via `ProjectRoleApplicationProjectGoal`
 
-### 🔴 **ProjectSkill** — Compétences Projet
+### **UserSocialLink** — Liens Sociaux
 
-| Nom        | Type    | Description                | Valeurs possibles | Contraintes   | Priorité |
-| ---------- | ------- | -------------------------- | ----------------- | ------------- | -------- |
-| id         | UUID    | Identifiant                | UUID              | PK, unique    | 🔴 MVP   |
-| project_id | UUID    | Projet concerné            | Référence Project | FK vers Project | 🔴 MVP |
-| skill_id   | UUID    | Compétence utilisée        | Référence Skill   | FK vers Skill | 🔴 MVP   |
-| is_primary | Booléen | Compétence principale      | true/false        | Défaut: false | 🔴 MVP   |
+| Nom        | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ---------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id         | UUID       | Identifiant du lien            | UUID                                   | PK, unique                | MVP      |
+| user_id    | UUID       | Utilisateur concerné           | Référence User                         | FK vers User, obligatoire  | MVP      |
+| type       | String(50) | Type de réseau social          | "github", "twitter", "linkedin"        | Optionnel                 | MVP      |
+| url        | Text       | URL du profil                  | URL valide                             | Obligatoire               | MVP      |
+| created_at | DateTime   | Date de création               | ISO 8601                               | Automatique               | MVP      |
 
-### 🔴 **ProjectTechnology** — Technologies Projet
+**Relations :**
+- `UserSocialLink` → `User` (N:1)
 
-| Nom           | Type    | Description                | Valeurs possibles    | Contraintes        | Priorité |
-| ------------- | ------- | -------------------------- | -------------------- | ------------------ | -------- |
-| id            | UUID    | Identifiant                | UUID                 | PK, unique         | 🔴 MVP   |
-| project_id    | UUID    | Projet concerné            | Référence Project    | FK vers Project    | 🔴 MVP   |
-| technology_id | UUID    | Technologie utilisée       | Référence Technology | FK vers Technology | 🔴 MVP   |
-| is_primary    | Booléen | Technologie principale     | true/false           | Défaut: false      | 🔴 MVP   |
-
-### 🟡🔴 **ProjectRoleSkill** — Compétences Rôle
-
-| Nom               | Type    | Description                           | Valeurs possibles                   | Contraintes         | Priorité |
-| ----------------- | ------- | ------------------------------------- | ----------------------------------- | ------------------- | -------- |
-| id                | UUID    | Identifiant                           | UUID                                | PK, unique          | 🟡🔴     |
-| project_role_id   | UUID    | Rôle concerné                         | Référence ProjectRole               | FK vers ProjectRole | 🟡🔴     |
-| skill_id          | UUID    | Compétence requise                    | Référence Skill                     | FK vers Skill       | 🟡🔴     |
-| proficiency_level | Texte   | Niveau requis                         | "basic", "intermediate", "advanced" | Enum                | 🟡🔴     |
-| is_required       | Booléen | Compétence obligatoire ou optionnelle | true/false                          | Défaut: true        | 🟡🔴     |
-
-### 🔴 **ProjectRoleTechnology** — Technologies Rôle
-
-| Nom               | Type    | Description                            | Valeurs possibles                   | Contraintes         | Priorité |
-| ----------------- | ------- | -------------------------------------- | ----------------------------------- | ------------------- | -------- |
-| id                | UUID    | Identifiant                            | UUID                                | PK, unique          | 🔴 MVP   |
-| project_role_id   | UUID    | Rôle concerné                          | Référence ProjectRole               | FK vers ProjectRole | 🔴 MVP   |
-| technology_id     | UUID    | Technologie requise                    | Référence Technology                | FK vers Technology  | 🔴 MVP   |
-| proficiency_level | Texte   | Niveau requis                          | "basic", "intermediate", "advanced" | Enum                | 🔴 MVP   |
-| is_required       | Booléen | Technologie obligatoire ou optionnelle | true/false                          | Défaut: true        | 🔴 MVP   |
-
-### 🟡🔴 **IssueSkill** — Compétences Issue
-
-| Nom        | Type    | Description           | Valeurs possibles        | Contraintes            | Priorité |
-| ---------- | ------- | --------------------- | ------------------------ | ---------------------- | -------- |
-| id         | UUID    | Identifiant           | UUID                     | PK, unique             | 🟡🔴     |
-| issue_id   | UUID    | Issue concernée       | Référence GoodFirstIssue | FK vers GoodFirstIssue | 🟡🔴     |
-| skill_id   | UUID    | Compétence requise    | Référence Skill          | FK vers Skill          | 🟡🔴     |
-| is_primary | Booléen | Compétence principale | true/false               | Défaut: false          | 🟡🔴     |
-
-### 🔴 **IssueTechnology** — Technologies Issue
-
-| Nom           | Type    | Description              | Valeurs possibles        | Contraintes            | Priorité |
-| ------------- | ------- | ------------------------ | ------------------------ | ---------------------- | -------- |
-| id            | UUID    | Identifiant              | UUID                     | PK, unique             | 🔴 MVP   |
-| issue_id      | UUID    | Issue concernée          | Référence GoodFirstIssue | FK vers GoodFirstIssue | 🔴 MVP   |
-| technology_id | UUID    | Technologie nécessaire   | Référence Technology     | FK vers Technology     | 🔴 MVP   |
-| is_primary    | Booléen | Technologie principale   | true/false               | Défaut: false          | 🔴 MVP   |
+**Contraintes :**
+- `UNIQUE(user_id, type)` : Un utilisateur ne peut avoir qu'un lien par type
 
 ---
 
-## 🔍 Contraintes d'Intégrité
+## 📋 Tables d'Association
+
+### **ProjectTechStack** — Projets ↔ Technologies
+
+| Nom           | Type | Description                    | Contraintes                            |
+| ------------- | ---- | ------------------------------ | -------------------------------------- |
+| project_id    | UUID | Référence Project              | FK vers Project, PK                    |
+| tech_stack_id | UUID | Référence TechStack            | FK vers TechStack, PK                  |
+
+### **UserTechStack** — Utilisateurs ↔ Technologies
+
+| Nom           | Type | Description                    | Contraintes                            |
+| ------------- | ---- | ------------------------------ | -------------------------------------- |
+| user_id       | UUID | Référence User                 | FK vers User, PK                       |
+| tech_stack_id | UUID | Référence TechStack            | FK vers TechStack, PK                  |
+
+### **ProjectCategory** — Projets ↔ Catégories
+
+| Nom          | Type | Description                    | Contraintes                            |
+| ------------ | ---- | ------------------------------ | -------------------------------------- |
+| project_id   | UUID | Référence Project              | FK vers Project, PK                    |
+| category_id  | UUID | Référence Category             | FK vers Category, PK                   |
+
+### **ProjectRoleTechStack** — Rôles ↔ Technologies
+
+| Nom           | Type | Description                    | Contraintes                            |
+| ------------- | ---- | ------------------------------ | -------------------------------------- |
+| project_role_id | UUID | Référence ProjectRole          | FK vers ProjectRole, PK                |
+| tech_stack_id | UUID | Référence TechStack            | FK vers TechStack, PK                  |
+
+### **TeamMemberProjectRole** — Membres ↔ Rôles
+
+| Nom             | Type | Description                    | Contraintes                            |
+| --------------- | ---- | ------------------------------ | -------------------------------------- |
+| team_member_id  | UUID | Référence TeamMember           | FK vers TeamMember, PK                 |
+| project_role_id | UUID | Référence ProjectRole          | FK vers ProjectRole, PK                |
+
+---
+
+## 🎯 Entités de Candidature
+
+### **ProjectRoleApplication** — Candidature
+
+| Nom                 | Type       | Description                    | Valeurs possibles                      | Contraintes               | Priorité |
+| ------------------- | ---------- | ------------------------------ | -------------------------------------- | ------------------------- | -------- |
+| id                  | UUID       | Identifiant de la candidature  | UUID                                   | PK, unique                | MVP      |
+| project_id          | UUID       | Projet concerné                | Référence Project                      | FK vers Project, obligatoire | MVP   |
+| project_title       | String(100)| Titre du projet (historique)   | Max 100 caractères                     | Optionnel                 | MVP      |
+| project_role_id     | UUID       | Rôle concerné                  | Référence ProjectRole                  | FK vers ProjectRole, obligatoire | MVP |
+| project_role_title  | String(100)| Titre du rôle (historique)     | Max 100 caractères                     | Optionnel                 | MVP      |
+| project_description | Text       | Description du projet          | Description du projet                  | Optionnel                 | MVP      |
+| status              | String(20) | Statut de la candidature       | "pending", "accepted", "rejected", "withdrawn" | Obligatoire        | MVP      |
+| motivation_letter   | Text       | Lettre de motivation           | Texte de motivation                    | Optionnel                 | MVP      |
+| rejection_reason    | Text       | Raison du rejet                | Raison du rejet                        | Optionnel                 | MVP      |
+| applied_at          | DateTime   | Date de candidature            | ISO 8601                               | Automatique               | MVP      |
+| created_at          | DateTime   | Date de création               | ISO 8601                               | Automatique               | MVP      |
+| updated_at          | DateTime   | Dernière mise à jour           | ISO 8601                               | Automatique               | MVP      |
+
+**Relations :**
+- `ProjectRoleApplication` → `Project` (N:1)
+- `ProjectRoleApplication` → `ProjectRole` (N:1)
+- `ProjectRoleApplication` → `User` (N:1)
+- `ProjectRoleApplication` ↔ `KeyFeature` (N:N) via `ProjectRoleApplicationKeyFeature`
+- `ProjectRoleApplication` ↔ `ProjectGoal` (N:N) via `ProjectRoleApplicationProjectGoal`
+
+### **ProjectRoleApplicationKeyFeature** — Applications ↔ Fonctionnalités
+
+| Nom                | Type | Description                    | Contraintes                            |
+| ------------------ | ---- | ------------------------------ | -------------------------------------- |
+| application_id     | UUID | Référence ProjectRoleApplication | FK vers ProjectRoleApplication, PK    |
+| key_feature_id     | UUID | Référence KeyFeature           | FK vers KeyFeature, PK                |
+
+### **ProjectRoleApplicationProjectGoal** — Applications ↔ Objectifs
+
+| Nom                | Type | Description                    | Contraintes                            |
+| ------------------ | ---- | ------------------------------ | -------------------------------------- |
+| application_id     | UUID | Référence ProjectRoleApplication | FK vers ProjectRoleApplication, PK    |
+| key_feature_id     | UUID | Référence ProjectGoal          | FK vers ProjectGoal, PK               |
+
+---
+
+## 📊 Contraintes d'Intégrité
 
 ### **Contraintes Métier**
 
-1. **Propriété de projet** : Un utilisateur ne peut pas postuler à un rôle dans son propre projet
-2. **Unicité des membres** : Un utilisateur ne peut occuper qu'un seul rôle par projet
-3. **Slots disponibles** : Le nombre de membres actifs ne peut pas dépasser les slots disponibles
-4. **Cohérence des contributions** : Une contribution ne peut être liée qu'à une issue du même projet
-5. **Compétences ou technologies obligatoires** : Un ProjectRole doit avoir au minimum une compétence ou technologie associée
-6. **Assignation unique** : Une GoodFirstIssue ne peut être assignée qu'à un seul utilisateur à la fois
+1. **Unicité des membres** : Un utilisateur ne peut être membre que d'une fois par projet
+2. **Cohérence des candidatures** : Une candidature ne peut être liée qu'à un rôle d'un projet
+3. **Historique des applications** : Les champs `project_title` et `project_role_title` sont conservés pour l'historique
+4. **Statuts cohérents** : Les statuts des candidatures suivent un workflow défini
 
 ### **Contraintes Techniques**
 
-1. **Unicité conditionnelle** : github_username unique si non null
-2. **Validation des URLs** : Tous les champs URL doivent respecter le format URI
-3. **Cohérence temporelle** : reviewed_at >= applied_at pour les candidatures
-4. **Scores positifs** : contribution_score >= 0
-5. **Technologies valides** : Chaque Technology doit respecter le catalogue OST
-6. **Niveaux cohérents** : proficiency_level doit respecter l'ordre hiérarchique
+1. **Clés étrangères** : Toutes les FK sont correctement définies avec CASCADE où approprié
+2. **Unicité** : Les contraintes UNIQUE sont respectées (username, email, etc.)
+3. **Timestamps** : `created_at` et `updated_at` sont automatiquement gérés
+4. **UUIDs** : Toutes les clés primaires utilisent UUID pour la scalabilité
 
-### **Contraintes de Statut**
+### **Contraintes de Validation**
 
-1. **Progression des candidatures** : pending → accepted/rejected (pas de retour en arrière)
-2. **Statut des issues** : open → assigned → in_progress → completed/closed
-3. **Statut des contributions** : submitted → reviewed → merged/rejected
-4. **Statut des projets** : Cohérence avec is_seeking_contributors
+1. **URLs valides** : Tous les champs URL doivent respecter le format URI
+2. **Emails valides** : Le champ email doit respecter le format email
+3. **Longueurs respectées** : Toutes les limites de caractères sont respectées
+4. **Statuts valides** : Les champs enum respectent les valeurs définies
 
 ---
 
-## 📊 Points d'Attention Implementation
+## 🚀 Utilisation pour le ML
 
-### **🔴 MVP - Décisions Prises**
+### **Données d'Entraînement**
 
-- **Architecture Skill/Technology** : Distinction claire métier vs outils
-- **Catalogue unifié** : Technologies techniques ET métier dans Technology
-- **Validation** : Auto-déclaration libre pour MVP
-- **Assignation issues** : Système simple 1:1 sans réservation
-- **Contributions** : Tracking interne pour scoring
+1. **TF-IDF** : Utilise le champ `readme` des projets
+2. **Mistral-Embed** : Utilise les relations `ProjectTechStack` et `ProjectRoleApplication`
+3. **Features** : Les `KeyFeature` et `ProjectGoal` fournissent des métadonnées riches
 
-### **🟡 Décisions à Valider**
+### **Patterns de Données**
 
-- **motivation_message** : Obligatoire/Optionnel/Configurable par owner ?
-- **Limitation candidatures** : Nombre max par utilisateur/projet ?
-- **ProjectType** : Obligatoire MVP ou peut attendre ?
-- **LinkedRepository** : Essentiel MVP pour projets multi-repos ?
-- **DomainCategory** : Nécessaire dès MVP pour discovery ?
-
-### **🔵 Future - Évolutions Prévues**
-
-- **Catégorisation** : TechnologyCategory pour organisation
-- **Validation avancée** : Endorsement, quiz, certification
-- **Community features** : Suivi projets, notifications
-- **Gamification** : Scoring avancé, badges, leaderboards
-- **Intégration GitHub** : Sync automatique contributions
+1. **Cohérence** : Toutes les données sont cohérentes entre les entités
+2. **Historique** : Les candidatures conservent l'historique des projets/rôles
+3. **Relations** : Les relations many-to-many permettent des analyses complexes
+4. **Timestamps** : Tous les événements sont timestampés pour l'analyse temporelle
