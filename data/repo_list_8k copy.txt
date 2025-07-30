@@ -1,0 +1,2 @@
+me115/design_patterns
+SciSharp/LLamaSharp

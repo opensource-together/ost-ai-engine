@@ -18,7 +18,7 @@ import time
 from dotenv import load_dotenv
 from github import Github, GithubException, RateLimitExceededException
 
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from src.infrastructure.config import settings
 

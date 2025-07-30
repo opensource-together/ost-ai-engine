@@ -26,57 +26,11 @@ class User(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String(30), nullable=False, unique=True)
     email = Column(String(255), nullable=False, unique=True)
-    # New fields from MCD
-    bio = Column(Text)  # Max 500 characters
-    github_username = Column(String(39))  # Max 39 characters, unique if present
-    linkedin_url = Column(Text)  # URL format
-    github_url = Column(Text)  # URL format
-    portfolio_url = Column(Text)  # URL format
-    contribution_score = Column(Integer, default=0)  # ≥ 0, calculated automatically
-    level = Column(String(20), default="beginner")  # "beginner", "intermediate", "advanced"
-    is_open_to_hire = Column(Boolean, default=False)  # Open to contribution opportunities
+    login = Column(String(100))  # GitHub login
+    avatar_url = Column(Text)  # GitHub avatar URL
     location = Column(String(100))  # Max 100 characters
-    timezone = Column(String(50))  # IANA format (e.g., "Europe/Paris")
-    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
-    )
-
-    # Relationships - Simplified to avoid SQLAlchemy conflicts
-    team_memberships = relationship("TeamMember", back_populates="user")
-    user_skills = relationship("UserSkill", back_populates="user")
-    user_technologies = relationship("UserTechnology", back_populates="user")
-    owned_projects = relationship("Project", back_populates="owner")
-    community_memberships = relationship("CommunityMember", back_populates="user")
-
-
-class Project(Base):
-    __tablename__ = "PROJECT"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    owner_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)  # Project owner
-    title = Column(String(100), nullable=False)
-    description = Column(Text)
-    vision = Column(Text)  # Project vision from docs
-    github_main_repo = Column(Text)  # Main GitHub repo URL
-    website_url = Column(Text)  # Project website
-    documentation_url = Column(Text)  # URL of the documentation
-    difficulty = Column(String(20))  # "easy", "medium", "hard"
-    status = Column(String(20), default="active")  # "active", "paused", "completed", "archived"
-    is_seeking_contributors = Column(Boolean, default=True)
-    project_type = Column(String(50))  # "library", "application", "tool", "framework", "other"
-    license = Column(String(50))  # "MIT", "Apache-2.0", "GPL-3.0", "custom", "other"
-    stars_count = Column(Integer, default=0)  # Renamed from stargazers_count
-    contributors_count = Column(Integer, default=0)  # Number of active contributors
-    language = Column(String(50))  # Primary programming language
-    topics = Column(Text)  # Comma-separated topics
-    # Legacy fields for compatibility with current data
-    readme = Column(Text)
-    forks_count = Column(Integer)
-    open_issues_count = Column(Integer)
-    pushed_at = Column(DateTime(timezone=True))
+    company = Column(String(100))  # Company name
+    bio = Column(Text)  # Max 500 characters
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime(timezone=True),
@@ -85,55 +39,40 @@ class Project(Base):
     )
 
     # Relationships
-    owner = relationship("User", back_populates="owned_projects")
-    roles = relationship("ProjectRole", back_populates="project")
-    team_members = relationship("TeamMember", back_populates="project")
-    contributions = relationship("Contribution", back_populates="project")
-    issues = relationship("GoodFirstIssue", back_populates="project")
-    linked_repositories = relationship("LinkedRepository", back_populates="project")
-    project_skills = relationship("ProjectSkill", back_populates="project")
-    project_technologies = relationship("ProjectTechnology", back_populates="project")
-    project_domain_categories = relationship("ProjectDomainCategory", back_populates="project")
-    community_members = relationship("CommunityMember", back_populates="project")
+    github_credentials = relationship("UserGitHubCredentials", back_populates="user", uselist=False)
+    tech_stacks = relationship("TechStack", secondary="user_tech_stack", back_populates="users")
+    social_links = relationship("UserSocialLink", back_populates="user")
+    projects = relationship("Project", back_populates="author")
+    project_role_applications = relationship("ProjectRoleApplication", back_populates="user")
 
 
-class ProjectTraining(Base):
-    """
-    Model for preprocessed project data used in ML training pipeline.
-    This table contains cleaned and balanced data from the original PROJECT table.
-    """
-    __tablename__ = "PROJECT_training"
+class UserGitHubCredentials(Base):
+    __tablename__ = "USER_GITHUB_CREDENTIALS"
 
-    id = Column(UUID(as_uuid=True), primary_key=True)
+    user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), primary_key=True)
+    github_access_token = Column(Text)
+    github_user_id = Column(String(100))
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+    )
+
+    user = relationship("User", back_populates="github_credentials")
+
+
+class Project(Base):
+    __tablename__ = "PROJECT"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    author_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"))  # Project author
     title = Column(String(100), nullable=False)
-    description = Column(Text)  # Contains combined cleaned text (title + description)
-    vision = Column(Text)  # Project vision
-    github_main_repo = Column(Text)  # Main GitHub repo URL
-    website_url = Column(Text)  # Project website
-    difficulty = Column(String(20))  # "easy", "medium", "hard"
-    status = Column(String(20), default="active")
-    is_seeking_contributors = Column(Boolean, default=True)
-    project_type = Column(String(50))  # "web_app", "api", "cli", "mobile_app", "library"
-    license = Column(String(50))  # License type
-    stars_count = Column(Integer, default=0)  # Renamed from stargazers_count
-    language = Column(String(50))  # Primary programming language
-    topics = Column(Text)  # Comma-separated cleaned topics
-    # Legacy fields for ML compatibility
-    readme = Column(Text)
-    forks_count = Column(Integer)
-    open_issues_count = Column(Integer)
-    pushed_at = Column(DateTime(timezone=True))
-    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-
-
-class DomainCategory(Base):
-    """Domain categories for projects (Education, Health, Finance, Gaming, etc.)"""
-    __tablename__ = "DOMAIN_CATEGORY"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String(100), nullable=False, unique=True)  # "Education", "Santé", "Finance", "Gaming", "DevTools"
-    description = Column(Text)  # Max 500 characters
-    icon_url = Column(Text)  # URL format
+    description = Column(Text)
+    short_description = Column(Text)  # ADDED from prod schema
+    image = Column(Text)  # Project image URL
+    cover_images = Column(Text)  # Array of cover image URLs (1 to 4) - stored as JSON string
+    readme = Column(Text)  # README content from GitHub
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
     updated_at = Column(
         DateTime(timezone=True),
@@ -141,91 +80,43 @@ class DomainCategory(Base):
         onupdate=datetime.datetime.utcnow,
     )
 
-    project_domain_categories = relationship("ProjectDomainCategory", back_populates="domain_category")
+    # Relationships
+    author = relationship("User", back_populates="projects")
+    external_links = relationship("ProjectExternalLink", back_populates="project")
+    tech_stacks = relationship("TechStack", secondary="project_tech_stack", back_populates="projects")
+    project_members = relationship("TeamMember", back_populates="project")
+    project_roles = relationship("ProjectRole", back_populates="project")
+    categories = relationship("Category", secondary="project_category", back_populates="projects")
+    key_features = relationship("KeyFeature", back_populates="project")
+    project_goals = relationship("ProjectGoal", back_populates="project")
+    project_role_applications = relationship("ProjectRoleApplication", back_populates="project")
 
 
-class Technology(Base):
-    """Technologies and tools (React, Python, Figma, Docker, Slack, Notion, etc.)"""
-    __tablename__ = "TECHNOLOGY"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String(100), nullable=False, unique=True)  # "React", "Python", "Figma", "Docker", "Slack", "Notion"
-    description = Column(Text)  # Max 500 characters
-    icon_url = Column(Text)  # URL format
-    category = Column(String(50))  # "frontend", "backend", "design", "devops", "business", "other"
-    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
-    )
-
-    user_technologies = relationship("UserTechnology", back_populates="technology")
-    project_technologies = relationship("ProjectTechnology", back_populates="technology")
-    project_role_technologies = relationship("ProjectRoleTechnology", back_populates="technology")
-    issue_technologies = relationship("IssueTechnology", back_populates="technology")
-
-
-class SkillCategory(Base):
-    __tablename__ = "SKILL_CATEGORY"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    name = Column(String(100), nullable=False, unique=True)  # "Frontend", "Backend", "Design", etc.
-    description = Column(Text)  # Max 500 characters
-    icon_url = Column(Text)  # URL format
-    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
-    )
-
-    skills = relationship("Skill", back_populates="category")
-
-
-class Skill(Base):
-    """Business skills (Product Management, Marketing, SEO, Community Management, etc.)"""
-    __tablename__ = "SKILL"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    skill_category_id = Column(UUID(as_uuid=True), ForeignKey("SKILL_CATEGORY.id"), nullable=False)
-    name = Column(String(100), nullable=False, unique=True)  # "Product Management", "Marketing", "SEO", "Community Management"
-    description = Column(Text)  # Max 500 characters
-    icon_url = Column(Text)  # URL format
-    is_technical = Column(Boolean, default=True)  # Technical skill or not
-    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    updated_at = Column(
-        DateTime(timezone=True),
-        default=datetime.datetime.utcnow,
-        onupdate=datetime.datetime.utcnow,
-    )
-
-    category = relationship("SkillCategory", back_populates="skills")
-    user_skills = relationship("UserSkill", back_populates="skill")
-    project_skills = relationship("ProjectSkill", back_populates="skill")
-    project_role_skills = relationship("ProjectRoleSkill", back_populates="skill")
-    issue_skills = relationship("IssueSkill", back_populates="skill")
-
-
-class ProjectRole(Base):
-    __tablename__ = "PROJECT_ROLE"
+class ProjectExternalLink(Base):
+    __tablename__ = "PROJECT_EXTERNAL_LINK"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    title = Column(String(100), nullable=False)
-    description = Column(Text)  # Max 1000 characters
-    responsibility_level = Column(String(20))  # "contributor", "maintainer", "lead"
-    time_commitment = Column(String(20))  # "few_hours", "part_time", "full_time"
-    slots_available = Column(Integer, default=1)  # ≥ 0
-    slots_filled = Column(Integer, default=0)  # Calculated automatically
-    experience_required = Column(String(20))  # "none", "some", "experienced"
+    type = Column(String(50))  # "github", "website", "documentation", etc.
+    url = Column(Text, nullable=False)
+
+    project = relationship("Project", back_populates="external_links")
+
+
+class TechStack(Base):
+    """Technologies and tools (React, Python, Figma, Docker, etc.)"""
+    __tablename__ = "TECH_STACK"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    name = Column(String(100), nullable=False, unique=True)  # "React", "Python", "Figma", "Docker"
+    icon_url = Column(Text)  # URL format
+    type = Column(String(20))  # "LANGUAGE" or "TECH"
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
 
-    project = relationship("Project", back_populates="roles")
-    applications = relationship("Application", back_populates="role")
-    required_skills = relationship("ProjectRoleSkill", back_populates="project_role")
-    required_technologies = relationship("ProjectRoleTechnology", back_populates="project_role")
-    team_members = relationship("TeamMember", back_populates="project_role")
+    # Many-to-many relationships
+    projects = relationship("Project", secondary="project_tech_stack", back_populates="tech_stacks")
+    project_roles = relationship("ProjectRole", secondary="project_role_tech_stack", back_populates="tech_stacks")
+    users = relationship("User", secondary="user_tech_stack", back_populates="tech_stacks")
 
 
 class TeamMember(Base):
@@ -234,280 +125,170 @@ class TeamMember(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)
     project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    project_role_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE.id"), nullable=False)
-    status = Column(String(20), default="active")  # "active", "inactive", "left"
-    contributions_count = Column(Integer, default=0)  # Calculated automatically
     joined_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    left_at = Column(DateTime(timezone=True))  # Optional
 
-    user = relationship("User", back_populates="team_memberships")
-    project = relationship("Project", back_populates="team_members")
-    project_role = relationship("ProjectRole", back_populates="team_members")
-
-    __table_args__ = (
-        UniqueConstraint('user_id', 'project_id', name='uq_team_member'),
-    )
+    # Relationships
+    user = relationship("User")
+    project = relationship("Project", back_populates="project_members")
+    project_roles = relationship("ProjectRole", secondary="team_member_project_role", back_populates="team_members")
 
 
-class Contribution(Base):
-    __tablename__ = "CONTRIBUTION"
+class ProjectRole(Base):
+    __tablename__ = "PROJECT_ROLE"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)
     project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    issue_id = Column(UUID(as_uuid=True), ForeignKey("GOOD_FIRST_ISSUE.id"))  # Optional
-    type = Column(String(50))  # "code", "design", "documentation", "bug_fix", "feature", "other"
-    title = Column(String(200), nullable=False)  # Max 200 characters
-    description = Column(Text)  # Max 1000 characters
-    github_pr_url = Column(Text)  # URL format
-    status = Column(String(20), default="submitted")  # "submitted", "reviewed", "merged", "rejected"
-    reviewed_by = Column(UUID(as_uuid=True), ForeignKey("USER.id"))  # Optional
-    submitted_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    merged_at = Column(DateTime(timezone=True))  # Optional
+    title = Column(String(100), nullable=False)
+    description = Column(Text)
+    is_filled = Column(Boolean, default=False)
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
+    )
 
-    # Relationships - Simplified to avoid SQLAlchemy conflicts
-    project = relationship("Project", back_populates="contributions")
-    issue = relationship("GoodFirstIssue", back_populates="contributions")
+    # Relationships
+    project = relationship("Project", back_populates="project_roles")
+    tech_stacks = relationship("TechStack", secondary="project_role_tech_stack", back_populates="project_roles")
+    team_members = relationship("TeamMember", secondary="team_member_project_role", back_populates="project_roles")
+    applications = relationship("ProjectRoleApplication", back_populates="project_role")
 
 
-class Application(Base):
-    __tablename__ = "APPLICATION"
+class ProjectRoleApplication(Base):
+    __tablename__ = "PROJECT_ROLE_APPLICATION"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)
-    project_role_id = Column(
-        UUID(as_uuid=True), ForeignKey("PROJECT_ROLE.id"), nullable=False
-    )
-    portfolio_links = Column(Text)  # JSON array of URLs
-    availability = Column(String(20))  # "immediate", "within_week", "within_month"
-    status = Column(String(20), default="pending")  # "pending", "accepted", "rejected", "withdrawn"
-    reviewed_by = Column(UUID(as_uuid=True), ForeignKey("USER.id"))  # Optional
-    review_message = Column(Text)  # Max 500 characters
+    project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
+    project_title = Column(String(100))  # Keep for history
+    project_role_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE.id"), nullable=False)
+    project_role_title = Column(String(100))  # Keep for history
+    project_description = Column(Text)  # New field for project description
+    status = Column(String(20))  # "pending", "accepted", "rejected", "withdrawn"
+    motivation_letter = Column(Text)
+    rejection_reason = Column(Text)
     applied_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    reviewed_at = Column(DateTime(timezone=True))  # Optional
-
-    # Relationships - Simplified to avoid SQLAlchemy conflicts
-    role = relationship("ProjectRole", back_populates="applications")
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "project_role_id", name="_user_project_role_uc"),
+    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
+    updated_at = Column(
+        DateTime(timezone=True),
+        default=datetime.datetime.utcnow,
+        onupdate=datetime.datetime.utcnow,
     )
 
+    # Relationships
+    project_role = relationship("ProjectRole", back_populates="applications")
+    user = relationship("User", back_populates="project_role_applications")
+    project = relationship("Project", back_populates="project_role_applications")
+    selected_key_features = relationship("KeyFeature", secondary="project_role_application_key_feature", back_populates="applications")
+    selected_project_goals = relationship("ProjectGoal", secondary="project_role_application_project_goal", back_populates="applications")
 
-class UserSkill(Base):
-    __tablename__ = "USER_SKILL"
+
+class UserSocialLink(Base):
+    __tablename__ = "USER_SOCIAL_LINK"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("SKILL.id"), nullable=False)
-    proficiency_level = Column(String(20), nullable=False)  # "learning", "basic", "intermediate", "advanced", "expert"
-    is_primary = Column(Boolean, default=False)  # Primary skill or not
+    type = Column(String(50))  # "github", "twitter", "linkedin", "website"
+    url = Column(Text, nullable=False)
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
 
-    user = relationship("User", back_populates="user_skills")
-    skill = relationship("Skill", back_populates="user_skills")
+    user = relationship("User", back_populates="social_links")
 
     __table_args__ = (
-        UniqueConstraint("user_id", "skill_id", name="_user_skill_uc"),
+        UniqueConstraint("user_id", "type", name="_user_social_link_uc"),
     )
 
 
-class UserTechnology(Base):
-    """User's technology proficiency"""
-    __tablename__ = "USER_TECHNOLOGY"
+class Category(Base):
+    """Categories for projects (Education, Health, Finance, Gaming, etc.)"""
+    __tablename__ = "CATEGORY"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)
-    technology_id = Column(UUID(as_uuid=True), ForeignKey("TECHNOLOGY.id"), nullable=False)
-    proficiency_level = Column(String(20), nullable=False)  # "learning", "basic", "intermediate", "advanced", "expert"
-    is_primary = Column(Boolean, default=False)  # Primary technology or not
+    name = Column(String(100), nullable=False, unique=True)  # "Education", "Finance", "Gaming", "DevTools"
     created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
 
-    user = relationship("User", back_populates="user_technologies")
-    technology = relationship("Technology", back_populates="user_technologies")
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "technology_id", name="_user_technology_uc"),
-    )
+    # Many-to-many relationship
+    projects = relationship("Project", secondary="project_category", back_populates="categories")
 
 
-class ProjectDomainCategory(Base):
-    """Project's domain categories"""
-    __tablename__ = "PROJECT_DOMAIN_CATEGORY"
+class KeyFeature(Base):
+    """Key features of a project"""
+    __tablename__ = "KEY_FEATURE"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    domain_category_id = Column(UUID(as_uuid=True), ForeignKey("DOMAIN_CATEGORY.id"), nullable=False)
-    is_primary = Column(Boolean, default=False)  # Primary domain category
+    feature = Column(String(200), nullable=False)
 
-    project = relationship("Project", back_populates="project_domain_categories")
-    domain_category = relationship("DomainCategory", back_populates="project_domain_categories")
-
-    __table_args__ = (
-        UniqueConstraint("project_id", "domain_category_id", name="_project_domain_category_uc"),
-    )
+    project = relationship("Project", back_populates="key_features")
+    applications = relationship("ProjectRoleApplication", secondary="project_role_application_key_feature", back_populates="selected_key_features")
 
 
-class ProjectSkill(Base):
-    """Skills used by a project"""
-    __tablename__ = "PROJECT_SKILL"
+class ProjectGoal(Base):
+    """Goals of a project"""
+    __tablename__ = "PROJECT_GOAL"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("SKILL.id"), nullable=False)
-    is_primary = Column(Boolean, default=False)  # Primary skill for the project
+    goal = Column(String(200), nullable=False)
 
-    project = relationship("Project", back_populates="project_skills")
-    skill = relationship("Skill", back_populates="project_skills")
-
-    __table_args__ = (
-        UniqueConstraint("project_id", "skill_id", name="_project_skill_uc"),
-    )
+    project = relationship("Project", back_populates="project_goals")
+    applications = relationship("ProjectRoleApplication", secondary="project_role_application_project_goal", back_populates="selected_project_goals")
 
 
-class ProjectTechnology(Base):
-    """Technologies used by a project"""
-    __tablename__ = "PROJECT_TECHNOLOGY"
+# --- Many-to-Many Association Tables ---
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    technology_id = Column(UUID(as_uuid=True), ForeignKey("TECHNOLOGY.id"), nullable=False)
-    is_primary = Column(Boolean, default=False)  # Primary technology for the project
+class ProjectTechStack(Base):
+    """Association table for Project-TechStack many-to-many"""
+    __tablename__ = "PROJECT_TECH_STACK"
 
-    project = relationship("Project", back_populates="project_technologies")
-    technology = relationship("Technology", back_populates="project_technologies")
-
-    __table_args__ = (
-        UniqueConstraint("project_id", "technology_id", name="_project_technology_uc"),
-    )
+    project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), primary_key=True)
+    tech_stack_id = Column(UUID(as_uuid=True), ForeignKey("TECH_STACK.id"), primary_key=True)
 
 
-class ProjectRoleSkill(Base):
-    __tablename__ = "PROJECT_ROLE_SKILL"
+class UserTechStack(Base):
+    """Association table for User-TechStack many-to-many"""
+    __tablename__ = "USER_TECH_STACK"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_role_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE.id"), nullable=False)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("SKILL.id"), nullable=False)
-    proficiency_level = Column(String(20), nullable=False)  # "basic", "intermediate", "advanced"
-    is_required = Column(Boolean, default=True)  # Required or optional skill
-
-    project_role = relationship("ProjectRole", back_populates="required_skills")
-    skill = relationship("Skill", back_populates="project_role_skills")
-
-    __table_args__ = (
-        UniqueConstraint("project_role_id", "skill_id", name="_project_role_skill_uc"),
-    )
+    user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), primary_key=True)
+    tech_stack_id = Column(UUID(as_uuid=True), ForeignKey("TECH_STACK.id"), primary_key=True)
 
 
-class ProjectRoleTechnology(Base):
-    """Technologies required for a project role"""
-    __tablename__ = "PROJECT_ROLE_TECHNOLOGY"
+class ProjectCategory(Base):
+    """Association table for Project-Category many-to-many"""
+    __tablename__ = "PROJECT_CATEGORY"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_role_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE.id"), nullable=False)
-    technology_id = Column(UUID(as_uuid=True), ForeignKey("TECHNOLOGY.id"), nullable=False)
-    proficiency_level = Column(String(20), nullable=False)  # "basic", "intermediate", "advanced"
-    is_required = Column(Boolean, default=True)  # Required or optional technology
-
-    project_role = relationship("ProjectRole", back_populates="required_technologies")
-    technology = relationship("Technology", back_populates="project_role_technologies")
-
-    __table_args__ = (
-        UniqueConstraint("project_role_id", "technology_id", name="_project_role_technology_uc"),
-    )
+    project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), primary_key=True)
+    category_id = Column(UUID(as_uuid=True), ForeignKey("CATEGORY.id"), primary_key=True)
 
 
-class GoodFirstIssue(Base):
-    __tablename__ = "GOOD_FIRST_ISSUE"
+class ProjectRoleTechStack(Base):
+    """Association table for ProjectRole-TechStack many-to-many"""
+    __tablename__ = "PROJECT_ROLE_TECH_STACK"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    created_by = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)
-    title = Column(String(200), nullable=False)  # Max 200 characters
-    description = Column(Text)  # Max 2000 characters
-    github_issue_url = Column(Text)  # URL format
-    estimated_time = Column(String(20))  # "30min", "1h", "2h", "4h", "1day"
-    difficulty = Column(String(20))  # "very_easy", "easy", "medium"
-    status = Column(String(20), default="open")  # "open", "assigned", "in_progress", "completed", "closed"
-    assigned_to = Column(UUID(as_uuid=True), ForeignKey("USER.id"))  # Optional
-    is_ai_generated = Column(Boolean, default=False)  # AI-generated issue
-    created_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    completed_at = Column(DateTime(timezone=True))  # Optional
-
-    project = relationship("Project", back_populates="issues")
-    # Relationships - Simplified to avoid SQLAlchemy conflicts
-    issue_skills = relationship("IssueSkill", back_populates="issue")
-    issue_technologies = relationship("IssueTechnology", back_populates="issue")
-    contributions = relationship("Contribution", back_populates="issue")
+    project_role_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE.id"), primary_key=True)
+    tech_stack_id = Column(UUID(as_uuid=True), ForeignKey("TECH_STACK.id"), primary_key=True)
 
 
-class IssueSkill(Base):
-    __tablename__ = "ISSUE_SKILL"
+class TeamMemberProjectRole(Base):
+    """Association table for TeamMember-ProjectRole many-to-many"""
+    __tablename__ = "TEAM_MEMBER_PROJECT_ROLE"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    issue_id = Column(UUID(as_uuid=True), ForeignKey("GOOD_FIRST_ISSUE.id"), nullable=False)
-    skill_id = Column(UUID(as_uuid=True), ForeignKey("SKILL.id"), nullable=False)
-    is_primary = Column(Boolean, default=False)  # Primary skill for the issue
-
-    issue = relationship("GoodFirstIssue", back_populates="issue_skills")
-    skill = relationship("Skill", back_populates="issue_skills")
-
-    __table_args__ = (
-        UniqueConstraint("issue_id", "skill_id", name="_issue_skill_uc"),
-    )
+    team_member_id = Column(UUID(as_uuid=True), ForeignKey("TEAM_MEMBER.id"), primary_key=True)
+    project_role_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE.id"), primary_key=True)
 
 
-class IssueTechnology(Base):
-    """Technologies needed for an issue"""
-    __tablename__ = "ISSUE_TECHNOLOGY"
+class ProjectRoleApplicationKeyFeature(Base):
+    """Association table for ProjectRoleApplication-KeyFeature many-to-many"""
+    __tablename__ = "PROJECT_ROLE_APPLICATION_KEY_FEATURE"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    issue_id = Column(UUID(as_uuid=True), ForeignKey("GOOD_FIRST_ISSUE.id"), nullable=False)
-    technology_id = Column(UUID(as_uuid=True), ForeignKey("TECHNOLOGY.id"), nullable=False)
-    is_primary = Column(Boolean, default=False)  # Primary technology for the issue
-
-    issue = relationship("GoodFirstIssue", back_populates="issue_technologies")
-    technology = relationship("Technology", back_populates="issue_technologies")
-
-    __table_args__ = (
-        UniqueConstraint("issue_id", "technology_id", name="_issue_technology_uc"),
-    )
+    application_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE_APPLICATION.id"), primary_key=True)
+    key_feature_id = Column(UUID(as_uuid=True), ForeignKey("KEY_FEATURE.id"), primary_key=True)
 
 
-class CommunityMember(Base):
-    """Users following projects as community members"""
-    __tablename__ = "COMMUNITY_MEMBER"
+class ProjectRoleApplicationProjectGoal(Base):
+    """Association table for ProjectRoleApplication-ProjectGoal many-to-many"""
+    __tablename__ = "PROJECT_ROLE_APPLICATION_PROJECT_GOAL"
 
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("USER.id"), nullable=False)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    followed_at = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-    notifications_enabled = Column(Boolean, default=True)  # Enable notifications for this project
-
-    user = relationship("User", back_populates="community_memberships")
-    project = relationship("Project", back_populates="community_members")
-
-    __table_args__ = (
-        UniqueConstraint("user_id", "project_id", name="_community_member_uc"),
-    )
-
-
-class LinkedRepository(Base):
-    __tablename__ = "LINKED_REPOSITORY"
-
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), nullable=False)
-    github_url = Column(Text, nullable=False)  # GitHub URL
-    name = Column(String(100), nullable=False)  # Max 100 characters
-    description = Column(Text)  # Max 500 characters
-    is_main = Column(Boolean, default=False)  # Main repository of the project
-    language = Column(String(50))  # "JavaScript", "Python", etc.
-    stars_count = Column(Integer, default=0)  # ≥ 0, synchronized
-    last_sync = Column(DateTime(timezone=True), default=datetime.datetime.utcnow)
-
-    project = relationship("Project", back_populates="linked_repositories")
-
-    __table_args__ = (
-        UniqueConstraint("project_id", "github_url", name="_linked_repository_uc"),
-    )
+    application_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_ROLE_APPLICATION.id"), primary_key=True)
+    key_feature_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT_GOAL.id"), primary_key=True)
  
