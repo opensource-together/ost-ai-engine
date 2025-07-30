@@ -123,4 +123,5 @@ model/
 *.sh
 
 # DB test
-test_api.db
+*.db
+*.prisma

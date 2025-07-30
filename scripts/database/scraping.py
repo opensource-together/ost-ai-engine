@@ -17,18 +17,13 @@ from sqlalchemy.orm import Session
 from src.domain.models.schema import (
     Project,
     ProjectRole,
-    ProjectSkill,
-    ProjectTechnology,
-    ProjectDomainCategory,
-    ProjectRoleSkill,
-    ProjectRoleTechnology,
-    IssueSkill,
-    IssueTechnology,
-    LinkedRepository,
-    GoodFirstIssue,
-    Skill,
-    Technology,
-    DomainCategory,
+    ProjectTechStack,
+    ProjectCategory,
+    ProjectRoleTechStack,
+    KeyFeature,
+    ProjectGoal,
+    TechStack,
+    Category,
     User,
 )
 from src.infrastructure.config import settings
@@ -163,6 +158,7 @@ class MockGithubScraper:
         return {
             "title": name.replace("-", " ").title(),
             "description": self._faker.sentence(),
+            "short_description": self._faker.sentence(nb_words=10),
             "readme": self._faker.text(max_nb_chars=1000),
             "language": category["language"],
             "topics": category["topics"] + self._faker.words(nb=random.randint(1, 3)),
@@ -200,6 +196,9 @@ class ProjectScraper:
         # Link projects to entities
         self._link_projects_to_entities(projects)
         
+        # Create key features and project goals
+        self._create_project_features_and_goals(projects)
+        
         log.info("🎉 Project scraping completed successfully!")
         self._log_project_statistics()
     
@@ -208,26 +207,18 @@ class ProjectScraper:
         log.info("Clearing existing project data...")
         
         # Delete in correct order to respect foreign key constraints
+        self.db.query(ProjectRoleTechStack).delete()
         self.db.query(ProjectRole).delete()
-        
-        # Clear project-entity linking tables
-        self.db.query(ProjectSkill).delete()
-        self.db.query(ProjectTechnology).delete()
-        self.db.query(ProjectDomainCategory).delete()
-        self.db.query(ProjectRoleSkill).delete()
-        self.db.query(ProjectRoleTechnology).delete()
-        self.db.query(IssueSkill).delete()
-        self.db.query(IssueTechnology).delete()
-        self.db.query(LinkedRepository).delete()
-        self.db.query(GoodFirstIssue).delete()
+        self.db.query(ProjectTechStack).delete()
+        self.db.query(ProjectCategory).delete()
+        self.db.query(KeyFeature).delete()
+        self.db.query(ProjectGoal).delete()
         
         # Now safe to delete projects
         self.db.query(Project).delete()
         self.db.commit()
         
         log.info("✅ Cleared existing project data")
-    
-
     
     def _fetch_projects(self, repo_file: str, num_projects: int, use_mock: bool):
         """Fetch projects from GitHub or use mock data."""
@@ -273,28 +264,27 @@ class ProjectScraper:
         default_owner = User(
             username="github_owner",
             email="owner@github.com",
+            login="github_owner",
             bio="Default owner for scraped projects",
-            github_username="github_owner",
-            level="advanced"
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
         )
         self.db.add(default_owner)
         self.db.flush()  # Get the ID without committing
         
-        # Create Project objects (UPDATED - removed legacy fields)
+        # Create Project objects
         projects = []
         for gh_project in gh_projects:
             project = Project(
+                author_id=default_owner.id,
                 title=gh_project["title"],
                 description=gh_project["description"],
-                # REMOVED: readme, language, topics, forks_count, open_issues_count, pushed_at
-                github_main_repo=gh_project.get("html_url", None),
-                stars_count=gh_project["stargazers_count"],
-                owner_id=default_owner.id,  # Use default owner
-                status="active",
-                is_seeking_contributors=True,
-                project_type=gh_project.get("project_type", "library"),
-                difficulty=gh_project.get("difficulty", "medium"),
-                license=random.choice(["MIT", "Apache-2.0", "GPL-3.0", "custom", "other"])
+                short_description=gh_project.get("short_description", gh_project["description"][:100]),
+                image=f"https://github.com/fake-org/{gh_project['title'].lower().replace(' ', '-')}/raw/main/screenshot.png",
+                cover_images=f'["https://github.com/fake-org/{gh_project["title"].lower().replace(" ", "-")}/raw/main/cover1.png", "https://github.com/fake-org/{gh_project["title"].lower().replace(" ", "-")}/raw/main/cover2.png"]',
+                readme=gh_project.get("readme", ""),
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow()
             )
             projects.append(project)
         
@@ -316,11 +306,9 @@ class ProjectScraper:
                     project_id=project.id,
                     title=f"Developer Role {i + 1}",
                     description=f"A sample description for role {i + 1} on project {project.title}.",
-                    responsibility_level=random.choice(["contributor", "maintainer", "lead"]),
-                    time_commitment=random.choice(["few_hours", "part_time", "full_time"]),
-                    slots_available=random.randint(1, 3),
-                    slots_filled=0,
-                    experience_required=random.choice(["none", "some", "experienced"])
+                    is_filled=random.choice([True, False]),
+                    created_at=datetime.utcnow(),
+                    updated_at=datetime.utcnow()
                 )
                 roles.append(role)
         
@@ -330,112 +318,171 @@ class ProjectScraper:
         log.info(f"✅ Created {len(roles)} project roles")
         return roles
     
-
-    
     def _link_projects_to_entities(self, projects: list):
-        """Link projects to skills, technologies, and domains coherently."""
+        """Link projects to tech stacks and categories coherently."""
         log.info("Linking projects to entities...")
         
-        skills = self.db.query(Skill).all()
-        technologies = self.db.query(Technology).all()
-        domains = self.db.query(DomainCategory).all()
+        tech_stacks = self.db.query(TechStack).all()
+        categories = self.db.query(Category).all()
         
-        if not skills or not technologies or not domains:
-            log.warning("Missing entities. Run create_tables.py first.")
+        if not tech_stacks or not categories:
+            log.warning("Missing entities. Run simulate_projects.py first.")
             return
         
-        project_skills = []
-        project_technologies = []
-        project_domains = []
+        project_tech_stacks = []
+        project_categories = []
+        project_role_tech_stacks = []
         
         for project in projects:
-            # Link based on project type and random assignment (since we removed language field)
-            # We'll use project_type and random assignment for now
-            if project.project_type == "library":
-                project_skills.extend([
-                    ProjectSkill(project_id=project.id, skill_id=s.id, is_primary=True)
-                    for s in skills if s.name in ["Python", "Data Analysis", "Machine Learning", "Systems Programming"]
-                ])
-                project_technologies.extend([
-                    ProjectTechnology(project_id=project.id, technology_id=t.id, is_primary=True)
-                    for t in technologies if t.name in ["Python", "Docker", "GitHub", "Git"]
-                ])
-            elif project.project_type == "application":
-                project_skills.extend([
-                    ProjectSkill(project_id=project.id, skill_id=s.id, is_primary=True)
-                    for s in skills if s.name in ["React", "Vue.js", "TypeScript", "Web Development", "Mobile Development"]
-                ])
-                project_technologies.extend([
-                    ProjectTechnology(project_id=project.id, technology_id=t.id, is_primary=True)
-                    for t in technologies if t.name in ["React", "Vue.js", "TypeScript", "Node.js", "GitHub"]
-                ])
-            elif project.project_type == "tool":
-                project_skills.extend([
-                    ProjectSkill(project_id=project.id, skill_id=s.id, is_primary=True)
-                    for s in skills if s.name in ["Go", "API Design", "Database Design", "Systems Programming"]
-                ])
-                project_technologies.extend([
-                    ProjectTechnology(project_id=project.id, technology_id=t.id, is_primary=True)
-                    for t in technologies if t.name in ["Go", "Docker", "Kubernetes", "GitHub"]
-                ])
-            elif project.project_type == "framework":
-                project_skills.extend([
-                    ProjectSkill(project_id=project.id, skill_id=s.id, is_primary=True)
-                    for s in skills if s.name in ["Java", "Spring Boot", "API Design", "Web Development"]
-                ])
-                project_technologies.extend([
-                    ProjectTechnology(project_id=project.id, technology_id=t.id, is_primary=True)
-                    for t in technologies if t.name in ["Java", "Spring Boot", "Maven", "GitHub"]
-                ])
-            else:  # "other" or default
-                project_skills.extend([
-                    ProjectSkill(project_id=project.id, skill_id=s.id, is_primary=True)
-                    for s in skills if s.name in ["Python", "Web Development", "API Design"]
-                ])
-                project_technologies.extend([
-                    ProjectTechnology(project_id=project.id, technology_id=t.id, is_primary=True)
-                    for t in technologies if t.name in ["Python", "Git", "GitHub"]
-                ])
+            # Link based on project description and random assignment
+            # We'll use project description and random assignment for now
+            if "python" in project.description.lower() or "data" in project.description.lower():
+                # Python/Data projects
+                matching_techs = [t for t in tech_stacks if t.name in ["Python", "Pandas", "PostgreSQL", "GitHub"]]
+                matching_categories = [c for c in categories if c.name in ["Data Science", "AI/ML", "DevTools"]]
+            elif "react" in project.description.lower() or "frontend" in project.description.lower():
+                # Frontend projects
+                matching_techs = [t for t in tech_stacks if t.name in ["React", "Vue.js", "TypeScript", "CSS", "HTML"]]
+                matching_categories = [c for c in categories if c.name in ["Web Development", "Social", "E-commerce"]]
+            elif "mobile" in project.description.lower() or "app" in project.description.lower():
+                # Mobile projects
+                matching_techs = [t for t in tech_stacks if t.name in ["React Native", "Flutter", "Swift", "Kotlin"]]
+                matching_categories = [c for c in categories if c.name in ["Mobile Development", "Gaming", "Social"]]
+            elif "backend" in project.description.lower() or "api" in project.description.lower():
+                # Backend projects
+                matching_techs = [t for t in tech_stacks if t.name in ["Node.js", "Java", "Go", "PostgreSQL", "Docker"]]
+                matching_categories = [c for c in categories if c.name in ["DevTools", "Finance", "E-commerce"]]
+            else:
+                # Default projects
+                matching_techs = [t for t in tech_stacks if t.name in ["Python", "Git", "GitHub"]]
+                matching_categories = [c for c in categories if c.name in ["DevTools", "Web Development"]]
+            
+            # Add primary tech stacks and categories
+            for tech in matching_techs[:3]:  # Limit to 3 primary techs
+                project_tech_stacks.append(ProjectTechStack(
+                    project_id=project.id,
+                    tech_stack_id=tech.id
+                ))
+            
+            for category in matching_categories[:2]:  # Limit to 2 primary categories
+                project_categories.append(ProjectCategory(
+                    project_id=project.id,
+                    category_id=category.id
+                ))
             
             # Add some random secondary links
-            num_secondary_skills = min(random.randint(1, 3), len(skills))
-            num_secondary_techs = min(random.randint(1, 3), len(technologies))
-            num_domains = min(random.randint(1, 2), len(domains))
+            num_secondary_techs = min(random.randint(1, 3), len(tech_stacks))
+            num_secondary_categories = min(random.randint(1, 2), len(categories))
             
-            secondary_skills = random.sample(skills, num_secondary_skills)
-            secondary_techs = random.sample(technologies, num_secondary_techs)
-            selected_domains = random.sample(domains, num_domains)
+            secondary_techs = random.sample(tech_stacks, num_secondary_techs)
+            secondary_categories = random.sample(categories, num_secondary_categories)
             
-            project_skills.extend([
-                ProjectSkill(project_id=project.id, skill_id=s.id, is_primary=False)
-                for s in secondary_skills
-            ])
-            project_technologies.extend([
-                ProjectTechnology(project_id=project.id, technology_id=t.id, is_primary=False)
+            project_tech_stacks.extend([
+                ProjectTechStack(project_id=project.id, tech_stack_id=t.id)
                 for t in secondary_techs
             ])
-            project_domains.extend([
-                ProjectDomainCategory(project_id=project.id, domain_category_id=d.id, is_primary=False)
-                for d in selected_domains
+            project_categories.extend([
+                ProjectCategory(project_id=project.id, category_id=c.id)
+                for c in secondary_categories
             ])
+            
+            # Link project roles to tech stacks
+            project_roles = self.db.query(ProjectRole).filter_by(project_id=project.id).all()
+            for role in project_roles:
+                role_techs = random.sample(matching_techs, min(2, len(matching_techs)))
+                for tech in role_techs:
+                    project_role_tech_stacks.append(ProjectRoleTechStack(
+                        project_role_id=role.id,
+                        tech_stack_id=tech.id
+                    ))
         
-        self.db.add_all(project_skills)
-        self.db.add_all(project_technologies)
-        self.db.add_all(project_domains)
+        self.db.add_all(project_tech_stacks)
+        self.db.add_all(project_categories)
+        self.db.add_all(project_role_tech_stacks)
         self.db.commit()
         
-        log.info(f"Linked {len(project_skills)} skills, {len(project_technologies)} technologies, {len(project_domains)} domains to projects")
+        log.info(f"Linked {len(project_tech_stacks)} tech stacks, {len(project_categories)} categories, {len(project_role_tech_stacks)} role tech stacks to projects")
     
-
+    def _create_project_features_and_goals(self, projects: list):
+        """Create key features and project goals for projects."""
+        log.info("Creating key features and project goals...")
+        
+        key_features = []
+        project_goals = []
+        
+        feature_templates = [
+            "User authentication and authorization",
+            "Real-time data processing",
+            "Responsive design for mobile devices",
+            "API integration with third-party services",
+            "Advanced search and filtering",
+            "Data visualization and analytics",
+            "Automated testing and CI/CD",
+            "Scalable microservices architecture",
+            "Real-time notifications",
+            "Multi-language support",
+            "Advanced caching system",
+            "Security and encryption",
+            "Performance optimization",
+            "Accessibility compliance",
+            "Cross-platform compatibility"
+        ]
+        
+        goal_templates = [
+            "Improve user experience and interface design",
+            "Enhance performance and scalability",
+            "Increase code quality and maintainability",
+            "Add new features and functionality",
+            "Improve security and data protection",
+            "Optimize for mobile devices",
+            "Implement automated testing",
+            "Reduce technical debt",
+            "Enhance documentation",
+            "Improve accessibility",
+            "Add internationalization support",
+            "Implement monitoring and logging",
+            "Optimize database queries",
+            "Add real-time capabilities",
+            "Improve error handling"
+        ]
+        
+        for project in projects:
+            # Create 2-4 key features per project
+            num_features = random.randint(2, 4)
+            selected_features = random.sample(feature_templates, num_features)
+            
+            for feature in selected_features:
+                key_features.append(KeyFeature(
+                    project_id=project.id,
+                    feature=feature
+                ))
+            
+            # Create 1-3 project goals per project
+            num_goals = random.randint(1, 3)
+            selected_goals = random.sample(goal_templates, num_goals)
+            
+            for goal in selected_goals:
+                project_goals.append(ProjectGoal(
+                    project_id=project.id,
+                    goal=goal
+                ))
+        
+        self.db.add_all(key_features)
+        self.db.add_all(project_goals)
+        self.db.commit()
+        
+        log.info(f"✅ Created {len(key_features)} key features and {len(project_goals)} project goals")
     
     def _log_project_statistics(self):
         """Log project statistics only."""
         log.info("📊 Project Statistics:")
         log.info(f"   Total Projects: {self.db.query(Project).count()}")
         log.info(f"   Total Project Roles: {self.db.query(ProjectRole).count()}")
-        log.info(f"   Total Project-Skill links: {self.db.query(ProjectSkill).count()}")
-        log.info(f"   Total Project-Technology links: {self.db.query(ProjectTechnology).count()}")
-        log.info(f"   Total Project-Domain links: {self.db.query(ProjectDomainCategory).count()}")
+        log.info(f"   Total Project-TechStack links: {self.db.query(ProjectTechStack).count()}")
+        log.info(f"   Total Project-Category links: {self.db.query(ProjectCategory).count()}")
+        log.info(f"   Total ProjectRole-TechStack links: {self.db.query(ProjectRoleTechStack).count()}")
+        log.info(f"   Total Key Features: {self.db.query(KeyFeature).count()}")
+        log.info(f"   Total Project Goals: {self.db.query(ProjectGoal).count()}")
 
 
 def main():
