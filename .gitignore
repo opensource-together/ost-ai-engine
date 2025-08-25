@@ -1,0 +1,133 @@
+# Byte-compiled / optimized / DLL files / Temp files
+__pycache__/
+*.py[cod]
+*$py.class
+*tmp*
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-wheel-metadata/
+share/python-wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+MANIFEST
+
+# PyInstaller
+#  Usually these files are written by a CI, but they should be ignored by default.
+*.manifest
+*.spec
+
+# Logs
+logs/
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Unit test / coverage reports
+htmlcov/
+.tox/
+.nox/
+.coverage
+.coverage.*
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+*.py,cover
+.hypothesis/
+.pytest_cache/
+
+# Translations
+*.mo
+*.pot
+
+# Django stuff:
+*.log
+local_settings.py
+db.sqlite3
+db.sqlite3-journal
+
+# Flask stuff:
+instance/
+.webassets-cache
+
+# Scrapy stuff:
+.scrapy
+
+# Sphinx documentation
+docs/_build/
+
+# PyBuilder
+target/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# IPython
+profile_default/
+ipython_config.py
+
+# Celery stuff
+celerybeat-schedule
+celerybeat.pid
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+env.bak
+venv.bak
+
+# IDE / Editor specific
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.cursor/
+
+# OS specific
+.DS_Store
+Thumbs.db
+
+# Personal
+TODO.md
+
+# Linters
+.ruff*
+
+# SQL
+postgres-data/
+
+# Model artifacts & db schema
+
+# Scripts
+*.sh
+
+# DB test
+*.db
+
+# Prisma files (from other repos)
+*.prisma
+src/domain/models/prisma.service.ts
+src/domain/models/schema.prisma
+
+# Claude
+CLAUDE.md

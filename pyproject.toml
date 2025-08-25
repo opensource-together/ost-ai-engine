@@ -1,0 +1,131 @@
+[tool.poetry]
+name = "data-engine"
+version = "1.0.0"
+description = "Data Engine for GitHub repository analysis and recommendations"
+authors = ["spideystreet <dhicham.pro@gmail.com>"]
+readme = "README.md"
+packages = [{include = "src"}]
+
+[tool.poetry.dependencies]
+python = ">=3.13,<3.14"
+fastapi = "^0.115.13"
+uvicorn = "^0.34.3"
+sqlalchemy = "^2.0.41"
+psycopg2-binary = "^2.9.10"
+celery = {extras = ["redis"], version = "^5.5.3"}
+scikit-learn = "^1.7.0"
+pandas = "^2.3.0"
+pydantic-settings = "^2.4.0"
+prefect = "^3.0.0"
+prefect-docker = "^0.5.0"
+joblib = "^1.4.0"
+numpy = "^2.3.0"
+matplotlib = "^3.10.0"
+seaborn = "^0.13.0"
+pydantic = "^2.0.0"
+pgvector = "^0.4.1"
+mistralai = "^1.9.3"
+sentence-transformers = "^3.3.1"
+python-dotenv = "^1.1.1"
+redis = "^5.0.0"
+requests = "^2.31.0"
+dagster = "^1.11.5"
+dagster-webserver = "^1.11.5"
+PyGithub = "^2.6.1"
+dbt = "^1.0.0.40.5"
+dbt-core = "^1.10.8"
+dbt-postgres = "^1.9.0"
+dagster-dbt = "^0.27.5"
+
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.12.0"
+pytest = "^8.4.1"
+pytest-cov = "^6.0.0"
+pytest-dotenv = "^0.5.2"
+faker = "^26.0.0"
+httpx = "^0.28.1"
+bandit = "^1.8.6"
+mypy = "^1.8.0"
+safety = "^2.3.0"
+
+[tool.poetry.group.test.dependencies]
+pytest = "^8.4.1"
+pytest-cov = "^6.0.0"
+pytest-dotenv = "^0.5.2"
+faker = "^26.0.0"
+httpx = "^0.28.1"
+
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+target-version = "py313"
+line-length = 88
+exclude = [
+    ".git",
+    ".ruff_cache",
+    ".venv",
+    "__pycache__",
+    "venv",
+]
+
+[tool.ruff.lint]
+select = [
+    "F",  # Pyflakes
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "I",  # isort (import sorting)
+    "UP", # pyupgrade
+    "B",  # flake8-bugbear
+    "C4", # flake8-comprehensions
+    "SIM", # flake8-simplify
+]
+
+[tool.ruff.lint.isort]
+known-first-party = ["src"]
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+skip-magic-trailing-comma = false
+line-ending = "auto"
+
+[tool.mypy]
+python_version = "3.13"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+disallow_untyped_decorators = true
+no_implicit_optional = true
+warn_redundant_casts = true
+warn_unused_ignores = true
+warn_no_return = true
+warn_unreachable = true
+strict_equality = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py", "*_test.py"]
+python_classes = ["Test*"]
+python_functions = ["test_*"]
+addopts = [
+    "--strict-markers",
+    "--strict-config",
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-report=xml",
+]
+markers = [
+    "unit: Unit tests",
+    "integration: Integration tests",
+    "performance: Performance tests",
+    "api: API tests",
+]
+
+[tool.dagster]
+module_name = "src.infrastructure.pipeline.dagster.definitions"
+ 

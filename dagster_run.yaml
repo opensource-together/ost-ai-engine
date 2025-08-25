@@ -1,0 +1,5 @@
+ops:
+  search_and_fetch_repo_metadata:
+    config:
+      query: "language:python stars:>200"
+      max_repositories: 3

@@ -1,0 +1,115 @@
+version: "3.8"
+
+# Define custom networks for better isolation
+networks:
+  ost_backend:
+    driver: bridge
+  ost_database:
+    driver: bridge
+
+services:
+  # API Service
+  api:
+    build: .
+    container_name: ost_api
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/ost_db
+      - REDIS_CACHE_URL=redis://redis:6379/0
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - GITHUB_ACCESS_TOKEN=${GITHUB_ACCESS_TOKEN}
+      - LOG_LEVEL=INFO
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ost_backend
+      - ost_database
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+
+  # Database Service
+  db:
+    image: pgvector/pgvector:pg15
+    container_name: ost_db
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_DB=ost_db
+      - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
+    ports:
+      - "5434:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/database:/docker-entrypoint-initdb.d:ro
+    networks:
+      - ost_database
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d ost_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Redis Service
+  redis:
+    image: redis:7-alpine
+    container_name: ost_redis
+    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
+    ports:
+      - "6380:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ost_backend
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  # Celery Worker Service
+  worker:
+    build: .
+    container_name: ost_worker
+    command: celery -A src.infrastructure.celery.celery_app worker --loglevel=info
+    environment:
+      - DATABASE_URL=postgresql://user:password@db:5432/ost_db
+      - REDIS_CACHE_URL=redis://redis:6379/0
+      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - GITHUB_ACCESS_TOKEN=${GITHUB_ACCESS_TOKEN}
+      - LOG_LEVEL=INFO
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - ost_backend
+      - ost_database
+    restart: unless-stopped
+    volumes:
+      - ./models:/app/models:ro
+      - ./logs:/app/logs
+
+volumes:
+  postgres_data:
+    driver: local
+  redis_data:
+    driver: local 

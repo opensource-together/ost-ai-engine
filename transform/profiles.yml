@@ -1,0 +1,13 @@
+ost_transform:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: user
+      password: password
+      port: 5434
+      dbname: OST_PROD
+      schema: public
+      threads: 4
+

@@ -1,0 +1,87 @@
+version: 2
+
+sources:
+  - name: dagster
+    description: "Dagster assets for temporal dependencies"
+    tables:
+      - name: github_project_table
+        description: "Python asset that saves GitHub data to github_PROJECT table"
+  
+  - name: ost_prod
+    description: "Production database tables from OST_PROD"
+    database: OST_PROD
+    schema: public
+    tables:
+      - name: PROJECT
+        description: "Main projects table with GitHub metadata"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: title
+            description: "Project title"
+          - name: description
+            description: "Project description"
+          - name: readme
+            description: "Project README content"
+          - name: topics
+            description: "Array of GitHub topics"
+          - name: primary_language
+            description: "Primary programming language"
+          - name: stargazers_count
+            description: "Number of GitHub stars"
+      
+      - name: PROJECT_CATEGORY
+        description: "Many-to-many relationship between projects and categories"
+        columns:
+          - name: project_id
+            description: "Foreign key to PROJECT"
+          - name: category_id
+            description: "Foreign key to CATEGORY"
+      
+      - name: CATEGORY
+        description: "Reference table for project categories"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: name
+            description: "Category name"
+      
+      - name: PROJECT_TECH_STACK
+        description: "Many-to-many relationship between projects and tech stacks"
+        columns:
+          - name: project_id
+            description: "Foreign key to PROJECT"
+          - name: tech_stack_id
+            description: "Foreign key to TECH_STACK"
+      
+      - name: TECH_STACK
+        description: "Reference table for technologies and frameworks"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: name
+            description: "Technology/framework name"
+          - name: type
+            description: "Type: LANGUAGE or TECH"
+      
+      - name: github_PROJECT
+        description: "Staging table with raw GitHub repository data"
+        columns:
+          - name: full_name
+            description: "Repository full name (owner/repo)"
+          - name: name
+            description: "Repository name"
+          - name: owner
+            description: "Repository owner login"
+          - name: description
+            description: "Repository description"
+          - name: language
+            description: "Primary programming language"
+          - name: topics
+            description: "Array of repository topics"
+          - name: readme
+            description: "Repository README content"
+          - name: languages_map
+            description: "JSONB map of languages and their byte counts"
+          - name: last_ingested_at
+            description: "Timestamp of last ingestion"
