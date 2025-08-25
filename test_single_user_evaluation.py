@@ -9,16 +9,16 @@ import numpy as np
 from src.application.services.recommendation_service import recommendation_service
 
 def evaluate_user_recommendations(username, top_n=None):
-    """Évalue les recommandations pour un utilisateur spécifique avec les paramètres .env."""
+    """Evaluate recommendations for a specific user using .env parameters."""
     print(f"🔍 ÉVALUATION DÉTAILLÉE POUR: {username}")
     print("=" * 80)
     
-    # Utiliser top_n du .env si non spécifié
+    # Use top_n from .env if not specified
     if top_n is None:
         from src.infrastructure.config import settings
         top_n = settings.RECOMMENDATION_TOP_N
     
-    # Récupérer les recommandations avec les paramètres .env
+    # Get recommendations with .env parameters
     result = recommendation_service.get_recommendations(username, top_n=top_n)
     
     if not result:
@@ -68,7 +68,7 @@ def evaluate_user_recommendations(username, top_n=None):
     print(f"     - Moyenne: {np.mean(popularity_scores):.3f}")
     print(f"     - Médiane: {np.median(popularity_scores):.3f}")
     
-    # Analyser la diversité
+    # Analyze diversity
     languages = [rec['language'] for rec in recommendations if rec['language']]
     unique_languages = set(languages)
     
@@ -89,11 +89,11 @@ def evaluate_user_recommendations(username, top_n=None):
     print(f"   Catégories uniques: {len(unique_categories)}")
     print(f"   Tech stacks uniques: {len(unique_tech_stacks)}")
     
-    # Calculer la diversité des scores
+    # Calculate score diversity
     diversity_score = 1 - (np.std(combined_scores) / np.mean(combined_scores)) if np.mean(combined_scores) > 0 else 0
     print(f"   Score de diversité: {diversity_score:.3f} (1 = très diversifié, 0 = très concentré)")
     
-    # Analyser la cohérence avec le profil utilisateur
+    # Analyze consistency with user profile
     user_categories = set(user['categories']) if user['categories'] else set()
     user_tech_stacks = set(user['tech_stacks']) if user['tech_stacks'] else set()
     
@@ -104,7 +104,7 @@ def evaluate_user_recommendations(username, top_n=None):
     print(f"   Cohérence catégorielle: {category_coherence:.3f}")
     print(f"   Cohérence technologique: {tech_coherence:.3f}")
     
-    # Score de qualité global
+    # Global quality score
     quality_score = (
         np.mean(combined_scores) * 0.4 +
         diversity_score * 0.3 +
@@ -114,7 +114,7 @@ def evaluate_user_recommendations(username, top_n=None):
     
     print(f"\n⭐ SCORE DE QUALITÉ GLOBAL: {quality_score:.3f}/1.0")
     
-    # Afficher les recommandations détaillées
+    # Display detailed recommendations
     print(f"\n📋 RECOMMANDATIONS DÉTAILLÉES:")
     print("-" * 80)
     
@@ -153,11 +153,11 @@ def evaluate_user_recommendations(username, top_n=None):
     }
 
 def main():
-    """Fonction principale utilisant les paramètres .env."""
+    """Main function using .env parameters."""
     print("🔍 ÉVALUATION DÉTAILLÉE D'UN UTILISATEUR")
     print("=" * 80)
     
-    # Afficher les paramètres utilisés
+    # Display used parameters
     from src.infrastructure.config import settings
     print(f"📋 PARAMÈTRES UTILISÉS (depuis .env):")
     print(f"   RECOMMENDATION_SEMANTIC_WEIGHT: {settings.RECOMMENDATION_SEMANTIC_WEIGHT}")
@@ -168,10 +168,10 @@ def main():
     print(f"   RECOMMENDATION_MAX_PROJECTS: {settings.RECOMMENDATION_MAX_PROJECTS}")
     print("=" * 80)
     
-    # Test avec un utilisateur spécifique
-    username = "alice_ml"  # Peut être changé
+    # Test with a specific user
+    username = "alice_ml"
     
-    # Évaluation détaillée avec les paramètres .env
+    # Detailed evaluation with .env parameters
     result = evaluate_user_recommendations(username)
     
     if result:

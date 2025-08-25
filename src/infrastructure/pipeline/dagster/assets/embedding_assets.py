@@ -1,4 +1,4 @@
-"""Assets Dagster pour embeddings projets avec stockage pgvector."""
+"""Dagster assets for project embeddings with pgvector storage."""
 
 import time
 from typing import List
@@ -22,7 +22,7 @@ from src.infrastructure.postgres.database import get_db_session
     required_resource_keys={"embedding_service"},
 )
 def project_embeddings_asset(context) -> Output[dict]:
-    """Génère embeddings pour tous les projets depuis table dbt ml_project_embeddings."""
+    """Generate embeddings for all projects from dbt ml_project_embeddings table."""
     
     start_time = time.time()
     embedding_service = context.resources.embedding_service
@@ -56,13 +56,13 @@ def project_embeddings_asset(context) -> Output[dict]:
         """))
         log.info(f"📋 Copied data from embed_PROJECTS_temp to embed_PROJECTS")
     
-    # Extraire textes et IDs (dbt a déjà fait l'enrichissement)
+    # Extract texts and IDs (dbt has already done the enrichment)
     project_ids = [str(row[0]) for row in embedding_data]
     texts = [row[1] for row in embedding_data]
     
     log.info(f"📝 Using pre-processed embedding texts from dbt model")
     
-    # Générer embeddings
+    # Generate embeddings
     embeddings = embedding_service.encode_batch(texts)
 
     # Stocker embeddings dans embed_PROJECTS avec pgvector
@@ -82,7 +82,7 @@ def project_embeddings_asset(context) -> Output[dict]:
             
         log.info(f"💾 Stored {len(embeddings)} embeddings in embed_PROJECTS with pgvector")
 
-    # Sauvegarder aussi les artifacts pour compatibilité (backup)
+    # Also save artifacts for compatibility (backup)
     persistence = ModelPersistenceService()
     artifacts = {
         "project_embeddings": embeddings,
@@ -118,11 +118,11 @@ def project_embeddings_asset(context) -> Output[dict]:
     required_resource_keys={"embedding_service"},
 )
 def hybrid_project_embeddings_asset(context) -> Output[dict]:
-    """Génère des vecteurs hybrides combinant embeddings sémantiques et features structurées."""
+    """Generate hybrid vectors combining semantic embeddings with structured features."""
     
     start_time = time.time()
     
-    # Charger données enrichies depuis dbt avec features structurées
+            # Load enriched data from dbt with structured features
     with get_db_session() as db:
         result = db.execute(text("""
             SELECT 
@@ -145,7 +145,7 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
     
     log.info(f"🔬 Generating hybrid embeddings for {len(hybrid_data)} projects")
     
-    # Extraire les données
+            # Extract data
     project_ids = [str(row[0]) for row in hybrid_data]
     texts = [row[1] for row in hybrid_data]
     categories_list = [row[2] for row in hybrid_data]
@@ -154,15 +154,15 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
     stars = [row[5] for row in hybrid_data]
     forks = [row[6] for row in hybrid_data]
     
-    # Générer embeddings sémantiques
+            # Generate semantic embeddings
     embedding_service = context.resources.embedding_service
     semantic_embeddings = embedding_service.encode_batch(texts)
     
-    # Créer features structurées normalisées (16 dimensions)
+            # Create normalized structured features (16 dimensions)
     structured_features = []
     for i in range(len(project_ids)):
-        # Encoder les catégories (one-hot simplifié)
-        category_features = [0.0] * 8  # 8 catégories principales
+        # Encode categories (simplified one-hot)
+        category_features = [0.0] * 8  # 8 main categories
         if categories_list[i]:
             for cat in categories_list[i]:
                 if "ia" in cat.lower() or "machine" in cat.lower():
@@ -182,12 +182,12 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
                 else:
                     category_features[7] = 1.0  # Autres
         
-        # Encoder les tech stacks (one-hot basé sur TECH_STACKS de reference_assets.py)
+        # Encode tech stacks (one-hot based on TECH_STACKS from reference_assets.py)
         tech_features = [0.0] * 30  # 30 tech stacks (16 langages + 14 techs)
         if tech_stacks_list[i]:
             for tech in tech_stacks_list[i]:
                 tech_lower = tech.lower()
-                # Mapping basé sur TECH_STACKS
+                # Mapping based on TECH_STACKS
                 tech_mapping = {
                     "python": 0, "javascript": 1, "typescript": 2, "java": 3, "go": 4, "rust": 5,
                     "c++": 6, "c#": 7, "php": 8, "c": 9, "kotlin": 10, "swift": 11, "ruby": 12,
@@ -201,11 +201,11 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
                         tech_features[idx] = 1.0
                         break
         
-        # Combiner toutes les features structurées (38 dimensions)
+        # Combine all structured features (38 dimensions)
         structured_feature_vector = category_features + tech_features
         structured_features.append(structured_feature_vector)
     
-    # Créer vecteurs hybrides (384 + 38 = 422 dimensions)
+            # Create hybrid vectors (384 + 38 = 422 dimensions)
     hybrid_vectors = []
     for i in range(len(semantic_embeddings)):
         semantic_vec = semantic_embeddings[i]

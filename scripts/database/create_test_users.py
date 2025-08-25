@@ -21,8 +21,8 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '.
 from sqlalchemy import text
 from src.infrastructure.postgres.database import get_db_session
 
-# Règles de mapping bio/compétences → catégories EXACTEMENT alignées avec recreate_schema.sql
-# Catégories existantes dans recreate_schema.sql :
+# Bio/skills → categories mapping rules EXACTLY aligned with recreate_schema.sql
+# Existing categories in recreate_schema.sql:
 # 'IA & Machine Learning', 'Applications Mobile', 'Applications Web', 'Blockchain & Crypto',
 # 'Data & Analytics', 'DevOps & Infrastructure', 'Gaming', 'Security', 'Open Source', 'Education'
 USER_CATEGORY_MAPPING = {
@@ -68,7 +68,7 @@ USER_CATEGORY_MAPPING = {
     ],
 }
 
-# Mapping bio/compétences → tech stacks (basé sur TECH_STACKS de reference_assets.py)
+# Bio/skills → tech stacks mapping (based on TECH_STACKS from reference_assets.py)
 USER_TECH_STACK_MAPPING = {
     # Languages
     "Python": ["python", "pandas", "numpy", "jupyter", "tensorflow", "pytorch", "django", "flask"],
@@ -105,7 +105,7 @@ USER_TECH_STACK_MAPPING = {
     "PostgreSQL": ["postgresql", "postgres"],
 }
 
-# Profils d'utilisateurs de test avec des bios réalistes et cohérentes
+# Test user profiles with realistic and consistent bios
 TEST_USERS = [
     {
         "username": "alice_ml",

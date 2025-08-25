@@ -28,7 +28,7 @@ class EmbeddingResource(ConfigurableResource):
         self._model: SentenceTransformer | None = None
         
     def _load_model(self) -> SentenceTransformer:
-        """Charge modèle avec optimisations RAM."""
+        """Load model with RAM optimizations."""
         if self._model is None:
             log.info(f"🤖 Loading {self.model_name}")
             model = SentenceTransformer(
@@ -41,14 +41,14 @@ class EmbeddingResource(ConfigurableResource):
             # Utiliser object.__setattr__ pour contourner le frozen ConfigurableResource
             object.__setattr__(self, '_model', model)
             
-            # Calculer la taille réelle du modèle
+            # Calculate actual model size
             import sys
             model_size_mb = sum(p.numel() * p.element_size() for p in self._model.parameters()) / (1024 * 1024)
             log.info(f"✅ Model loaded ({model_size_mb:.1f}MB)")
         return self._model
     
     def _unload_model(self):
-        """Libère RAM."""
+        """Free RAM."""
         if self._model is not None:
             # Utiliser object.__setattr__ pour contourner le frozen ConfigurableResource
             object.__setattr__(self, '_model', None)

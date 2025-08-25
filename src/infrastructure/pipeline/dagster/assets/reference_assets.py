@@ -6,7 +6,7 @@ from sqlalchemy import text
 
 from src.infrastructure.postgres.database import get_db_session
 
-# Catégories depuis prisma.service.ts
+# Categories from prisma.service.ts
 CATEGORIES = [
     "IA & Machine Learning", "Développement Web", "Applications Mobile", 
     "DevOps & Cloud", "Jeux Vidéo", "Blockchain & Crypto", "E-commerce", 
@@ -16,7 +16,7 @@ CATEGORIES = [
     "API & Microservices", "Open Source Tools"
 ]
 
-# Tech stacks essentielles (sélection depuis prisma.service.ts)
+# Essential tech stacks (selection from prisma.service.ts)
 TECH_STACKS = [
     # Langages
     ("Python", "LANGUAGE"), ("JavaScript", "LANGUAGE"), ("TypeScript", "LANGUAGE"),
@@ -104,7 +104,7 @@ def reference_tables_populated(context) -> Output[dict]:
     )
 
 
-# Règles de mapping topics + description → categories
+# Mapping rules: topics + description → categories
 CATEGORY_MAPPING = {
     "Éducation": ["education", "books", "learning", "tutorial", "course", "study"],
     "Outils Développeur": ["development", "programming", "developer", "tools", "framework", "design-patterns"],
@@ -209,7 +209,7 @@ def projects_mapped(context) -> Output[dict]:
         total_category_relations = db.execute(text('SELECT COUNT(*) FROM "PROJECT_CATEGORY"')).scalar()
         total_tech_relations = db.execute(text('SELECT COUNT(*) FROM "PROJECT_TECH_STACK"')).scalar()
     
-    # Logs de récapitulatif
+    # Summary logs
     context.log.info(f"🎉 Project mapping completed successfully!")
     context.log.info(f"📊 Projects processed: {projects_processed}")
     context.log.info(f"📂 New category mappings: {category_mappings}")

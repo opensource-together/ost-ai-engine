@@ -25,7 +25,7 @@ from .resources.github_client import github_client
 training_data_pipeline = define_asset_job(
     "training_data_pipeline", 
     description="Complete pipeline: GitHub scraping → data transformation → project mapping → ML training data preparation",
-    # Dagster orchestre l'ordre via les dépendances dans chaque asset
+    # Dagster orchestrates the order via dependencies in each asset
     selection=[
         "github_repositories",      # 1. Scrape GitHub API and upsert → github_PROJECT
         "github_project_table",     # 2. Checkpoint: verify github_PROJECT
