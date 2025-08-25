@@ -1,5 +1,6 @@
 import json
 import subprocess
+import os
 from datetime import date, datetime
 from pathlib import Path
 from typing import List
@@ -18,8 +19,12 @@ from sqlalchemy import text
 from src.infrastructure.postgres.database import get_db_session
 from src.infrastructure.config import settings
 
-# DBT project directory
-DBT_PROJECT_DIR = Path(__file__).joinpath("..", "..", "..", "..", "..", "..", "transform").resolve()
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+# Use environment variable for dbt project directory
+DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR")).resolve()
 
 class GithubConfig(Config):
     """Configuration for the GitHub repo scraping asset."""
@@ -39,7 +44,6 @@ def github_repositories(context, config: GithubConfig) -> Output[List[dict]]:
     Scrapes the GitHub API using Go service and upserts directly into Postgres.
     Also returns the scraped repositories for visibility/metadata.
     """
-    import os
 
     # Use settings if not provided in config
     query = config.query or settings.GITHUB_SCRAPING_QUERY

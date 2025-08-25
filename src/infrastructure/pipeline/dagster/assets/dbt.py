@@ -1,10 +1,16 @@
 from __future__ import annotations
 import subprocess
+import os
 from pathlib import Path
 
 from dagster import asset, Output, AssetIn, Nothing
 
-DBT_PROJECT_DIR = Path(__file__).joinpath("..", "..", "..", "..", "..", "..", "transform").resolve()
+# Load environment variables
+from dotenv import load_dotenv
+load_dotenv()
+
+# Use environment variable for dbt project directory
+DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR", "src/dbt")).resolve()
 
 
 @asset(
