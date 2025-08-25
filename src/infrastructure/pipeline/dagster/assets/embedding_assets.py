@@ -27,7 +27,7 @@ def project_embeddings_asset(context) -> Output[dict]:
     start_time = time.time()
     embedding_service = context.resources.embedding_service
     
-    # Charger données depuis dbt table embed_PROJECTS_temp
+
     with get_db_session() as db:
         result = db.execute(text("""
             SELECT project_id, embedding_text 
@@ -43,7 +43,7 @@ def project_embeddings_asset(context) -> Output[dict]:
     
     log.info(f"📊 Generating embeddings for {len(embedding_data)} projects from dbt")
     
-    # Copier les données de embed_PROJECTS_temp vers embed_PROJECTS
+
     with get_db_session() as db:
         db.execute(text("""
             INSERT INTO "embed_PROJECTS" (project_id, embedding_text, last_ingested_at, created_at)

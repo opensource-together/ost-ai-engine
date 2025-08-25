@@ -82,7 +82,7 @@ def github_repositories(context, config: GithubConfig) -> Output[List[dict]]:
             cwd=os.getcwd()
         )
 
-        # Log Go service output for debugging
+
         if result.stderr:
             context.log.info("🔍 Go service logs:")
             for line in result.stderr.strip().split('\n'):
