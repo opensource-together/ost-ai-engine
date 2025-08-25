@@ -12,8 +12,8 @@ class Settings(BaseSettings):
 
     # --- Database ---
     DATABASE_URL: str = Field(
-        default="postgresql://user:password@localhost:5434/ost_db",
-        description="PostgreSQL database connection URL",
+        default="",
+        description="PostgreSQL database connection URL (use environment variable for production)",
     )
     DATABASE_POOL_SIZE: int = Field(
         default=10, description="Database connection pool size"
