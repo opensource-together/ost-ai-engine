@@ -3,11 +3,11 @@ ost_transform:
   outputs:
     dev:
       type: postgres
-      host: localhost
-      user: user
-      password: password
-      port: 5434
-      dbname: OST_PROD
-      schema: public
-      threads: 4
+      host: "{{ env_var('DB_HOST', 'localhost') }}"
+      user: "{{ env_var('POSTGRES_USER', 'user') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'password') }}"
+      port: "{{ env_var('DB_PORT', '5434') | as_native }}"
+      dbname: "{{ env_var('POSTGRES_DB', 'OST_PROD') }}"
+      schema: "{{ env_var('DB_SCHEMA', 'public') }}"
+      threads: "{{ env_var('DB_THREADS', '4') | as_native }}"
 
