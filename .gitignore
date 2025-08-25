@@ -118,7 +118,9 @@ TODO.md
 postgres-data/
 
 # Model artifacts & db schema
-models/
+# Ignore generated embeddings but keep Hugging Face models
+models/*.npy
+models/*.pkl
 
 # Scripts
 *.sh
