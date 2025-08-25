@@ -19,12 +19,8 @@ from sqlalchemy import text
 from src.infrastructure.postgres.database import get_db_session
 from src.infrastructure.config import settings
 
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
-
-# Use environment variable for dbt project directory
-DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR")).resolve()
+# Use PROJECT_ROOT from config for dbt project directory
+DBT_PROJECT_DIR = (Path(settings.PROJECT_ROOT) / settings.DBT_PROJECT_DIR).resolve()
 
 class GithubConfig(Config):
     """Configuration for the GitHub repo scraping asset."""
@@ -54,12 +50,12 @@ def github_repositories(context, config: GithubConfig) -> Output[List[dict]]:
     context.log.info(f"🔍 Query: '{query}'")
 
     try:
-        # Get tokens and DB URL
-        github_token = os.getenv("GITHUB_ACCESS_TOKEN", "")
+        # Get tokens and DB URL from centralized config
+        github_token = settings.GITHUB_ACCESS_TOKEN
         db_url = settings.DATABASE_URL
 
-        # Build command for Go service
-        go_service_path = os.getenv("GO_SCRAPER_PATH", "./src/infrastructure/services/go/github-scraper/main")
+        # Build command for Go service using config
+        go_service_path = settings.GO_SCRAPER_PATH
         cmd = [
             go_service_path,
             "--query", query,

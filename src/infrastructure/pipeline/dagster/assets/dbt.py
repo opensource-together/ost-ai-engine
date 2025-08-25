@@ -5,12 +5,11 @@ from pathlib import Path
 
 from dagster import asset, Output, AssetIn, Nothing
 
-# Load environment variables
-from dotenv import load_dotenv
-load_dotenv()
+# Use centralized config instead of manual dotenv loading
+from src.infrastructure.config import settings
 
-# Use environment variable for dbt project directory
-DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR", "src/dbt")).resolve()
+# Use PROJECT_ROOT from config for dbt project directory
+DBT_PROJECT_DIR = (Path(settings.PROJECT_ROOT) / settings.DBT_PROJECT_DIR).resolve()
 
 
 @asset(

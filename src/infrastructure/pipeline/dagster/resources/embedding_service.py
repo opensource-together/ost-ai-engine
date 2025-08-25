@@ -14,6 +14,7 @@ from sentence_transformers import SentenceTransformer
 
 from src.infrastructure.cache import cache_service
 from src.infrastructure.logger import log
+from src.infrastructure.config import settings
 
 
 class EmbeddingResource(ConfigurableResource):
@@ -34,7 +35,7 @@ class EmbeddingResource(ConfigurableResource):
             model = SentenceTransformer(
                 self.model_name,
                 device='cpu',
-                cache_folder='models/sentence-transformers'
+                cache_folder=settings.MODEL_CACHE_PATH
             )
             torch.set_num_threads(2)
             

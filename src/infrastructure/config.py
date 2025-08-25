@@ -96,8 +96,28 @@ class Settings(BaseSettings):
         description="Log format",
     )
 
+    # --- Application Configuration ---
+    PROJECT_ROOT: str = Field(
+        default="", description="Project root directory path"
+    )
+
+    # --- dbt Configuration ---
+    DBT_PROJECT_DIR: str = Field(
+        default="src/dbt", description="dbt project directory path"
+    )
+
+    # --- Go Scraper Configuration ---
+    GO_SCRAPER_PATH: str = Field(
+        default="./src/infrastructure/services/go/github-scraper/main",
+        description="Path to the Go scraper executable"
+    )
+
     # --- Model Paths ---
     MODEL_DIR: str = Field(default="models", description="Model directory")
+    MODEL_CACHE_PATH: str = Field(
+        default="models/sentence-transformers",
+        description="Path for sentence transformers model cache"
+    )
     SIMILARITY_MATRIX_PATH: str = Field(
         default="models/similarity_matrix.npy",
         description="Similarity matrix file path",
@@ -152,7 +172,7 @@ class Settings(BaseSettings):
     @classmethod
     def validate_database_url(cls, v):
         """Validate database URL format."""
-        if not v.startswith("postgresql://"):
+        if v and not v.startswith("postgresql://"):
             raise ValueError("DATABASE_URL must start with postgresql://")
         return v
 
