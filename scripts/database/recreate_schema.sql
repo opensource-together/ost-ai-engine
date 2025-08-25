@@ -5,6 +5,20 @@
 -- Run this to reset the database to a clean state
 -- =============================================================================
 
+-- ⚠️ SAFETY CHECK: Prevent accidental execution in production
+DO $$
+BEGIN
+    IF current_database() LIKE '%prod%' OR current_database() LIKE '%production%' THEN
+        RAISE EXCEPTION '🚨 PRODUCTION SAFETY: This script cannot be run on production databases. 
+        Current database: % 
+        If you really need to run this, comment out this safety check.', current_database();
+    END IF;
+END $$;
+
+-- =============================================================================
+-- 🗑️ DROP ALL TABLES
+-- =============================================================================
+
 -- Drop all tables in reverse dependency order
 DROP TABLE IF EXISTS "hybrid_PROJECT_embeddings" CASCADE;
 DROP TABLE IF EXISTS "embed_PROJECTS" CASCADE;
