@@ -126,6 +126,28 @@ class Settings(BaseSettings):
         default="models/tfidf_vectorizer.pkl", description="TF-IDF vectorizer file path"
     )
 
+    # --- MLflow Configuration ---
+    MLFLOW_TRACKING_URI: str = Field(
+        default="sqlite:///logs/mlflow.db",
+        description="MLflow tracking URI for model persistence"
+    )
+    MLFLOW_ARTIFACT_ROOT: str = Field(
+        default="logs/mlruns",
+        description="MLflow artifact root directory"
+    )
+    MLFLOW_MODEL_REGISTRY_NAME: str = Field(
+        default="ost-models",
+        description="MLflow model registry name"
+    )
+    MLFLOW_UI_PORT: int = Field(
+        default=5050,
+        description="MLflow UI port"
+    )
+    MLFLOW_UI_HOST: str = Field(
+        default="0.0.0.0",
+        description="MLflow UI host"
+    )
+
     # --- Security ---
     API_RATE_LIMIT: int = Field(default=100, description="API rate limit per minute")
     API_TIMEOUT: int = Field(default=30, description="API request timeout")

@@ -21,16 +21,16 @@ class MLflowModelPersistence:
     Focuses only on saving/loading models, not experiment tracking.
     """
 
-    def __init__(self, tracking_uri: Optional[str] = None, model_registry_name: str = "ost-models"):
+    def __init__(self, tracking_uri: Optional[str] = None, model_registry_name: Optional[str] = None):
         """
         Initialize MLflow model persistence service.
         
         Args:
-            tracking_uri: MLflow tracking URI (default: local SQLite)
-            model_registry_name: Name for the model registry
+            tracking_uri: MLflow tracking URI (default from settings)
+            model_registry_name: Name for the model registry (default from settings)
         """
-        self.tracking_uri = tracking_uri or "sqlite:///mlflow.db"
-        self.model_registry_name = model_registry_name
+        self.tracking_uri = tracking_uri or settings.MLFLOW_TRACKING_URI
+        self.model_registry_name = model_registry_name or settings.MLFLOW_MODEL_REGISTRY_NAME
         self.logger = get_dagster_logger()
         
         # Set tracking URI
