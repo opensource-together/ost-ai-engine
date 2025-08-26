@@ -6,7 +6,6 @@ from dagster import asset, Config
 from sentence_transformers import SentenceTransformer
 from sqlalchemy import text
 from typing import List, Dict, Any
-import logging
 
 from src.infrastructure.postgres.database import get_db_session
 

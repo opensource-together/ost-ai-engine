@@ -3,6 +3,8 @@ import pickle
 
 import numpy as np
 
+from src.infrastructure.logger import log
+
 
 class ModelPersistenceService:
     """
@@ -38,7 +40,7 @@ class ModelPersistenceService:
                 with open(path, "wb") as f:
                     pickle.dump(artifact, f)
 
-        print(f"Model artifacts saved to {self.model_dir}")
+        log.info(f"Model artifacts saved to {self.model_dir}")
 
     def load_model_artifacts(self) -> dict:
         """
@@ -66,11 +68,11 @@ class ModelPersistenceService:
                 feature_engineer = artifacts["feature_engineer"]
                 if hasattr(feature_engineer, "tfidf_vectorizer"):
                     artifacts["tfidf_vectorizer"] = feature_engineer.tfidf_vectorizer
-                    print("✅ Extracted tfidf_vectorizer from feature_engineer")
+                    log.info("✅ Extracted tfidf_vectorizer from feature_engineer")
             except Exception as e:
-                print(f"⚠️ Could not extract vectorizer from feature_engineer: {e}")
+                log.warning(f"⚠️ Could not extract vectorizer from feature_engineer: {e}")
 
-        print(f"Model artifacts loaded from {self.model_dir}")
+        log.info(f"Model artifacts loaded from {self.model_dir}")
         return artifacts
 
     def save_model(self, training_data: dict, model_name: str) -> str:
@@ -97,7 +99,7 @@ class ModelPersistenceService:
                 with open(path, "wb") as f:
                     pickle.dump(artifact, f)
 
-        print(f"Model '{model_name}' saved to {model_path}")
+        log.info(f"Model '{model_name}' saved to {model_path}")
         return model_path
 
     def load_model(self, model_name: str) -> dict:
@@ -123,7 +125,7 @@ class ModelPersistenceService:
                 with open(path, "rb") as f:
                     artifacts[name] = pickle.load(f)
 
-        print(f"Model '{model_name}' loaded from {model_path}")
+        log.info(f"Model '{model_name}' loaded from {model_path}")
         return artifacts
 
     # --- Added for Dagster assets compatibility ---
@@ -145,4 +147,4 @@ class ModelPersistenceService:
         with open(os.path.join(self.model_dir, f"{name}_metadata.pkl"), "wb") as f:
             pickle.dump(safe, f)
         
-        print(f"✅ Saved embeddings artifacts for {name} in {self.model_dir}")
+        log.info(f"✅ Saved embeddings artifacts for {name} in {self.model_dir}")

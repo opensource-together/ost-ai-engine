@@ -1,4 +1,3 @@
-import logging
 from contextlib import contextmanager
 
 from sqlalchemy import create_engine, text
@@ -7,9 +6,7 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from sqlalchemy.pool import QueuePool
 
 from src.infrastructure.config import settings
-
-# Configure logging
-logger = logging.getLogger(__name__)
+from src.infrastructure.logger import log
 
 # Enhanced database engine with connection pooling and error handling
 engine = create_engine(
@@ -45,11 +42,11 @@ def get_db():
     try:
         yield db
     except SQLAlchemyError as e:
-        logger.error(f"Database error: {e}")
+        log.error(f"Database error: {e}")
         db.rollback()
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in database session: {e}")
+        log.error(f"Unexpected error in database session: {e}")
         db.rollback()
         raise
     finally:
@@ -67,11 +64,11 @@ def get_db_session():
         yield db
         db.commit()
     except SQLAlchemyError as e:
-        logger.error(f"Database error in session: {e}")
+        log.error(f"Database error in session: {e}")
         db.rollback()
         raise
     except Exception as e:
-        logger.error(f"Unexpected error in database session: {e}")
+        log.error(f"Unexpected error in database session: {e}")
         db.rollback()
         raise
     finally:
@@ -87,10 +84,10 @@ def test_database_connection():
             # Simple query to test connection
             result = db.execute(text("SELECT 1"))
             result.fetchone()
-            logger.info("✅ Database connection successful")
+            log.info("✅ Database connection successful")
             return True
     except Exception as e:
-        logger.error(f"❌ Database connection failed: {e}")
+        log.error(f"❌ Database connection failed: {e}")
         return False
 
 
@@ -110,7 +107,7 @@ def get_database_stats():
             ),  # Handle missing attribute gracefully
         }
     except Exception as e:
-        logger.error(f"Failed to get database stats: {e}")
+        log.error(f"Failed to get database stats: {e}")
         return {}
 
 
@@ -121,6 +118,6 @@ def close_database_connections():
     """
     try:
         engine.dispose()
-        logger.info("✅ Database connections closed")
+        log.info("✅ Database connections closed")
     except Exception as e:
-        logger.error(f"❌ Failed to close database connections: {e}")
+        log.error(f"❌ Failed to close database connections: {e}")
