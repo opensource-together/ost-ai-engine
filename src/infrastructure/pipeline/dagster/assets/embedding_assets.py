@@ -5,9 +5,6 @@ from typing import List
 import json
 import numpy as np
 
-# Model configuration constants
-MINILM_DIMENSIONS = settings.MODEL_DIMENSIONS  # Dynamic dimension from settings
-
 from dagster import AssetIn, Nothing, Output, asset
 from sqlalchemy import text
 
@@ -16,16 +13,19 @@ from src.infrastructure.config import settings
 from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import get_db_session
 
+# Model configuration constants
+MINILM_DIMENSIONS = settings.MODEL_DIMENSIONS  # Dynamic dimension from settings
+
 
 @asset(
-    name="project_embeddings",
+    name="project_semantic_embeddings",
     description=f"Generate embeddings for all projects using {settings.MODEL_DISPLAY_NAME}",
-    ins={"embeddings_data": AssetIn("ml_project_embeddings", dagster_type=Nothing)},
+    ins={"embeddings_data": AssetIn("dbt_project_embeddings_data", dagster_type=Nothing)},
     group_name="ml_embeddings",
     compute_kind="ml",
     required_resource_keys={"embedding_service"},
 )
-def project_embeddings_asset(context) -> Output[dict]:
+def project_semantic_embeddings_asset(context) -> Output[dict]:
     """Generate embeddings for all projects from dbt ml_project_embeddings table."""
     
     start_time = time.time()
@@ -116,14 +116,14 @@ def project_embeddings_asset(context) -> Output[dict]:
 
 
 @asset(
-    name="hybrid_project_embeddings",
+    name="project_hybrid_embeddings",
     description="Generate hybrid embeddings combining semantic embeddings with structured features for better User↔Project similarity",
-    ins={"semantic_embeddings": AssetIn("project_embeddings", dagster_type=Nothing)},
+    ins={"semantic_embeddings": AssetIn("project_semantic_embeddings", dagster_type=Nothing)},
     group_name="ml_embeddings",
     compute_kind="ml",
     required_resource_keys={"embedding_service"},
 )
-def hybrid_project_embeddings_asset(context) -> Output[dict]:
+def project_hybrid_embeddings_asset(context) -> Output[dict]:
     """Generate hybrid vectors combining semantic embeddings with structured features."""
     
     start_time = time.time()

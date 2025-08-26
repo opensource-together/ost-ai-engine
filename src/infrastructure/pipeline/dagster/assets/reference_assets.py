@@ -32,78 +32,6 @@ TECH_STACKS = [
     ("MongoDB", "TECH"), ("Redis", "TECH"), ("MySQL", "TECH")
 ]
 
-@asset(
-    name="reference_tables_populated",
-    description="Populate CATEGORY and TECH_STACK reference tables with standard data from prisma schema",
-    group_name="reference_data",
-    compute_kind="python",
-)
-def reference_tables_populated(context) -> Output[dict]:
-    """
-    Populates CATEGORY and TECH_STACK reference tables with predefined data.
-    These tables are required for intelligent project mapping.
-    """
-    context.log.info(f"🏗️ Starting reference tables population")
-    context.log.info(f"📋 Categories to populate: {len(CATEGORIES)}")
-    context.log.info(f"⚙️ Tech stacks to populate: {len(TECH_STACKS)}")
-    
-    categories_inserted = 0
-    tech_stacks_inserted = 0
-    
-    with get_db_session() as db:
-        # Populate CATEGORY table
-        for category in CATEGORIES:
-            category_id = str(uuid.uuid4())
-            result = db.execute(text("""
-                INSERT INTO "CATEGORY" (id, name, created_at) 
-                VALUES (:id, :name, NOW())
-                ON CONFLICT (name) DO NOTHING
-                RETURNING id
-            """), {"id": category_id, "name": category})
-            if result.fetchone():
-                categories_inserted += 1
-        
-        # Populate TECH_STACK table
-        for name, type_val in TECH_STACKS:
-            tech_id = str(uuid.uuid4())
-            result = db.execute(text("""
-                INSERT INTO "TECH_STACK" (id, name, type, created_at) 
-                VALUES (:id, :name, :type, NOW())
-                ON CONFLICT (name) DO NOTHING
-                RETURNING id
-            """), {"id": tech_id, "name": name, "type": type_val})
-            if result.fetchone():
-                tech_stacks_inserted += 1
-        
-        db.commit()
-    
-    # Verify final counts
-    with get_db_session() as db:
-        total_categories = db.execute(text('SELECT COUNT(*) FROM "CATEGORY"')).scalar()
-        total_tech_stacks = db.execute(text('SELECT COUNT(*) FROM "TECH_STACK"')).scalar()
-    
-    # Logs de récapitulatif
-    context.log.info(f"🎉 Reference tables population completed!")
-    context.log.info(f"📂 Categories: {categories_inserted} new / {total_categories} total")
-    context.log.info(f"⚙️ Tech stacks: {tech_stacks_inserted} new / {total_tech_stacks} total")
-    context.log.info(f"✅ Reference data ready for project mapping...")
-    
-    return Output(
-        {
-            "categories_inserted": categories_inserted,
-            "tech_stacks_inserted": tech_stacks_inserted,
-            "total_categories": total_categories,
-            "total_tech_stacks": total_tech_stacks,
-        },
-        metadata={
-            "categories_inserted": categories_inserted,
-            "tech_stacks_inserted": tech_stacks_inserted,
-            "total_categories": total_categories,
-            "total_tech_stacks": total_tech_stacks,
-        }
-    )
-
-
 # Mapping rules: topics + description → categories
 CATEGORY_MAPPING = {
     "Éducation": ["education", "books", "learning", "tutorial", "course", "study"],
@@ -120,16 +48,16 @@ CATEGORY_MAPPING = {
 }
 
 @asset(
-    name="projects_mapped",
+    name="project_mappings",
     description="Map existing projects to categories and tech stacks using intelligent text analysis",
     ins={
-        "github_data": AssetIn("github_project_table", dagster_type=Nothing),
-        "project_data": AssetIn("github_to_project", dagster_type=Nothing)  # Attend github_to_project dbt model
+        "github_data": AssetIn("github_data_ready", dagster_type=Nothing),
+        "project_data": AssetIn("dbt_projects", dagster_type=Nothing)  # Attend dbt_projects dbt model
     },
     group_name="reference_data", 
     compute_kind="python",
 )
-def projects_mapped(context) -> Output[dict]:
+def project_mappings(context) -> Output[dict]:
     """
     Maps existing projects to categories and tech stacks based on intelligent analysis
     of project topics, descriptions, and primary language.
@@ -237,13 +165,13 @@ def projects_mapped(context) -> Output[dict]:
 
 
 @asset(
-    name="mapping_completed",
+    name="mappings_ready",
     description="Checkpoint: ensures all project mappings are completed before training data creation",
-    ins={"mapping_data": AssetIn("projects_mapped")},
+    ins={"mapping_data": AssetIn("project_mappings")},
     group_name="reference_data",
     compute_kind="python",
 )
-def mapping_completed(context, mapping_data: dict) -> Output[dict]:
+def mappings_ready(context, mapping_data: dict) -> Output[dict]:
     """
     Simple checkpoint asset that confirms project mapping is complete.
     This forces embed_PROJECTS (dbt) to wait for all mappings.

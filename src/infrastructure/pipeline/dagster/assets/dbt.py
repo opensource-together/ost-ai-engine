@@ -13,12 +13,12 @@ DBT_PROJECT_DIR = (Path(settings.PROJECT_ROOT) / settings.DBT_PROJECT_DIR).resol
 
 
 @asset(
-    name="raw_github_repositories_table",
+    name="dbt_raw_repositories",
     description="Create raw_github_repositories table structure via dbt",
     group_name="data_transformation",
     compute_kind="dbt",
 )
-def raw_github_repositories_table_asset(context) -> Output[None]:
+def dbt_raw_repositories_asset(context) -> Output[None]:
     """
     Creates the raw_github_repositories table structure using dbt.
     This must run before the GitHub scraper tries to insert data.
@@ -41,13 +41,13 @@ def raw_github_repositories_table_asset(context) -> Output[None]:
 
 
 @asset(
-    name="ml_project_embeddings",
+    name="dbt_project_embeddings_data",
     description="Execute ml_project_embeddings dbt model to prepare project embedding data",
-    ins={"project_data": AssetIn("github_to_project", dagster_type=Nothing)},  # Wait for github_to_project
+    ins={"project_data": AssetIn("dbt_projects", dagster_type=Nothing)},  # Wait for dbt_projects
     group_name="ml_preparation",
     compute_kind="dbt",
 )
-def ml_project_embeddings_asset(context) -> Output[None]:
+def dbt_project_embeddings_data_asset(context) -> Output[None]:
     """
     Runs the dbt model `ml_project_embeddings` to prepare project data for embeddings.
     This creates embed_PROJECTS_temp table.
@@ -70,13 +70,13 @@ def ml_project_embeddings_asset(context) -> Output[None]:
 
 
 @asset(
-    name="github_to_project",
+    name="dbt_projects",
     description="Execute github_to_project dbt model with dependency control",
-    ins={"github_data": AssetIn("github_project_table", dagster_type=Nothing)}, # Wait for GitHub data
+    ins={"github_data": AssetIn("github_data_ready", dagster_type=Nothing)}, # Wait for GitHub data
     group_name="data_transformation",
     compute_kind="dbt",
 )
-def github_to_project_asset(context) -> Output[None]:
+def dbt_projects_asset(context) -> Output[None]:
     """
     Runs the dbt model `github_to_project` to transform raw GitHub data into the PROJECT table.
     """
@@ -99,13 +99,13 @@ def github_to_project_asset(context) -> Output[None]:
 
 
 @asset(
-    name="embed_PROJECTS",
+    name="dbt_project_enriched_data",
     description="Execute embed_PROJECTS dbt model with dependency control",
-    ins={"mapping_data": AssetIn("mapping_completed", dagster_type=Nothing)}, # Wait for mapping to complete
+    ins={"mapping_data": AssetIn("mappings_ready", dagster_type=Nothing)}, # Wait for mapping to complete
     group_name="ml_preparation",
     compute_kind="dbt",
 )
-def embed_PROJECTS_dbt_asset(context) -> Output[None]:
+def dbt_project_enriched_data_asset(context) -> Output[None]:
     """
     Runs the dbt model `embed_PROJECTS` to prepare enriched data for embeddings.
     """
@@ -127,13 +127,13 @@ def embed_PROJECTS_dbt_asset(context) -> Output[None]:
 
 
 @asset(
-    name="embed_USERS",
+    name="dbt_user_embeddings_data",
     description="Execute embed_USERS dbt model with dependency control",
-    ins={"mapping_data": AssetIn("mapping_completed", dagster_type=Nothing)}, # Wait for mapping to complete
+    ins={"mapping_data": AssetIn("mappings_ready", dagster_type=Nothing)}, # Wait for mapping to complete
     group_name="ml_preparation",
     compute_kind="dbt",
 )
-def embed_USERS_dbt_asset(context) -> Output[None]:
+def dbt_user_embeddings_data_asset(context) -> Output[None]:
     """
     Runs the dbt model `embed_USERS` to prepare enriched user data for embeddings.
     """

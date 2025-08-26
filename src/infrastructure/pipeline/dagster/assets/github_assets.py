@@ -29,13 +29,13 @@ class GithubConfig(Config):
 
 
 @asset(
-    name="github_repositories",
+    name="github_scraping",
     description="Scrape GitHub with Go and upsert directly into github_PROJECT (Postgres).",
     required_resource_keys={"github_client"},  # Keep for compatibility
     group_name="github_scraping",
     compute_kind="github",
 )
-def github_repositories(context, config: GithubConfig) -> Output[List[dict]]:
+def github_scraping(context, config: GithubConfig) -> Output[List[dict]]:
     """
     Scrapes the GitHub API using Go service and upserts directly into Postgres.
     Also returns the scraped repositories for visibility/metadata.
@@ -123,13 +123,13 @@ def github_repositories(context, config: GithubConfig) -> Output[List[dict]]:
 
 
 @asset(
-    name="github_project_table",
+    name="github_data_ready",
     description="Checkpoint: verify github_PROJECT populated after Go upsert.",
-    ins={"repos": AssetIn(key=AssetKey("github_repositories"))},
+    ins={"repos": AssetIn(key=AssetKey("github_scraping"))},
     group_name="github_scraping",
     compute_kind="postgres",
 )
-def github_project_table(context, repos: List[dict]) -> Output[None]:
+def github_data_ready(context, repos: List[dict]) -> Output[None]:
     """
     Simple checkpoint to verify that rows exist in github_PROJECT.
     """

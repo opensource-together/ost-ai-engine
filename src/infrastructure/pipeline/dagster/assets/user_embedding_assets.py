@@ -24,7 +24,7 @@ class UserEmbeddingConfig(Config):
 @asset(
     description="Generate embeddings for users using sentence transformers",
     group_name="ml_pipeline",
-    deps=["embed_USERS"]  # Depends on the dbt model
+    deps=["dbt_user_embeddings_data"]  # Depends on the dbt model
 )
 def user_embeddings(context, config: UserEmbeddingConfig) -> Dict[str, Any]:
     """
