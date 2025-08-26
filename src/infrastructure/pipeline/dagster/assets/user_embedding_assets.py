@@ -9,6 +9,8 @@ from typing import List, Dict, Any
 import logging
 
 from src.infrastructure.postgres.database import get_db_session
+from src.infrastructure.services.mlflow_service import mlflow_service
+from src.infrastructure.services.mlflow_model_persistence import mlflow_model_persistence
 from src.infrastructure.logger import log
 
 logger = log
@@ -87,27 +89,35 @@ def user_embeddings(context, config: UserEmbeddingConfig) -> Dict[str, Any]:
                 
             logger.info(f"💾 Updated {len(all_embeddings)} user embeddings in embed_USERS with pgvector")
             
-            # Save embeddings to files if requested
+            # Prepare artifacts and metadata for MLflow
+            artifacts = {
+                "user_embeddings": embeddings_array,
+                "user_ids": user_ids,
+                "usernames": usernames,
+            }
+            
+            metadata = {
+                "user_ids": user_ids,
+                "usernames": usernames,
+                "model_name": config.model_name,
+                "embedding_dimension": embeddings_array.shape[1],
+                "count": len(user_ids),
+                "generation_time": 0  # TODO: Add actual generation time
+            }
+            
+            # Log with MLflow
+            run_id = mlflow_service.log_embedding_experiment(
+                run_name="user_embeddings",
+                artifacts=artifacts,
+                metadata=metadata,
+                model_name=config.model_name
+            )
+            logger.info(f"✅ MLflow experiment logged with run ID: {run_id}")
+            
+            # Save with MLflow model persistence
             if config.save_embeddings:
-                os.makedirs("models", exist_ok=True)
-                
-                # Save embeddings array
-                np.save("models/user_embeddings.npy", embeddings_array)
-                logger.info("💾 Saved user embeddings to models/user_embeddings.npy")
-                
-                # Save metadata
-                if config.save_metadata:
-                    metadata = {
-                        "user_ids": user_ids,
-                        "usernames": usernames,
-                        "model_name": config.model_name,
-                        "embedding_dimension": embeddings_array.shape[1],
-                        "count": len(user_ids)
-                    }
-                    
-                    with open("models/user_embedding_metadata.pkl", "wb") as f:
-                        pickle.dump(metadata, f)
-                    logger.info("💾 Saved user embedding metadata to models/user_embedding_metadata.pkl")
+                model_uri = mlflow_model_persistence.save_embeddings("user_embeddings", artifacts)
+                logger.info(f"💾 Saved user embeddings with MLflow: {model_uri}")
             
             return {
                 "status": "success",

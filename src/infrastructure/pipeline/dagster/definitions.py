@@ -17,6 +17,8 @@ from .assets.embedding_assets import project_embeddings_asset, hybrid_project_em
 from .assets.user_embedding_assets import user_embeddings
 from .assets.github_assets import github_project_table, github_repositories
 from .assets.reference_assets import reference_tables_populated, projects_mapped, mapping_completed
+
+
 from .resources.embedding_service import embedding_service
 from .resources.github_client import github_client
 

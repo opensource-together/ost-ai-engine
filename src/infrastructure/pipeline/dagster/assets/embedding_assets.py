@@ -8,7 +8,8 @@ import numpy as np
 from dagster import AssetIn, Nothing, Output, asset
 from sqlalchemy import text
 
-from src.infrastructure.analysis.model_persistence_service import ModelPersistenceService
+from src.infrastructure.services.mlflow_model_persistence import mlflow_model_persistence
+from src.infrastructure.services.mlflow_service import mlflow_service
 from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import get_db_session
 
@@ -82,8 +83,7 @@ def project_embeddings_asset(context) -> Output[dict]:
             
         log.info(f"💾 Stored {len(embeddings)} embeddings in embed_PROJECTS with pgvector")
 
-    # Also save artifacts for compatibility (backup)
-    persistence = ModelPersistenceService()
+    # Prepare artifacts and metadata
     artifacts = {
         "project_embeddings": embeddings,
         "project_ids": project_ids,
@@ -95,8 +95,17 @@ def project_embeddings_asset(context) -> Output[dict]:
         }
     }
     
-    persistence.save_embeddings("project_embeddings", artifacts)
-    log.info(f"💾 Saved project embeddings artifacts")
+    # Save with MLflow tracking
+    run_id = mlflow_service.log_embedding_experiment(
+        run_name="project_embeddings",
+        artifacts=artifacts,
+        metadata=artifacts["metadata"]
+    )
+    log.info(f"✅ MLflow experiment logged with run ID: {run_id}")
+    
+    # Save with MLflow model persistence
+    model_uri = mlflow_model_persistence.save_embeddings("project_embeddings", artifacts)
+    log.info(f"💾 Saved project embeddings artifacts with MLflow: {model_uri}")
 
     return Output(
         artifacts,
@@ -249,21 +258,32 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
     
     log.info(f"💾 Stored {len(hybrid_vectors)} hybrid embeddings in hybrid_PROJECT_embeddings")
     
+    # Prepare metadata and weights for MLflow
+    metadata = {
+        "count": len(hybrid_vectors),
+        "semantic_dimensions": 384,
+        "structured_dimensions": 38,
+        "hybrid_dimensions": 422,
+        "generation_time": time.time() - start_time,
+    }
+    
+    weights = {
+        "tech_stacks": 0.6,
+        "categories": 0.3,
+        "semantic": 0.1
+    }
+    
+    # Log with MLflow
+    run_id = mlflow_service.log_hybrid_embedding_experiment(
+        run_name="hybrid_project_embeddings",
+        metadata=metadata,
+        weights=weights
+    )
+    log.info(f"✅ MLflow hybrid experiment logged with run ID: {run_id}")
+    
     return Output(
-        {
-            "count": len(hybrid_vectors),
-            "semantic_dimensions": 384,
-            "structured_dimensions": 38,
-            "hybrid_dimensions": 422,
-            "generation_time": time.time() - start_time,
-        },
-        metadata={
-            "count": len(hybrid_vectors),
-            "semantic_dimensions": 384,
-            "structured_dimensions": 38,
-            "hybrid_dimensions": 422,
-            "generation_time": time.time() - start_time,
-        }
+        metadata,
+        metadata=metadata
     )
 
 
