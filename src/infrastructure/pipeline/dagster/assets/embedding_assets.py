@@ -5,11 +5,14 @@ from typing import List
 import json
 import numpy as np
 
+# Model configuration constants
+MINILM_DIMENSIONS = 384  # Fixed dimension for all-MiniLM-L6-v2 model
+
 from dagster import AssetIn, Nothing, Output, asset
 from sqlalchemy import text
 
 from src.infrastructure.services.mlflow_model_persistence import mlflow_model_persistence
-
+from src.infrastructure.config import settings
 from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import get_db_session
 
@@ -90,7 +93,7 @@ def project_embeddings_asset(context) -> Output[dict]:
         "metadata": {
             "count": len(embeddings),
             "model": "all-MiniLM-L6-v2",
-            "dimensions": 384,
+            "dimensions": MINILM_DIMENSIONS,
             "generation_time": time.time() - start_time,
         }
     }
@@ -106,7 +109,7 @@ def project_embeddings_asset(context) -> Output[dict]:
         metadata={
             "count": len(embeddings),
             "model": "all-MiniLM-L6-v2",
-            "dimensions": 384,
+            "dimensions": MINILM_DIMENSIONS,
             "generation_time": time.time() - start_time,
         }
     )
@@ -208,7 +211,7 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
         structured_feature_vector = category_features + tech_features
         structured_features.append(structured_feature_vector)
     
-            # Create hybrid vectors (384 + 38 = 422 dimensions)
+            # Create hybrid vectors (MINILM_DIMENSIONS + 38 = 422 dimensions)
     hybrid_vectors = []
     for i in range(len(semantic_embeddings)):
         semantic_vec = semantic_embeddings[i]
@@ -227,9 +230,9 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
             }
             hybrid_list = hybrid_vectors[i].tolist()
             weights_dict = {
-                "tech_stacks": 0.6,
-                "categories": 0.3,
-                "semantic": 0.1
+                "tech_stacks": settings.RECOMMENDATION_TECH_WEIGHT,
+                "categories": settings.RECOMMENDATION_CATEGORY_WEIGHT,
+                "semantic": settings.RECOMMENDATION_SEMANTIC_WEIGHT
             }
             
             db.execute(text("""
@@ -255,16 +258,16 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
     # Prepare metadata and weights for MLflow
     metadata = {
         "count": len(hybrid_vectors),
-        "semantic_dimensions": 384,
+        "semantic_dimensions": MINILM_DIMENSIONS,
         "structured_dimensions": 38,
-        "hybrid_dimensions": 422,
+        "hybrid_dimensions": MINILM_DIMENSIONS + 38,
         "generation_time": time.time() - start_time,
     }
     
     weights = {
-        "tech_stacks": 0.6,
-        "categories": 0.3,
-        "semantic": 0.1
+        "tech_stacks": settings.RECOMMENDATION_TECH_WEIGHT,
+        "categories": settings.RECOMMENDATION_CATEGORY_WEIGHT,
+        "semantic": settings.RECOMMENDATION_SEMANTIC_WEIGHT
     }
     
 
