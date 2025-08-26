@@ -255,26 +255,33 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
     
     log.info(f"💾 Stored {len(hybrid_vectors)} hybrid embeddings in hybrid_PROJECT_embeddings")
     
-    # Prepare metadata and weights for MLflow
-    metadata = {
-        "count": len(hybrid_vectors),
-        "semantic_dimensions": MINILM_DIMENSIONS,
-        "structured_dimensions": 38,
-        "hybrid_dimensions": MINILM_DIMENSIONS + 38,
-        "generation_time": time.time() - start_time,
+    # Prepare artifacts for MLflow persistence
+    artifacts = {
+        "hybrid_embeddings": np.array(hybrid_vectors),
+        "project_ids": project_ids,
+        "semantic_embeddings": semantic_embeddings,
+        "structured_features": structured_features,
+        "metadata": {
+            "count": len(hybrid_vectors),
+            "semantic_dimensions": MINILM_DIMENSIONS,
+            "structured_dimensions": 38,
+            "hybrid_dimensions": MINILM_DIMENSIONS + 38,
+            "generation_time": time.time() - start_time,
+        },
+        "weights": {
+            "tech_stacks": settings.RECOMMENDATION_TECH_WEIGHT,
+            "categories": settings.RECOMMENDATION_CATEGORY_WEIGHT,
+            "semantic": settings.RECOMMENDATION_SEMANTIC_WEIGHT
+        }
     }
     
-    weights = {
-        "tech_stacks": settings.RECOMMENDATION_TECH_WEIGHT,
-        "categories": settings.RECOMMENDATION_CATEGORY_WEIGHT,
-        "semantic": settings.RECOMMENDATION_SEMANTIC_WEIGHT
-    }
-    
-
+    # Save with MLflow model persistence
+    model_uri = mlflow_model_persistence.save_embeddings("hybrid_project_embeddings", artifacts)
+    log.info(f"💾 Saved hybrid project embeddings artifacts with MLflow: {model_uri}")
     
     return Output(
-        metadata,
-        metadata=metadata
+        artifacts,
+        metadata=artifacts["metadata"]
     )
 
 
