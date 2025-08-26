@@ -1,187 +1,176 @@
-# Plateforme d'Analyse de repos Git
+# OST Data Engine
 
-Un système distribué pour l'analyse automatisée de repos Git qui collecte quotidiennement les données de repos, les traite via des pipelines d'apprentissage automatique, et stocke les insights sémantiques dans une base de données vectorielle pour des requêtes intelligentes.
+A distributed data processing platform for GitHub repository analysis and intelligent project recommendations.   
+This project is part of the [OpenSource Together](https://github.com/opensource-together) platform, which connects project creators with developers, designers, and creatives to build the future of open source together.
 
-## 🎯 Aperçu du Projet
+The system collects GitHub data, processes it through machine learning pipelines, and stores semantic insights in a vector database. Ultimately, this will power an API that provides intelligent project recommendations to users based on their skills, interests, and preferences.
 
-Cette plateforme automatise le processus de :
-1. **Collecte Quotidienne de Dépôts** - Récupère les données de commits, modifications de fichiers et métadonnées depuis les repos Git configurés
-2. **Analyse par IA** - Traite les données Git brutes à travers des modèles d'apprentissage automatique pour extraire des insights
-3. **Stockage Vectoriel** - Stocke les données analysées dans une base de données vectorielle pour la recherche sémantique et les requêtes de similarité
-4. **Traitement Scalable** - Utilise des files d'attente de tâches distribuées pour gérer efficacement un grand nombre de repos
+## Overview
 
-## 📁 Structure du Projet
+This platform automates the process of:
+1. **GitHub Data Collection** - Retrieves repository metadata, commits, and file changes from configured GitHub repositories
+2. **AI Analysis** - Processes raw GitHub data through machine learning models to extract semantic insights
+3. **Vector Storage** - Stores analyzed data in a PostgreSQL vector database for semantic search and similarity queries
+4. **Scalable Processing** - Uses distributed task queues to efficiently handle large numbers of repositories
+5. **Recommendation API** - Provides intelligent project recommendations to users based on semantic similarity and user preferences
+
+## Architecture
+
+The project follows a clean architecture pattern with clear separation of concerns:
 
 ```
 src/
-├── domain/                     # Logique métier centrale (aucune dépendance externe)
-│   ├── models/                 # Entités du domaine
-│   └── ports/                  # Définitions d'interfaces
-├── application/                # Cas d'usage et workflows métier
-│   ├── services/               # Services métier centraux
-│   └── use_cases/              # Opérations métier spécifiques
-├── infrastructure/             # Adaptateurs systèmes externes
-│   ├── postgres/               # Persistance base de données
-│   ├── redis/                  # File d'attente et cache
-│   ├── celery/                 # Traitement tâches distribuées
-│   │   ├── app.py              # Configuration application Celery
-│   │   ├── config.py           # Configuration Celery
-│   ├── scraping/               # Implémentations extraction données
-│   └── analysis/               # Implémentations traitement IA
-├── api/                        # Interfaces externes
-├── config/                     # Gestion configuration
-│   ├── config.py             # Paramètres application
-└── tests/                      # Suites de tests
-    ├── unit/                   # Tests unitaires par couche
-    ├── integration/            # Tests d'intégration
-    └── fixtures/               # Données de test
+├── domain/                     # Core business logic (no external dependencies)
+│   └── models/                 # Domain entities and schema
+├── application/                # Business use cases and workflows
+│   └── services/               # Core business services
+├── infrastructure/             # External system adapters
+│   ├── postgres/               # Database persistence
+│   ├── pipeline/               # Data processing orchestration
+│   │   └── dagster/            # Dagster pipeline assets
+│   ├── services/               # External service integrations
+│   │   └── go/                 # Go-based GitHub scraper
+│   └── analysis/               # ML model implementations
+├── dbt/                        # Data transformation models
+└── api/                        # External interfaces
 ```
 
-## 🚀 Démarrage Rapide
+## Key Components
 
-### Prérequis
+### Data Pipeline (Dagster)
+- **GitHub Scraping**: Go-based scraper for efficient GitHub API data collection
+- **Data Transformation**: dbt models for data cleaning and enrichment
+- **ML Processing**: Embedding generation using sentence-transformers
+- **Vector Storage**: PostgreSQL with pgvector extension for similarity search
 
-- Python 3.9+
-- Conda 24.11
-- PostgreSQL 17+
+### Machine Learning
+- **Semantic Embeddings**: all-MiniLM-L6-v2 model for text embeddings
+- **Hybrid Embeddings**: Combines semantic and structured features
+- **Model Persistence**: MLflow for model versioning and artifact management
+- **Recommendation Engine**: User-project similarity scoring and personalized recommendations
+
+### Database Schema
+- **Core Entities**: Users, Projects, Categories, Tech Stacks
+- **Relationships**: Many-to-many mappings between entities
+- **ML Tables**: Embedding vectors and similarity matrices
+- **Vector Support**: pgvector for efficient similarity queries
+
+## Quick Start
+
+### Prerequisites
+- Python 3.13+
+- PostgreSQL 15+ with pgvector extension
 - Redis 6+
-- Git
+- Docker & Docker Compose
 
 ### Installation
 
-1. **Cloner le dépôt**
+1. **Clone and setup environment**
    ```bash
-   git clone https://github.com/opensource-together/data-engine
-   cd data-engine
+   git clone <repository-url>
+   cd ost-data-engine
+   conda create -n data-engine-py13 python=3.13
+   conda activate data-engine-py13
+   poetry install
    ```
 
-2. **Configurer l'environnement Python**
-   ```bash
-   conda create -n data-engine python=3.9
-   conda activate data-engine
-   pip install -r requirements.txt
-   ```
-
-3. **Configurer l'environnement**
+2. **Configure environment**
    ```bash
    cp .env.example .env
-   # Éditer .env avec vos identifiants de base de données et paramètres
+   # Edit .env with your database credentials and API keys
    ```
 
-### Configuration
+3. **Start services**
+   ```bash
+   docker-compose up -d db redis
+   ```
 
-Créer un fichier `.env` avec les paramètres requis :
+4. **Initialize database**
+   ```bash
+   psql -d OST_PROD -f scripts/database/recreate_schema.sql
+   python scripts/database/create_test_users.py
+   ```
+
+5. **Run the data pipeline**
+   ```bash
+   export DAGSTER_HOME=$(pwd)/logs/dagster
+   poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select training_data_pipeline
+   ```
+
+## Configuration
+
+Key configuration parameters in `.env`:
 
 ```env
-# Base de données
-DATABASE_URL=postgresql://utilisateur:motdepasse@localhost:5432/analyse_git
-REDIS_URL=redis://localhost:6379/0
+# Database
+DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
+REDIS_CACHE_URL=redis://localhost:6380/0
 
-# Celery
-CELERY_BROKER_URL=redis://localhost:6379/0
-CELERY_RESULT_URL=redis://localhost:6379/0
+# GitHub API
+GITHUB_ACCESS_TOKEN=your_github_token
 
-# Analyse IA
-VECTOR_DB_TYPE=chromadb  # ou pinecone
-EMBEDDING_MODEL=sentence-transformers/all-MiniLM-L6-v2
+# MLflow
+MLFLOW_TRACKING_URI=sqlite:///logs/mlflow.db
+MLFLOW_ARTIFACT_ROOT=logs/mlruns
 
-# Surveillance
-LOG_LEVEL=INFO
-FLOWER_PORT=5555
+# Recommendation weights
+RECOMMENDATION_SEMANTIC_WEIGHT=0.25
+RECOMMENDATION_CATEGORY_WEIGHT=0.45
+RECOMMENDATION_TECH_WEIGHT=0.5
 ```
 
-## 🧪 Workflow de Développement
+## Development
 
-### Exécution des Tests
-
-#### Tests Unitaires de l'Infrastructure (76 tests)
+### Running Tests
 ```bash
-# Tous les tests d'infrastructure
+# Unit tests
 poetry run pytest tests/unit/infrastructure/ -v
 
-# Tests spécifiques par composant
-poetry run pytest tests/unit/infrastructure/postgres/ -v      # Database (22 tests)
-poetry run pytest tests/unit/infrastructure/scraping/ -v      # GitHub Scraper (12 tests)
-poetry run pytest tests/unit/infrastructure/test_config.py -v # Configuration (18 tests)
-poetry run pytest tests/unit/infrastructure/analysis/ -v      # Model Persistence (22 tests)
-```
-
-#### Tests d'Intégration
-```bash
-# Tests d'intégration complets
+# Integration tests
 poetry run pytest tests/integration/ -v
-
-# Tests avec couverture
-poetry run pytest --cov=src --cov-report=html
 ```
 
-#### Validation Pré-commit
+### Code Quality
 ```bash
-# Qualité du code
+# Linting
 poetry run ruff check .
-poetry run black --check .
 
-# Tests critiques
-poetry run pytest tests/unit/infrastructure/ -v
+# Formatting
+poetry run ruff format .
+
+# Type checking
+poetry run mypy src/
 ```
 
-**📊 Statut des Tests**: ✅ **76/76 tests d'infrastructure passent**
-**📖 Documentation**: Voir [docs/testing_strategy.md](docs/testing_strategy.md) pour les détails
-
-### Étendre les Collecteurs
-
-Pour ajouter le support de nouveaux types de sources :
-
-1. **Créer un nouveau collecteur** dans `infrastructure/scraping/` :
-   ```python
-   class NouveauCollecteur(Scraper):
-       def can_handle(self, source: DataSource) -> bool:
-           return source.source_type == SourceType.NOUVEAU_TYPE
-       
-       def scrape(self, source: DataSource) -> ScrapedData:
-           # Implémentation
-   ```
-
-2. **L'enregistrer** dans `scraper_factory.py` :
-   ```python
-   self._scrapers.append(NouveauCollecteur())
-   ```
-
-### Ajouter des Étapes d'Analyse IA
-
-1. **Implémenter service d'analyse** dans `infrastructure/analysis/` :
-   ```python
-   class ServiceAnalysePersonnalisé(AnalysisService):
-       def analyze(self, data: ScrapedData) -> AnalysisResult:
-           # Votre traitement IA
-   ```
-
-2. **Mettre à jour le workflow** pour inclure votre étape d'analyse
-
-## 🔧 Options de Configuration
-
-### Configuration de Collecte de Dépôt
-
-```json
-{
-  "branch": "main",
-  "since_date": "2024-01-01T00:00:00Z",
-  "file_extensions": [".py", ".js"],
-  "max_commits": 1000,
-  "include_merge_commits": false,
-  "exclude_paths": ["tests/", "docs/"]
-}
+### MLflow UI
+```bash
+python scripts/start_mlflow_ui.py
+# Access at http://localhost:5050
 ```
 
-### Configuration Celery
+## Data Flow
 
-```python
-# Ajuster concurrence workers selon votre système
-CELERY_WORKER_CONCURRENCY = 4
+1. **GitHub Scraping**: Go scraper collects repository metadata
+2. **Data Transformation**: dbt models clean and enrich the data
+3. **Entity Mapping**: Projects mapped to categories and tech stacks
+4. **Embedding Generation**: Semantic embeddings created for projects and users
+5. **Hybrid Features**: Combined semantic and structured embeddings
+6. **Similarity Calculation**: User-project similarity matrices computed
+7. **Model Persistence**: MLflow stores model artifacts and versions
+8. **Recommendation API**: Serves personalized project recommendations to users
 
-# Routage des tâches pour différents types de travail
-CELERY_ROUTES = {
-    'scraping.*': {'queue': 'scraping'},
-    'analysis.*': {'queue': 'analysis'},
-}
-```
+## Technologies
+
+- **Python 3.13**: Core application language
+- **Dagster**: Data pipeline orchestration
+- **dbt**: Data transformation and modeling
+- **PostgreSQL + pgvector**: Vector database for similarity search
+- **Redis**: Caching and task queue
+- **MLflow**: Model versioning and persistence
+- **sentence-transformers**: Semantic embedding generation
+- **Go**: High-performance GitHub scraping
+- **Docker**: Containerized services
+
+## License
+
+[License information to be added]
