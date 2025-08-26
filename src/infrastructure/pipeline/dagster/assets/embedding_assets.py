@@ -150,6 +150,7 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
         raise Exception("No hybrid embedding data found from dbt model")
     
     log.info(f"🔬 Generating hybrid embeddings for {len(hybrid_data)} projects")
+    log.info(f"⚖️ Using weights - Semantic: {settings.RECOMMENDATION_SEMANTIC_WEIGHT}, Category: {settings.RECOMMENDATION_CATEGORY_WEIGHT}, Tech: {settings.RECOMMENDATION_TECH_WEIGHT}")
     
             # Extract data
     project_ids = [str(row[0]) for row in hybrid_data]
@@ -211,13 +212,29 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
         structured_feature_vector = category_features + tech_features
         structured_features.append(structured_feature_vector)
     
-            # Create hybrid vectors (MINILM_DIMENSIONS + 38 = 422 dimensions)
+            # Create hybrid vectors with weighted combination (MINILM_DIMENSIONS + 38 = 422 dimensions)
     hybrid_vectors = []
     for i in range(len(semantic_embeddings)):
-        semantic_vec = semantic_embeddings[i]
+        # Apply semantic weight to semantic embeddings
+        semantic_vec = semantic_embeddings[i] * settings.RECOMMENDATION_SEMANTIC_WEIGHT
+        
+        # Apply category and tech weights to structured features
         structured_vec = np.array(structured_features[i], dtype=np.float32)
-        hybrid_vec = np.concatenate([semantic_vec, structured_vec])
+        
+        # Weight the structured features based on their importance
+        # Categories (first 8 dimensions) get category weight
+        category_features = structured_vec[:8] * settings.RECOMMENDATION_CATEGORY_WEIGHT
+        # Tech stacks (next 30 dimensions) get tech weight  
+        tech_features = structured_vec[8:] * settings.RECOMMENDATION_TECH_WEIGHT
+        
+        # Combine weighted features
+        weighted_structured_vec = np.concatenate([category_features, tech_features])
+        
+        # Create final hybrid vector
+        hybrid_vec = np.concatenate([semantic_vec, weighted_structured_vec])
         hybrid_vectors.append(hybrid_vec)
+    
+    log.info(f"✅ Created {len(hybrid_vectors)} weighted hybrid embeddings (422 dimensions)")
     
     # Stocker dans la nouvelle table hybrid_PROJECT_embeddings
     with get_db_session() as db:
