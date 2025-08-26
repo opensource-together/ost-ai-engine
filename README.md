@@ -44,7 +44,7 @@ src/
 - **Vector Storage**: PostgreSQL with pgvector extension for similarity search
 
 ### Machine Learning
-- **Semantic Embeddings**: all-MiniLM-L6-v2 model for text embeddings
+- **Semantic Embeddings**: [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) model for text embeddings
 - **Hybrid Embeddings**: Combines semantic and structured features
 - **Model Persistence**: MLflow for model versioning and artifact management
 - **Recommendation Engine**: User-project similarity scoring and personalized recommendations
@@ -167,7 +167,7 @@ python scripts/start_mlflow_ui.py
 - **PostgreSQL + pgvector**: Vector database for similarity search
 - **Redis**: Caching and task queue
 - **MLflow**: Model versioning and persistence
-- **sentence-transformers**: Semantic embedding generation
+- **[all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)**: Semantic embedding generation
 - **Go**: High-performance GitHub scraping
 - **Docker**: Containerized services
 
