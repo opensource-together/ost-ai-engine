@@ -16,6 +16,12 @@ from src.infrastructure.config import settings
 def start_mlflow_ui():
     """Start MLflow UI server."""
     
+    # Set environment variables to ensure correct paths
+    os.environ["MLFLOW_ARTIFACT_ROOT"] = settings.MLFLOW_ARTIFACT_ROOT
+    
+    # Ensure artifact directory exists
+    os.makedirs(settings.MLFLOW_ARTIFACT_ROOT, exist_ok=True)
+    
     print("🚀 Starting MLflow UI...")
     print(f"📊 MLflow UI will be available at: http://localhost:{settings.MLFLOW_UI_PORT}")
     print(f"📁 Tracking URI: {settings.MLFLOW_TRACKING_URI}")

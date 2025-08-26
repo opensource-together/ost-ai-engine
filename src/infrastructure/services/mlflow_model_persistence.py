@@ -33,8 +33,11 @@ class MLflowModelPersistence:
         self.model_registry_name = model_registry_name or settings.MLFLOW_MODEL_REGISTRY_NAME
         self.logger = get_dagster_logger()
         
-        # Set tracking URI
+        # Set tracking URI and artifact root
         mlflow.set_tracking_uri(self.tracking_uri)
+        
+        # Set artifact root to ensure artifacts go to logs/mlruns/
+        os.environ["MLFLOW_ARTIFACT_ROOT"] = settings.MLFLOW_ARTIFACT_ROOT
         
         # Create or get model registry
         try:

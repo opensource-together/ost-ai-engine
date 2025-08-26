@@ -132,7 +132,7 @@ class Settings(BaseSettings):
         description="MLflow tracking URI for model persistence"
     )
     MLFLOW_ARTIFACT_ROOT: str = Field(
-        default="logs/mlruns",
+        default="models/mlruns",
         description="MLflow artifact root directory"
     )
     MLFLOW_MODEL_REGISTRY_NAME: str = Field(
