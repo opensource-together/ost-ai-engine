@@ -163,6 +163,20 @@ class Settings(BaseSettings):
         default=100, description="Default batch size for operations"
     )
 
+    # --- ML Model Configuration ---
+    MODEL_NAME: str = Field(
+        default="sentence-transformers/all-MiniLM-L6-v2",
+        description="Hugging Face model name for sentence embeddings"
+    )
+    MODEL_DISPLAY_NAME: str = Field(
+        default="all-MiniLM-L6-v2",
+        description="Display name for the embedding model"
+    )
+    MODEL_DIMENSIONS: int = Field(
+        default=384,
+        description="Output dimensions of the embedding model"
+    )
+    
     # --- Recommendation Model Parameters ---
     RECOMMENDATION_SEMANTIC_WEIGHT: float = Field(
         default=0.4, description="Weight for semantic similarity in recommendations"

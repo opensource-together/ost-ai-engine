@@ -374,7 +374,7 @@ class HybridProjectEmbeddings(Base):
     __tablename__ = "hybrid_PROJECT_embeddings"
 
     project_id = Column(UUID(as_uuid=True), ForeignKey("PROJECT.id"), primary_key=True)
-    semantic_embedding = Column(Vector(384), comment="384-dimensional semantic embedding from all-MiniLM-L6-v2")
+    semantic_embedding = Column(Vector(384), comment="384-dimensional semantic embedding from sentence-transformers")
     structured_features = Column(JSONB, comment="Structured features: categories, tech_stacks, language")
     hybrid_vector = Column(Vector(422), comment="422-dimensional hybrid vector: semantic(384) + structured(38)")
     similarity_weights = Column(JSONB, comment="Weights for different similarity components")

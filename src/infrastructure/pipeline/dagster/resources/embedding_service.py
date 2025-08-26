@@ -18,9 +18,9 @@ from src.infrastructure.config import settings
 
 
 class EmbeddingResource(ConfigurableResource):
-    """Resource Dagster pour embeddings avec all-MiniLM-L6-v2."""
+    """Resource Dagster pour embeddings avec sentence-transformers."""
     
-    model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
+    model_name: str = settings.MODEL_NAME
     max_batch_size: int = 32
     cache_ttl: int = 86400  # 24h
     

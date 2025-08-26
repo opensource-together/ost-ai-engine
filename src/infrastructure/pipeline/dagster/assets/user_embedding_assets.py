@@ -8,6 +8,7 @@ from sqlalchemy import text
 from typing import List, Dict, Any
 
 from src.infrastructure.postgres.database import get_db_session
+from src.infrastructure.config import settings
 
 from src.infrastructure.services.mlflow_model_persistence import mlflow_model_persistence
 from src.infrastructure.logger import log
@@ -15,7 +16,7 @@ from src.infrastructure.logger import log
 logger = log
 
 class UserEmbeddingConfig(Config):
-    model_name: str = "all-MiniLM-L6-v2"
+    model_name: str = settings.MODEL_NAME
     batch_size: int = 32
     save_embeddings: bool = True
     save_metadata: bool = True
@@ -98,7 +99,7 @@ def user_embeddings(context, config: UserEmbeddingConfig) -> Dict[str, Any]:
             metadata = {
                 "user_ids": user_ids,
                 "usernames": usernames,
-                "model_name": config.model_name,
+                "model_name": settings.MODEL_DISPLAY_NAME,
                 "embedding_dimension": embeddings_array.shape[1],
                 "count": len(user_ids),
                 "generation_time": 0  # TODO: Add actual generation time

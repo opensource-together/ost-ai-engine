@@ -6,7 +6,7 @@ import json
 import numpy as np
 
 # Model configuration constants
-MINILM_DIMENSIONS = 384  # Fixed dimension for all-MiniLM-L6-v2 model
+MINILM_DIMENSIONS = settings.MODEL_DIMENSIONS  # Dynamic dimension from settings
 
 from dagster import AssetIn, Nothing, Output, asset
 from sqlalchemy import text
@@ -19,7 +19,7 @@ from src.infrastructure.postgres.database import get_db_session
 
 @asset(
     name="project_embeddings",
-    description="Generate embeddings for all projects using all-MiniLM-L6-v2",
+    description=f"Generate embeddings for all projects using {settings.MODEL_DISPLAY_NAME}",
     ins={"embeddings_data": AssetIn("ml_project_embeddings", dagster_type=Nothing)},
     group_name="ml_embeddings",
     compute_kind="ml",
@@ -92,7 +92,7 @@ def project_embeddings_asset(context) -> Output[dict]:
         "project_ids": project_ids,
         "metadata": {
             "count": len(embeddings),
-            "model": "all-MiniLM-L6-v2",
+            "model": settings.MODEL_DISPLAY_NAME,
             "dimensions": MINILM_DIMENSIONS,
             "generation_time": time.time() - start_time,
         }
@@ -108,7 +108,7 @@ def project_embeddings_asset(context) -> Output[dict]:
         artifacts,
         metadata={
             "count": len(embeddings),
-            "model": "all-MiniLM-L6-v2",
+            "model": settings.MODEL_DISPLAY_NAME,
             "dimensions": MINILM_DIMENSIONS,
             "generation_time": time.time() - start_time,
         }
