@@ -9,7 +9,7 @@ from dagster import AssetIn, Nothing, Output, asset
 from sqlalchemy import text
 
 from src.infrastructure.services.mlflow_model_persistence import mlflow_model_persistence
-from src.infrastructure.services.mlflow_service import mlflow_service
+
 from src.infrastructure.logger import log
 from src.infrastructure.postgres.database import get_db_session
 
@@ -95,13 +95,7 @@ def project_embeddings_asset(context) -> Output[dict]:
         }
     }
     
-    # Save with MLflow tracking
-    run_id = mlflow_service.log_embedding_experiment(
-        run_name="project_embeddings",
-        artifacts=artifacts,
-        metadata=artifacts["metadata"]
-    )
-    log.info(f"✅ MLflow experiment logged with run ID: {run_id}")
+
     
     # Save with MLflow model persistence
     model_uri = mlflow_model_persistence.save_embeddings("project_embeddings", artifacts)
@@ -273,13 +267,7 @@ def hybrid_project_embeddings_asset(context) -> Output[dict]:
         "semantic": 0.1
     }
     
-    # Log with MLflow
-    run_id = mlflow_service.log_hybrid_embedding_experiment(
-        run_name="hybrid_project_embeddings",
-        metadata=metadata,
-        weights=weights
-    )
-    log.info(f"✅ MLflow hybrid experiment logged with run ID: {run_id}")
+
     
     return Output(
         metadata,

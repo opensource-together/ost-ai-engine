@@ -9,7 +9,7 @@ from typing import List, Dict, Any
 import logging
 
 from src.infrastructure.postgres.database import get_db_session
-from src.infrastructure.services.mlflow_service import mlflow_service
+
 from src.infrastructure.services.mlflow_model_persistence import mlflow_model_persistence
 from src.infrastructure.logger import log
 
@@ -105,14 +105,7 @@ def user_embeddings(context, config: UserEmbeddingConfig) -> Dict[str, Any]:
                 "generation_time": 0  # TODO: Add actual generation time
             }
             
-            # Log with MLflow
-            run_id = mlflow_service.log_embedding_experiment(
-                run_name="user_embeddings",
-                artifacts=artifacts,
-                metadata=metadata,
-                model_name=config.model_name
-            )
-            logger.info(f"✅ MLflow experiment logged with run ID: {run_id}")
+
             
             # Save with MLflow model persistence
             if config.save_embeddings:
