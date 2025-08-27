@@ -1,6 +1,5 @@
 """
 MLflow service for model persistence only.
-Replaces ModelPersistenceService with MLflow model registry capabilities.
 """
 
 import os

@@ -1,13 +1,13 @@
 """
 Cache infrastructure package for the data engine.
 
-Provides advanced caching capabilities including:
-- Multi-level caching (Memory + Redis)
-- Compression and serialization
-- Performance monitoring
-- Circuit breaker pattern
+Provides simplified caching capabilities using standard libraries:
+- Two-level caching (Memory + Redis)
+- JSON serialization
+- Automatic TTL management
+- Error handling
 """
 
-from .redis_cache_service import AdvancedRedisCacheService, cache_service
+from .redis_cache_service import SimpleRedisCacheService, cache_service
 
-__all__ = ["cache_service", "AdvancedRedisCacheService"]
+__all__ = ["cache_service", "SimpleRedisCacheService"]
