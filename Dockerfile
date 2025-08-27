@@ -52,12 +52,16 @@ RUN chown -R appuser:appuser /app
 # Switch to non-root user
 USER appuser
 
-# Expose port for the API
+# Set default environment variables
+ENV API_HOST=0.0.0.0
+ENV API_PORT=8000
+
+# Expose port for the API (default, can be overridden)
 EXPOSE 8000
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import requests; requests.get('http://localhost:8000/health')" || exit 1
+    CMD python -c "import requests; requests.get('http://localhost:${API_PORT:-8000}/health')" || exit 1
 
 # Default command to run the API server
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"] 
+CMD ["sh", "-c", "uvicorn src.api.main:app --host ${API_HOST:-0.0.0.0} --port ${API_PORT:-8000}"] 
