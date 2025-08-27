@@ -1,10 +1,7 @@
 # OST Data Engine
 
-A data processing platform for GitHub repository analysis and intelligent project recommendations. Part of the [OpenSource Together](https://github.com/opensource-together) platform.
-
-## Overview
-
-Automates GitHub data collection, AI analysis, and vector storage to power intelligent project recommendations.
+A data processing platform for GitHub repository analysis and intelligent project recommendations.  
+Part of the [OpenSource Together](https://github.com/opensource-together) platform.
 
 ## Quick Start
 
@@ -35,7 +32,6 @@ Automates GitHub data collection, AI analysis, and vector storage to power intel
 
 3. **Run Pipeline**
    ```bash
-   export DAGSTER_HOME=$(pwd)/logs/dagster
    poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select training_data_pipeline
    ```
 
@@ -43,22 +39,32 @@ Automates GitHub data collection, AI analysis, and vector storage to power intel
 
 ```
 src/
-├── domain/          # Business logic
-├── application/     # Use cases
+├── api/             # FastAPI recommendation service
+├── domain/          # Business logic and models
+├── application/     # Use cases and services
+│   └── services/    # Recommendation engine
 ├── infrastructure/  # External adapters
 │   ├── pipeline/    # Dagster orchestration
-│   ├── services/    # External integrations
-│   └── analysis/    # ML models
-└── dbt/            # Data transformation
+│   ├── services/    # MLflow, Redis, external APIs
+│   ├── postgres/    # Database connections
+│   └── cache/       # Redis caching layer
+└── dbt/            # Data transformation models
+```
+
+**Data Flow:**
+```
+GitHub Scraping → Data Transformation → Embedding Generation → 
+Similarity Calculation → Model Persistence → Recommendation API
 ```
 
 ## Key Components
 
-- **GitHub Scraping**: Go-based scraper for efficient data collection
-- **ML Processing**: [all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) embeddings
+- **GitHub Scraping**: [@Golang](https://github.com/golang/go) scraper for efficient data collection
+- **ML Processing**: [@all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) embeddings
 - **Vector Storage**: PostgreSQL with pgvector for similarity search
-- **Model Persistence**: MLflow for versioning and artifacts
+- **Model Persistence**: [@MLFlow](https://github.com/mlflow/mlflow) for versioning and artifacts
 - **Recommendation Engine**: User-project similarity scoring
+- **API Layer**: FastAPI service for recommendation endpoints
 
 ## Configuration
 
@@ -68,7 +74,9 @@ Key settings in `.env`:
 DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
 GITHUB_ACCESS_TOKEN=your_github_token
 MLFLOW_TRACKING_URI=sqlite:///logs/mlflow.db
-MLFLOW_ARTIFACT_ROOT=logs/mlruns
+MLFLOW_ARTIFACT_ROOT=models/mlruns
+API_HOST=0.0.0.0
+API_PORT=8000
 ```
 
 ## Development
@@ -77,21 +85,13 @@ MLFLOW_ARTIFACT_ROOT=logs/mlruns
 # Tests
 poetry run pytest tests/ -v
 
-# Code quality
-poetry run ruff check .
-poetry run ruff format .
-
 # MLflow UI
 python scripts/start_mlflow_ui.py
+
+# Start API
+python src/api/main.py
 ```
 
 ## Data Flow
 
 1. GitHub scraping → 2. Data transformation → 3. Embedding generation → 4. Similarity calculation → 5. Model persistence → 6. Recommendation API
-
-## Tech Stack
-
-- **Python 3.13** + **Dagster** + **dbt**
-- **PostgreSQL** + **pgvector** + **Redis**
-- **MLflow** + **[all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2)**
-- **Go** (GitHub scraper) + **Docker**
