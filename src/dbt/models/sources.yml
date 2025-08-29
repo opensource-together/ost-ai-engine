@@ -64,6 +64,32 @@ sources:
           - name: type
             description: "Type: LANGUAGE or TECH"
       
+      - name: USER_TECH_STACK
+        description: "Many-to-many relationship between users and tech stacks"
+        columns:
+          - name: user_id
+            description: "Foreign key to USER"
+          - name: tech_stack_id
+            description: "Foreign key to TECH_STACK"
+      
+      - name: USER_CATEGORY
+        description: "Many-to-many relationship between users and categories"
+        columns:
+          - name: user_id
+            description: "Foreign key to USER"
+          - name: category_id
+            description: "Foreign key to CATEGORY"
+      
+      - name: USER
+        description: "Main users table"
+        columns:
+          - name: id
+            description: "Primary key"
+          - name: username
+            description: "Username"
+          - name: bio
+            description: "User bio"
+      
       - name: github_PROJECT
         description: "Staging table with raw GitHub repository data"
         columns:
