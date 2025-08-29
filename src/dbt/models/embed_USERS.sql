@@ -52,7 +52,7 @@ SELECT
   ) as embedding_text,
   bio,
   categories,
-  NULL as embedding_vector,  -- Will be populated by Dagster pipeline
+  CAST(NULL AS vector(384)) as embedding_vector,  -- ✅ Explicit vector(384) type
   NOW() as last_ingested_at,
   NOW() as created_at
 FROM user_categories
