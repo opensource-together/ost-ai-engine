@@ -22,6 +22,8 @@
 
 ## Quick Start
 
+For detailed setup instructions, see our [Quick Start Guide](docs/deployment/quick-start.md).
+
 ### Setup
 
 #### 1. **Environment Setup**
@@ -44,6 +46,18 @@ python scripts/database/create_test_users.py
 #### 3. **Pipeline Execution**
 ```bash
 poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select training_data_pipeline
+```
+
+#### 4. **Start Go API**
+```bash
+cd src/api/go
+go build -o recommendations-api recommendations.go
+./recommendations-api
+```
+
+#### 5. **Test API**
+```bash
+curl "http://localhost:8080/recommendations?user_id={USER_ID}"
 ```
 
 ---
@@ -81,6 +95,8 @@ src/
 
 ## Configuration
 
+For complete environment configuration details, see [Environment Configuration](docs/deployment/environment.md).
+
 Key settings in `.env`:
 
 ```env
@@ -97,6 +113,7 @@ MLFLOW_ARTIFACT_ROOT=models/mlruns
 # API
 API_HOST=0.0.0.0
 API_PORT=8000
+GO_API_PORT=8080
 ```
 
 ---
@@ -114,9 +131,29 @@ poetry run ruff format .
 # MLflow UI
 python scripts/start_mlflow_ui.py
 
-# Start API
-python src/api/main.py
+# Dagster UI
+dagster dev
+
+# Start Go API
+cd src/api/go
+go build -o recommendations-api recommendations.go
+./recommendations-api
 ```
+
+---
+
+## Documentation
+
+📚 **Complete Documentation**: [docs/](docs/)
+
+### Key Documentation Sections
+
+- **[Quick Start Guide](docs/deployment/quick-start.md)** - Get up and running quickly
+- **[Environment Configuration](docs/deployment/environment.md)** - All environment variables explained
+- **[REST API Reference](docs/api/rest-api.md)** - Complete API documentation
+- **[Go API Implementation](docs/api/go-api.md)** - Go API technical details
+- **[ML Pipeline Overview](docs/ml-pipeline/overview.md)** - Machine learning pipeline architecture
+- **[Database Schema](docs/database/schema.md)** - Complete database schema documentation
 
 ---
 
@@ -126,10 +163,10 @@ python src/api/main.py
 
 | Category | Technologies |
 |----------|-------------|
-| **Backend** | Python 3.13 + Dagster + dbt + FastAPI |
+| **Backend** | Python 3.13 + Dagster + dbt + Go |
 | **Database** | PostgreSQL + pgvector + Redis |
 | **ML/AI** | MLflow + all-MiniLM-L6-v2 |
-| **Infrastructure** | Go (GitHub scraper) + Docker |
+| **Infrastructure** | Docker + Docker Compose |
 
 </div>
 
