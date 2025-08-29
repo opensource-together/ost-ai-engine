@@ -152,3 +152,34 @@ def dbt_user_embeddings_data_asset(context) -> Output[None]:
         raise Exception(f"dbt run failed: {result.stderr}")
     context.log.info(f"✅ dbt model embed_USERS completed.")
     return Output(None)
+
+
+@asset(
+    name="dbt_user_project_similarities",
+    description="Execute user_project_similarities dbt model to prepare similarity calculation data",
+    ins={
+        "user_embeddings": AssetIn("user_embeddings", dagster_type=Nothing),
+        "hybrid_embeddings": AssetIn("project_hybrid_embeddings", dagster_type=Nothing)
+    },
+    group_name="ml_preparation",
+    compute_kind="dbt",
+)
+def dbt_user_project_similarities_asset(context) -> Output[None]:
+    """
+    Runs the dbt model `user_project_similarities` to prepare data for similarity calculations.
+    """
+    context.log.info(f"🚀 Starting dbt model: user_project_similarities")
+    # Use subprocess to run dbt directly with correct parameters
+    result = subprocess.run(
+        ["dbt", "run", "--select", "user_project_similarities", "--profiles-dir", str(DBT_PROJECT_DIR), "--project-dir", str(DBT_PROJECT_DIR)],
+        capture_output=True,
+        text=True,
+        cwd=str(DBT_PROJECT_DIR) # Ensure dbt runs from its project directory
+    )
+    context.log.info(result.stdout)
+    if result.stderr:
+        context.log.error(result.stderr)
+    if result.returncode != 0:
+        raise Exception(f"dbt run failed: {result.stderr}")
+    context.log.info(f"✅ dbt model user_project_similarities completed.")
+    return Output(None)
