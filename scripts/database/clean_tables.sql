@@ -21,7 +21,10 @@ BEGIN
     'embed_PROJECTS_temp',
     'embed_USERS',
     'hybrid_PROJECT_embeddings',
-    'training_PROJECT'
+    'training_PROJECT',
+    'user_project_similarities_temp',
+    'user_project_similarities',
+    'USER_PROJECT_SIMILARITY'
   ]
   LOOP
     EXECUTE format('TRUNCATE TABLE %I RESTART IDENTITY CASCADE;', t);
