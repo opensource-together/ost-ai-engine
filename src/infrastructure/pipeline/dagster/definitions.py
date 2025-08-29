@@ -12,11 +12,12 @@ from __future__ import annotations
 from dagster import Definitions, define_asset_job, IOManager, InputManager, io_manager, input_manager
 from dagster_dbt import DbtCliResource
 
-from .assets.dbt import DBT_PROJECT_DIR, dbt_project_embeddings_data_asset, dbt_projects_asset, dbt_project_enriched_data_asset, dbt_user_embeddings_data_asset
+from .assets.dbt import DBT_PROJECT_DIR, dbt_project_embeddings_data_asset, dbt_projects_asset, dbt_project_enriched_data_asset, dbt_user_embeddings_data_asset, dbt_user_project_similarities_asset
 from .assets.embedding_assets import project_semantic_embeddings_asset, project_hybrid_embeddings_asset
 from .assets.user_embedding_assets import user_embeddings
 from .assets.github_assets import github_data_ready, github_scraping
 from .assets.reference_assets import project_mappings, mappings_ready
+from .assets.similarity_assets import user_project_similarities_asset
 
 
 from .resources.embedding_service import embedding_service
@@ -39,6 +40,8 @@ training_data_pipeline = define_asset_job(
         "project_hybrid_embeddings",   # 8. Generate hybrid embeddings (Python)
         "dbt_user_embeddings_data",    # 9. Prepare user embedding data (dbt)
         "user_embeddings",             # 10. Generate user embeddings (Python)
+        "dbt_user_project_similarities", # 11. Prepare similarity data (dbt)
+        "user_project_similarities",   # 12. Calculate and store similarities (Python)
     ],
 )
 
@@ -52,9 +55,11 @@ defs = Definitions(
         dbt_projects_asset,  # Individual dbt asset with explicit dependencies
         dbt_project_enriched_data_asset,  # dbt model for project embedding preparation
         dbt_user_embeddings_data_asset,  # dbt model for user embedding preparation
+        dbt_user_project_similarities_asset,  # dbt model for similarity data preparation
         project_semantic_embeddings_asset,  # Generate semantic embeddings
         project_hybrid_embeddings_asset,  # Generate hybrid embeddings
         user_embeddings,  # Generate user embeddings
+        user_project_similarities_asset,  # Calculate and store similarities
     ],
     jobs=[training_data_pipeline],
     resources={
