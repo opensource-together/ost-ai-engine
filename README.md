@@ -5,15 +5,6 @@
 
 <div align="center">
 
-```ascii
-                             ╔══════════════════════════════════════════════════════════════╗
-                                                       OST DATA ENGINE                           
-                                                                                           
-                                    🔍 Projects  →  🧠 ML Processing  →  🎯 API              
-                               📊 Data Pipeline    →  🔄 Embeddings    →  💡 Recommendations 
-                             ╚══════════════════════════════════════════════════════════════╝
-```
-
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-green.svg)](https://postgresql.org) [![Redis](https://img.shields.io/badge/Redis-6+-red.svg)](https://redis.io) [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com) [![MLflow](https://img.shields.io/badge/MLflow-Enabled-orange.svg)](https://mlflow.org)
 
 </div>
@@ -66,7 +57,7 @@ curl "http://localhost:8080/recommendations?user_id={USER_ID}"
 
 ```
 src/
-├──  api/             # FastAPI recommendation service
+├──  api/             # Go API recommendation service
 ├──  domain/          # Business logic and models
 ├──  application/     # Use cases and services
 │   └──  services/    # Recommendation engine
@@ -75,7 +66,7 @@ src/
 │   ├──  services/    # MLflow, Redis, external APIs
 │   ├──  postgres/    # Database connections
 │   └──  cache/       # Redis caching layer
-└──  dbt/            # Data transformation models
+└──  dbt/             # Data transformation models
 ```
 
 ---
@@ -84,12 +75,12 @@ src/
 
 | Component | Technology | Purpose |
 |-----------|------------|---------|
-| **GitHub Scraping** | [@Golang](https://github.com/golang/go) | Efficient data collection |
+| **Data extraction & API** | [@Golang](https://github.com/golang/go) | Recommendation endpoints |
+| **Data Transformation** | [@dbt](https://github.com/golang/go) | Transformation models |
+| **Recommendation Engine** | [@Python](https://github.com/python) | User-project scoring |
 | **ML Processing** | [@all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | Semantic embeddings |
-| **Vector Storage** | PostgreSQL + pgvector | Similarity search |
 | **Model Persistence** | [@MLFlow](https://github.com/mlflow/mlflow) | Versioning & artifacts |
-| **Recommendation Engine** | Custom Python | User-project scoring |
-| **API Layer** | FastAPI | Recommendation endpoints |
+| **Vector Storage** | [@Postgres](https://github.com/postgres/postgres) | Similarity search |
 
 ---
 
@@ -154,21 +145,6 @@ go build -o recommendations-api recommendations.go
 - **[Go API Implementation](docs/api/go-api.md)** - Go API technical details
 - **[ML Pipeline Overview](docs/ml-pipeline/overview.md)** - Machine learning pipeline architecture
 - **[Database Schema](docs/database/schema.md)** - Complete database schema documentation
-
----
-
-## Tech Stack
-
-<div align="center">
-
-| Category | Technologies |
-|----------|-------------|
-| **Backend** | Python 3.13 + Dagster + dbt + Go |
-| **Database** | PostgreSQL + pgvector + Redis |
-| **ML/AI** | MLflow + all-MiniLM-L6-v2 |
-| **Infrastructure** | Docker + Docker Compose |
-
-</div>
 
 ---
 
