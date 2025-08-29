@@ -11,6 +11,37 @@
 
 ---
 
+## Key Components
+
+| Component | Technology | Purpose |
+|-----------|------------|---------|
+| **Data extraction & API** | [@Golang](https://github.com/golang/go) | Recommendation endpoints |
+| **Data Transformation** | [@dbt](https://github.com/golang/go) | Transformation models |
+| **Recommendation Engine** | [@Python](https://github.com/python) | User-project scoring |
+| **ML Processing** | [@all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | Semantic embeddings |
+| **Model Persistence** | [@MLFlow](https://github.com/mlflow/mlflow) | Versioning & artifacts |
+| **Vector Storage** | [@Postgres](https://github.com/postgres/postgres) | Similarity search |
+
+---
+
+## Architecture
+
+```
+src/
+├──  api/             # Go API recommendation service
+├──  domain/          # Business logic and models
+├──  application/     # Use cases and services
+│   └──  services/    # Recommendation engine
+├──  infrastructure/  # External adapters
+│   ├──  pipeline/    # Dagster orchestration
+│   ├──  services/    # MLflow, Redis, external APIs
+│   ├──  postgres/    # Database connections
+│   └──  cache/       # Redis caching layer
+└──  dbt/             # Data transformation models
+```
+
+---
+
 ## Quick Start
 
 For detailed setup instructions, see our [Quick Start Guide](docs/deployment/quick-start.md).
@@ -50,37 +81,6 @@ go build -o recommendations-api recommendations.go
 ```bash
 curl "http://localhost:8080/recommendations?user_id={USER_ID}"
 ```
-
----
-
-## Architecture
-
-```
-src/
-├──  api/             # Go API recommendation service
-├──  domain/          # Business logic and models
-├──  application/     # Use cases and services
-│   └──  services/    # Recommendation engine
-├──  infrastructure/  # External adapters
-│   ├──  pipeline/    # Dagster orchestration
-│   ├──  services/    # MLflow, Redis, external APIs
-│   ├──  postgres/    # Database connections
-│   └──  cache/       # Redis caching layer
-└──  dbt/             # Data transformation models
-```
-
----
-
-## Key Components
-
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Data extraction & API** | [@Golang](https://github.com/golang/go) | Recommendation endpoints |
-| **Data Transformation** | [@dbt](https://github.com/golang/go) | Transformation models |
-| **Recommendation Engine** | [@Python](https://github.com/python) | User-project scoring |
-| **ML Processing** | [@all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | Semantic embeddings |
-| **Model Persistence** | [@MLFlow](https://github.com/mlflow/mlflow) | Versioning & artifacts |
-| **Vector Storage** | [@Postgres](https://github.com/postgres/postgres) | Similarity search |
 
 ---
 
