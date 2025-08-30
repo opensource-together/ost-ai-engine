@@ -79,6 +79,11 @@ jobs:
     - name: Setup database schema
       env:
         DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
       run: |
         poetry run python -c "
         from sqlalchemy import create_engine, text
@@ -87,6 +92,10 @@ jobs:
             conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
             conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
         "
+        
+        # Setup test database using dbt models
+        cd src/dbt
+        poetry run dbt run --select tag:test --target ci
 
     - name: Run tests
       env:
@@ -99,4 +108,14 @@ jobs:
         RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
         RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
       run: |
-        poetry run python -m pytest tests/ -v
+        # Run unit tests first (fast, no external dependencies)
+        echo "🧪 Running unit tests..."
+        poetry run pytest tests/unit/ -v -m "unit"
+        
+        # Run integration tests (require database and services)
+        echo "🔗 Running integration tests..."
+        poetry run pytest tests/integration/ -v -m "integration"
+        
+        # Run all tests together for coverage
+        echo "📊 Running all tests with coverage..."
+        poetry run pytest tests/ -v --cov=src --cov-report=xml

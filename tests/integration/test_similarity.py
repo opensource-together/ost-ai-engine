@@ -13,7 +13,7 @@ from src.infrastructure.config import settings
 
 @pytest.mark.integration
 def test_similarity_data_quality():
-    """Test the quality of similarity data in USER_PROJECT_SIMILARITY."""
+    """Test the quality of similarity data in test_similarities."""
     print("🔍 SIMILARITY DATA QUALITY TEST")
     print("=" * 80)
     
@@ -22,9 +22,9 @@ def test_similarity_data_quality():
     
     with engine.connect() as conn:
         # Check that the table exists and contains data
-        result = conn.execute(text('SELECT COUNT(*) FROM "USER_PROJECT_SIMILARITY"'))
+        result = conn.execute(text('SELECT COUNT(*) FROM "test_similarities"'))
         total_records = result.scalar()
-        assert total_records > 0, "USER_PROJECT_SIMILARITY table is empty"
+        assert total_records > 0, "test_similarities table is empty"
         
         print(f"📊 Total records: {total_records:,}")
         
@@ -37,7 +37,7 @@ def test_similarity_data_quality():
                 STDDEV(similarity_score) as std_score,
                 COUNT(DISTINCT user_id) as unique_users,
                 COUNT(DISTINCT project_id) as unique_projects
-            FROM "USER_PROJECT_SIMILARITY"
+            FROM "test_similarities"
         """))
         
         stats = result.fetchone()
@@ -54,7 +54,7 @@ def test_similarity_data_quality():
             SELECT user_id, COUNT(*) as duplicate_count
             FROM (
                 SELECT user_id, similarity_score, COUNT(*) as score_count
-                FROM "USER_PROJECT_SIMILARITY"
+                FROM "test_similarities"
                 GROUP BY user_id, similarity_score
                 HAVING COUNT(*) > 1
             ) duplicates
@@ -80,7 +80,7 @@ def test_similarity_data_quality():
                 COUNT(*) as users_with_recs
             FROM (
                 SELECT user_id, COUNT(*) as rec_count
-                FROM "USER_PROJECT_SIMILARITY"
+                FROM "test_similarities"
                 GROUP BY user_id
             ) user_recs
         """))
@@ -98,7 +98,7 @@ def test_similarity_data_quality():
             SELECT COUNT(*) as users_with_correct_count
             FROM (
                 SELECT user_id, COUNT(*) as rec_count
-                FROM "USER_PROJECT_SIMILARITY"
+                FROM "test_similarities"
                 GROUP BY user_id
                 HAVING COUNT(*) = {expected_top_n}
             ) correct_users
@@ -177,7 +177,7 @@ def test_similarity_consistency():
             SELECT COUNT(*) as duplicate_pairs
             FROM (
                 SELECT user_id, project_id, COUNT(*)
-                FROM "USER_PROJECT_SIMILARITY"
+                FROM "test_similarities"
                 GROUP BY user_id, project_id
                 HAVING COUNT(*) > 1
             ) duplicates
@@ -190,7 +190,7 @@ def test_similarity_consistency():
         # Check that scores are in [0, 1]
         result = conn.execute(text("""
             SELECT COUNT(*) as invalid_scores
-            FROM "USER_PROJECT_SIMILARITY"
+            FROM "test_similarities"
             WHERE similarity_score < 0 OR similarity_score > 1
         """))
         
@@ -198,29 +198,29 @@ def test_similarity_consistency():
         assert invalid_scores == 0, f"Found {invalid_scores} invalid scores"
         print(f"✅ All scores are in [0, 1]")
         
-        # Check that users exist in USER table
+        # Check that users exist in test_users table
         result = conn.execute(text("""
             SELECT COUNT(*) as orphan_users
-            FROM "USER_PROJECT_SIMILARITY" ups
-            LEFT JOIN "USER" u ON ups.user_id = u.id
-            WHERE u.id IS NULL
+            FROM "test_similarities" ts
+            LEFT JOIN "test_users" tu ON ts.user_id = tu.id
+            WHERE tu.id IS NULL
         """))
         
         orphan_users = result.scalar()
         assert orphan_users == 0, f"Found {orphan_users} orphan users"
-        print(f"✅ All users exist in USER table")
+        print(f"✅ All users exist in test_users table")
         
-        # Check that projects exist in PROJECT table
+        # Check that projects exist in test_projects table
         result = conn.execute(text("""
             SELECT COUNT(*) as orphan_projects
-            FROM "USER_PROJECT_SIMILARITY" ups
-            LEFT JOIN "PROJECT" p ON ups.project_id = p.id
-            WHERE p.id IS NULL
+            FROM "test_similarities" ts
+            LEFT JOIN "test_projects" tp ON ts.project_id = tp.id
+            WHERE tp.id IS NULL
         """))
         
         orphan_projects = result.scalar()
         assert orphan_projects == 0, f"Found {orphan_projects} orphan projects"
-        print(f"✅ All projects exist in PROJECT table")
+        print(f"✅ All projects exist in test_projects table")
 
 
 @pytest.mark.integration
