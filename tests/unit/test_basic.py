@@ -7,6 +7,7 @@ import os
 from unittest.mock import patch, MagicMock
 
 
+@pytest.mark.unit
 def test_environment_variables():
     """Test that required environment variables are set."""
     required_vars = [
@@ -20,6 +21,7 @@ def test_environment_variables():
         assert os.getenv(var) is not None, f"Environment variable {var} is not set"
 
 
+@pytest.mark.unit
 def test_model_configuration():
     """Test that model configuration is valid."""
     model_name = os.getenv('MODEL_NAME')
@@ -29,6 +31,7 @@ def test_model_configuration():
     assert model_dimensions == '384'
 
 
+@pytest.mark.unit
 def test_project_structure():
     """Test that essential project files exist."""
     essential_files = [
@@ -43,6 +46,7 @@ def test_project_structure():
         assert os.path.exists(file_path), f"Essential file/directory {file_path} not found"
 
 
+@pytest.mark.unit
 def test_settings_import():
     """Test that settings can be imported correctly."""
     try:
@@ -52,6 +56,7 @@ def test_settings_import():
         pytest.fail(f"Failed to import settings: {e}")
 
 
+@pytest.mark.unit
 def test_database_url_format():
     """Test that DATABASE_URL has correct format."""
     database_url = os.getenv('DATABASE_URL')
@@ -59,6 +64,7 @@ def test_database_url_format():
     assert database_url.startswith('postgresql://'), "DATABASE_URL should start with postgresql://"
 
 
+@pytest.mark.unit
 def test_github_token_length():
     """Test that GitHub token has reasonable length."""
     token = os.getenv('GITHUB_ACCESS_TOKEN')
