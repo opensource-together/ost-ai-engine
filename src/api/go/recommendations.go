@@ -171,6 +171,17 @@ func getRecommendations(db *sql.DB, config Config, userID string) (*Recommendati
 	}, nil
 }
 
+// HTTP handler for health check endpoint
+func healthHandler() http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":    "healthy",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
+	}
+}
+
 // HTTP handler for recommendations endpoint
 func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -215,6 +226,7 @@ func main() {
 	log.Println("✅ Database connection established")
 
 	// Setup HTTP routes
+	http.HandleFunc("/health", healthHandler())
 	http.HandleFunc("/recommendations", recommendationsHandler(db, config))
 
 	// Start server
