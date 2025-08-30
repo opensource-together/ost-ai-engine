@@ -2,9 +2,9 @@ name: CI
 
 on:
   push:
-    branches: [ main, feature/*, ci/cd ]
+    branches: [ main, feature/*, ci-cd, develop, staging, release/*, hotfix/* ]
   pull_request:
-    branches: [ main ]
+    branches: [ main, develop, staging ]
 
 env:
   POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
