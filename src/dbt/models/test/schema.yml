@@ -1,0 +1,118 @@
+version: 2
+
+models:
+  - name: test_users
+    description: "Test users for integration tests with different profiles"
+    columns:
+      - name: id
+        description: "Unique user identifier"
+        tests:
+          - not_null
+          - unique
+      - name: username
+        description: "User username"
+        tests:
+          - not_null
+          - unique
+      - name: email
+        description: "User email address"
+        tests:
+          - not_null
+          - unique
+      - name: primary_language
+        description: "User's primary programming language"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Python', 'JavaScript', 'Go']
+      - name: category
+        description: "User's primary category"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Data Science', 'Web Development', 'Backend Development']
+
+  - name: test_projects
+    description: "Test projects for integration tests with different technologies"
+    columns:
+      - name: id
+        description: "Unique project identifier"
+        tests:
+          - not_null
+          - unique
+      - name: title
+        description: "Project title"
+        tests:
+          - not_null
+      - name: description
+        description: "Project description"
+        tests:
+          - not_null
+      - name: primary_language
+        description: "Project's primary programming language"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Python', 'JavaScript', 'Go', 'TypeScript']
+      - name: category
+        description: "Project's primary category"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ['Data Science', 'Web Development', 'Backend Development']
+      - name: stargazers_count
+        description: "Number of GitHub stars"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 10000
+
+  - name: test_similarities
+    description: "Test similarity scores between users and projects"
+    columns:
+      - name: user_id
+        description: "User identifier"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('test_users')
+              field: id
+      - name: project_id
+        description: "Project identifier"
+        tests:
+          - not_null
+          - relationships:
+              to: ref('test_projects')
+              field: id
+      - name: similarity_score
+        description: "Overall similarity score between user and project"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 1.0
+      - name: semantic_similarity
+        description: "Semantic similarity component"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 1.0
+      - name: category_similarity
+        description: "Category similarity component"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 1.0
+      - name: language_similarity
+        description: "Language similarity component"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 1.0
+      - name: popularity_similarity
+        description: "Popularity similarity component"
+        tests:
+          - dbt_utils.accepted_range:
+              min_value: 0.0
+              max_value: 1.0
