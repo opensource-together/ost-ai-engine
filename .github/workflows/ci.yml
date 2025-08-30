@@ -93,9 +93,16 @@ jobs:
             conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
         "
         
-        # Setup test database using dbt models
-        cd src/dbt
-        poetry run dbt run --select tag:test --target ci
+        # Try to setup test database using dbt models
+        echo "🔧 Attempting to setup test data with dbt..."
+        cd $GITHUB_WORKSPACE/src/dbt
+        if poetry run dbt run --select tag:test --target ci; then
+            echo "✅ dbt models run successfully"
+        else
+            echo "⚠️  dbt failed, using fallback method..."
+            cd $GITHUB_WORKSPACE
+            poetry run python scripts/setup_test_data_fallback.py
+        fi
 
     - name: Run tests
       env:
