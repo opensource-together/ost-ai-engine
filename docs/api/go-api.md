@@ -119,8 +119,7 @@ CREATE INDEX idx_user_project_similarity_project ON "USER_PROJECT_SIMILARITY" (p
 | `RECOMMENDATION_TOP_N` | `5` | Number of recommendations to return |
 | `RECOMMENDATION_MIN_SIMILARITY` | `0.1` | Minimum similarity threshold |
 | `GO_API_PORT` | `8080` | API server port |
-| `CACHE_ENABLED` | `true` | Enable Redis caching |
-| `CACHE_TTL` | `3600` | Cache TTL in seconds |
+
 
 ## Build and Run
 
@@ -139,7 +138,7 @@ go build -o recommendations-api recommendations.go
 
 ### Docker (if needed)
 ```dockerfile
-FROM golang:1.21-alpine
+FROM golang:1.24-alpine
 WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
@@ -206,7 +205,7 @@ Consider adding Prometheus metrics for:
 
 ## Future Enhancements
 
-1. **Caching**: Redis implementation for frequently accessed data
+1. **Caching**: In-memory or external caching for frequently accessed data
 2. **Rate Limiting**: Request rate limiting
 3. **Authentication**: JWT or API key authentication
 4. **Pagination**: Support for large result sets

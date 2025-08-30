@@ -4,8 +4,8 @@
 
 - **Python 3.13+**
 - **PostgreSQL 15+** with pgvector extension
-- **Redis 6+** (optional, for caching)
-- **Go 1.21+** (for API)
+- **Redis 7+**
+- **Go 1.24+**
 - **Git**
 
 ## Installation
@@ -28,7 +28,7 @@ conda activate data-engine-py13
 poetry install
 ```
 
-### 3. Setup Database
+### 3. Setup Database and Cache
 
 ```bash
 # Start PostgreSQL and Redis with Docker
@@ -54,6 +54,7 @@ nano .env
 **Required environment variables:**
 ```env
 DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
+REDIS_CACHE_URL=redis://localhost:6379/0
 GITHUB_ACCESS_TOKEN=your_github_token_here
 MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
 MODEL_DIMENSIONS=384
@@ -76,10 +77,13 @@ dagster asset materialize --select project_hybrid_embeddings
 ### 2. Start Go API
 
 ```bash
-# Build and run API
+# Option 1: Build and run locally
 cd src/api/go
 go build -o recommendations-api recommendations.go
 ./recommendations-api
+
+# Option 2: Run with Docker Compose
+docker-compose up go-api
 ```
 
 ### 3. Test the System
@@ -92,9 +96,45 @@ curl "http://localhost:8080/recommendations?user_id={USER_ID}"
 curl "http://localhost:8080/recommendations?user_id={USER_ID}"
 ```
 
+## Testing with Act (Local CI/CD)
+
+### Setup Act for Local Testing
+
+```bash
+# Install Act
+brew install act
+
+# Create secrets file for testing
+cp .secrets.example .secrets
+# Edit .secrets with your test values
+```
+
+### Run Local CI Tests
+
+```bash
+# macOS (recommended command)
+act -j test --secret-file .secrets --pull=false --container-daemon-socket /var/run/docker.sock
+
+# Alternative commands
+act --list  # List available jobs
+act -j test --secret-file .secrets --pull=false  # Skip image pulling
+```
+
+### Troubleshooting Act
+
+```bash
+# If you get Docker socket errors on macOS
+act -j test --secret-file .secrets --pull=false --container-daemon-socket /var/run/docker.sock
+
+# For port conflicts, use different ports in .secrets
+POSTGRES_PORT=5436
+REDIS_PORT=6381
+GO_API_PORT=8082
+```
+
 ## Verification
 
-### Check Database
+### Check Database and Cache
 
 ```bash
 # Connect to database
@@ -109,6 +149,10 @@ SELECT COUNT(*) FROM embed_PROJECTS;
 
 # Check similarities
 SELECT COUNT(*) FROM "USER_PROJECT_SIMILARITY";
+
+# Check Redis cache
+redis-cli ping
+redis-cli info memory
 ```
 
 ### Check API
@@ -199,17 +243,17 @@ tail -f logs/data_engine.log
    export DAGSTER_MEMORY_LIMIT=4G
    ```
 
-2. **Enable Caching**
-   ```bash
-   # In .env
-   CACHE_ENABLED=true
-   REDIS_CACHE_URL=redis://localhost:6380/0
-   ```
-
-3. **Optimize Database**
+2. **Optimize Database**
    ```sql
    -- Increase work_mem for vector operations
    SET work_mem = '256MB';
+   ```
+
+3. **Go API Optimization**
+   ```bash
+   # Set Go environment variables for better performance
+   export GOMAXPROCS=4
+   export GOGC=100
    ```
 
 ## Next Steps

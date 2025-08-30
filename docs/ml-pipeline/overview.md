@@ -133,9 +133,9 @@ Navigate to `http://localhost:3000` to view:
 All assets include comprehensive logging:
 
 ```python
-log.info(f"🚀 Starting User↔Project similarity calculations")
-log.info(f"📊 Loaded {len(user_embeddings_dict)} user embeddings")
-log.info(f"✅ Similarity calculation completed!")
+log.info(f"Starting User↔Project similarity calculations")
+log.info(f"Loaded {len(user_embeddings_dict)} user embeddings")
+log.info(f"Similarity calculation completed!")
 ```
 
 ## Error Handling

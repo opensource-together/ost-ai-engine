@@ -33,22 +33,19 @@ cp .env.example .env
 |----------|---------|-------------|----------|
 | `DBT_PROJECT_DIR` | `src/dbt` | dbt project directory | Yes |
 
-### Redis Configuration
+### Go API Configuration
 
 | Variable | Default | Description | Required |
 |----------|---------|-------------|----------|
-| `REDIS_CACHE_URL` | `redis://localhost:6380/0` | Redis connection URL | No |
-| `REDIS_PASSWORD` | `your_redis_password` | Redis password | No |
-
-### API Configuration
-
-| Variable | Default | Description | Required |
-|----------|---------|-------------|----------|
-| `API_HOST` | `0.0.0.0` | API host binding | No |
-| `API_PORT` | `8000` | Python API port | No |
-| `API_WORKERS` | `4` | Number of API workers | No |
 | `GO_API_PORT` | `8080` | Go API port | No |
-| `PYTHON_SERVICE_URL` | `http://localhost:8000` | Python service URL | No |
+
+### Redis Cache Configuration
+
+| Variable | Default | Description | Required |
+|----------|---------|-------------|----------|
+| `REDIS_CACHE_URL` | `redis://localhost:6379/0` | Redis connection URL for ML pipeline cache | Yes |
+| `REDIS_CACHE_TTL` | `86400` | Cache TTL in seconds (24h) for embeddings | No |
+| `REDIS_PORT` | `6379` | Redis port for Docker service | No |
 
 ### ML Model Configuration
 
@@ -72,12 +69,7 @@ cp .env.example .env
 | `RECOMMENDATION_MAX_PROJECTS` | `1000` | Maximum projects to consider | No |
 | `RECOMMENDATION_POPULARITY_THRESHOLD` | `100000` | Popularity threshold for normalization | No |
 
-### Cache Configuration
 
-| Variable | Default | Description | Required |
-|----------|---------|-------------|----------|
-| `CACHE_ENABLED` | `true` | Enable caching | No |
-| `CACHE_TTL` | `3600` | Cache TTL in seconds | No |
 
 ### MLflow Configuration
 
@@ -134,8 +126,9 @@ cp .env.example .env
 ```env
 ENVIRONMENT=development
 LOG_LEVEL=DEBUG
-CACHE_ENABLED=false
 DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
+REDIS_CACHE_URL=redis://localhost:6379/0
+GO_API_PORT=8080
 ```
 
 ### Production Environment
@@ -143,8 +136,9 @@ DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
 ```env
 ENVIRONMENT=production
 LOG_LEVEL=WARNING
-CACHE_ENABLED=true
 DATABASE_URL=postgresql://prod_user:secure_password@prod-db:5432/OST_PROD
+REDIS_CACHE_URL=redis://redis:6379/0
+GO_API_PORT=8080
 SECRET_KEY=your_very_secure_secret_key_here
 ```
 
@@ -153,8 +147,9 @@ SECRET_KEY=your_very_secure_secret_key_here
 ```env
 ENVIRONMENT=testing
 LOG_LEVEL=INFO
-CACHE_ENABLED=false
 DATABASE_URL=postgresql://test_user:test_password@localhost:5435/OST_TEST
+REDIS_CACHE_URL=redis://localhost:6379/0
+GO_API_PORT=8081
 ```
 
 ## Validation
@@ -174,6 +169,7 @@ required_vars=(
     "MODEL_DIMENSIONS"
     "GITHUB_ACCESS_TOKEN"
     "SECRET_KEY"
+    "REDIS_CACHE_URL"
 )
 
 for var in "${required_vars[@]}"; do
@@ -192,16 +188,16 @@ echo "All required environment variables are set"
 # Validate database connection
 psql $DATABASE_URL -c "SELECT 1;" || echo "Database connection failed"
 
-# Validate Redis connection (if enabled)
-if [ "$CACHE_ENABLED" = "true" ]; then
-    redis-cli -u $REDIS_CACHE_URL ping || echo "Redis connection failed"
-fi
+# Validate Redis connection
+redis-cli -u $REDIS_CACHE_URL ping || echo "Redis connection failed"
+
+
 ```
 
 ## Security Best Practices
 
 1. **Never commit `.env` files** to version control
-2. **Use strong passwords** for database and Redis
+2. **Use strong passwords** for database
 3. **Rotate secrets regularly** in production
 4. **Use environment-specific configurations**
 5. **Validate all inputs** from environment variables
@@ -216,17 +212,24 @@ fi
    - Verify database is running
    - Check firewall settings
 
-2. **Redis Connection Failed**
-   - Verify Redis is running
-   - Check `REDIS_CACHE_URL` format
-   - Validate Redis password
+2. **Go API Connection Failed**
+   - Verify Go API is running on correct port
+   - Check `GO_API_PORT` configuration
+   - Validate database connection from Go API
 
 3. **Model Loading Failed**
    - Check `MODEL_NAME` is valid
    - Verify model files exist
    - Check `MODEL_DIMENSIONS` matches model
 
-4. **API Not Starting**
-   - Check port availability
+4. **Go API Not Starting**
+   - Check port availability (default: 8080)
    - Verify all required variables are set
-   - Check log files for errors
+   - Check Go API logs for errors
+   - Ensure database is accessible from Go API
+
+5. **Redis Cache Issues**
+   - Verify Redis service is running
+   - Check `REDIS_CACHE_URL` format
+   - Validate Redis connection from ML pipeline
+   - Check Redis logs for errors
