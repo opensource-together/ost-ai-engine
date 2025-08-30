@@ -266,7 +266,7 @@ def test_database_connection():
                 print("❌ uuid-ossp extension not found")
                 print("   Trying to create uuid-ossp extension...")
                 try:
-                    conn.execute(text('CREATE EXTENSION IF NOT EXISTS uuid-ossp'))
+                    conn.execute(text('CREATE EXTENSION IF NOT EXISTS "uuid-ossp"'))
                     conn.commit()
                     print("   ✅ uuid-ossp extension created successfully")
                 except Exception as e:

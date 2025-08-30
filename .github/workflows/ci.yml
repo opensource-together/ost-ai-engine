@@ -91,7 +91,7 @@ jobs:
         engine = create_engine('${{ env.DATABASE_URL }}')
         with engine.connect() as conn:
             conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
-            conn.execute(text('CREATE EXTENSION IF NOT EXISTS uuid-ossp'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
             conn.commit()
         print('✅ PostgreSQL extensions created successfully')
         "
