@@ -19,7 +19,8 @@ tests-integration → coverage
 - **`setup`**: No dependencies (runs first)
 - **`tests-unit`**: Depends on `setup`
 - **`tests-integration`**: Depends on `setup`
-- **`coverage`**: Depends on `tests-unit` AND `tests-integration`
+- **`tests-performance`**: Depends on `setup`
+- **`coverage`**: Depends on `tests-unit` AND `tests-integration` AND `tests-performance`
 
 ## Job Details
 
@@ -86,7 +87,7 @@ tests-integration → coverage
 
 **Purpose**: Generate comprehensive coverage report
 
-**Dependencies**: `tests-unit` AND `tests-integration`
+**Dependencies**: `tests-unit` AND `tests-integration` AND `tests-performance`
 
 **Services**:
 - PostgreSQL (pgvector/pgvector:pg15)
@@ -99,9 +100,33 @@ tests-integration → coverage
 4. **Coverage Report**: Run `pytest tests/ -v --cov=src --cov-report=xml --cov-report=html`
 
 **Characteristics**:
-- Runs only if both test jobs succeed
+- Runs only if all test jobs succeed
 - Generates coverage reports
 - Tests all code with coverage metrics
+
+### 5. Tests Performance Job
+
+**Purpose**: Test API performance and scalability
+
+**Dependencies**: `setup`
+
+**Services**:
+- PostgreSQL (pgvector/pgvector:pg15)
+- Redis (redis:7-alpine)
+
+**Steps**:
+1. **Environment Setup**: Python, Poetry, cache
+2. **Dependencies**: Install packages
+3. **Database Schema**: Create extensions and test data
+4. **Start Go API**: Build and start Go API in background
+5. **Performance Tests**: Run `pytest tests/performance/ -v -m "performance"`
+6. **Cleanup**: Stop Go API
+
+**Characteristics**:
+- Slow execution (2-5 minutes)
+- Requires full system setup
+- Tests API under load conditions
+- Measures response times and throughput
 
 ## Configuration
 

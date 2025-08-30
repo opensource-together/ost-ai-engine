@@ -9,10 +9,16 @@ tests/
 ├── conftest.py              # Shared fixtures and configuration
 ├── unit/                    # Unit tests (fast, isolated)
 │   ├── __init__.py
-│   └── test_basic.py        # Basic functionality tests
-└── integration/             # Integration tests (require services)
+│   ├── test_basic.py        # Basic functionality tests
+│   ├── test_config.py       # Configuration management tests
+│   └── test_services.py     # Application services tests
+├── integration/             # Integration tests (require services)
+│   ├── __init__.py
+│   ├── test_similarity.py   # Database and API integration tests
+│   └── test_cache.py        # Redis cache integration tests
+└── performance/             # Performance tests (slow, comprehensive)
     ├── __init__.py
-    └── test_similarity.py   # Database and API integration tests
+    └── test_api_performance.py  # API performance and load tests
 
 src/dbt/models/test/         # Test data models (dbt)
 ├── schema.yml              # Documentation and tests
@@ -85,6 +91,23 @@ We use **dbt models** to manage test data instead of hardcoded SQL or Python scr
 - API endpoint testing
 - Data quality validation
 - Similarity calculations
+- Redis cache operations
+
+### Performance Tests (`tests/performance/`)
+
+**Purpose**: Test system performance and scalability
+**Characteristics**:
+- Slow execution (several minutes)
+- Require full system setup
+- Test under load conditions
+- Measure response times and throughput
+
+**Examples**:
+- API response time under normal load
+- Concurrent request handling
+- Memory usage under stress
+- Error handling performance
+- Throughput measurements
 
 ## Running Tests
 
@@ -103,6 +126,7 @@ We use **dbt models** to manage test data instead of hardcoded SQL or Python scr
 # Run tests with specific markers
 > poetry run pytest tests/ -v -m "unit"
 > poetry run pytest tests/ -v -m "integration"
+> poetry run pytest tests/ -v -m "performance"
 > poetry run pytest tests/ -v -m "api"
 
 # Run tests excluding slow ones
@@ -122,7 +146,8 @@ The CI pipeline runs tests in stages:
 1. **Setup Database**: Create extensions and run dbt test models
 2. **Unit Tests**: Fast validation of basic functionality
 3. **Integration Tests**: Full system validation with test database
-4. **Coverage Report**: Overall test coverage analysis
+4. **Performance Tests**: API performance and load testing
+5. **Coverage Report**: Overall test coverage analysis
 
 ## Test Data
 
@@ -158,6 +183,7 @@ Pytest markers help categorize and filter tests:
 
 - `@pytest.mark.unit`: Unit tests
 - `@pytest.mark.integration`: Integration tests
+- `@pytest.mark.performance`: Performance tests
 - `@pytest.mark.api`: API-specific tests
 - `@pytest.mark.slow`: Slow-running tests
 
@@ -192,10 +218,26 @@ def test_database_operation():
         assert count > 0
 ```
 
+### Writing Performance Tests
+
+```python
+@pytest.mark.performance
+@pytest.mark.slow
+def test_api_response_time():
+    """Test API response time under normal load."""
+    start_time = time.time()
+    response = requests.get(f"{api_url}?user_id={test_user_id}")
+    response_time = (time.time() - start_time) * 1000
+    
+    assert response.status_code == 200
+    assert response_time < 100  # Less than 100ms
+```
+
 ### Test Dependencies
 
 - **Unit tests**: No external dependencies
 - **Integration tests**: Require database and services
+- **Performance tests**: Require full system setup and Go API
 - **API tests**: Require running Go API
 
 ## Troubleshooting
@@ -217,7 +259,12 @@ def test_database_operation():
    - Ensure Go API is running
    - Verify API endpoint is accessible
 
-4. **Test Data Missing**
+4. **Redis Cache Issues**
+   - Check `REDIS_CACHE_URL` environment variable
+   - Ensure Redis is running
+   - Verify Redis connection
+
+5. **Test Data Missing**
    - Run `python scripts/test_dbt_models.py` to create test data
    - Check dbt model execution logs
    - Verify database schema matches expectations
@@ -230,6 +277,9 @@ def test_database_operation():
 
 # Run specific test with debug
 > poetry run pytest tests/integration/test_similarity.py::test_similarity_data_quality -v -s
+
+# Run performance tests locally
+> poetry run pytest tests/performance/ -v -m "performance"
 
 # Debug dbt models
 > cd src/dbt
