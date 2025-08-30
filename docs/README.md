@@ -29,6 +29,7 @@ Welcome to the OST Data Engine documentation. This project implements a machine 
 - [Environment Configuration](deployment/environment.md) - Environment variables and configuration
 - [Quick Start](deployment/quick-start.md) - Fast deployment guide
 - [GitHub Secrets](deployment/github-secrets.md) - CI/CD secrets management
+- [CI/CD Pipeline](deployment/ci-cd.md) - GitHub Actions pipeline documentation
 - [Go API Setup](deployment/go-api-setup.md) - Go API deployment and configuration
 
 ### ML Pipeline
