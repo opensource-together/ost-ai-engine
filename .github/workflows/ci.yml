@@ -11,7 +11,7 @@ env:
   POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
   POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
   DATABASE_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5436/${{ secrets.POSTGRES_DB }}
-  GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+  GITHUB_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
   MODEL_NAME: ${{ secrets.MODEL_NAME }}
   MODEL_DIMENSIONS: ${{ secrets.MODEL_DIMENSIONS }}
   GO_API_PORT: ${{ secrets.GO_API_PORT }}
