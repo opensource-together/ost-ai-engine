@@ -1,0 +1,3 @@
+--container-architecture=linux/amd64
+--action-offline-mode
+--container-options=--privileged

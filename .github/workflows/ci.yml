@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [ main, feature/* ]
+  pull_request:
+    branches: [ main ]
+
+env:
+  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+  DATABASE_URL: ${{ secrets.DATABASE_URL }}
+  GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+  MODEL_NAME: ${{ secrets.MODEL_NAME }}
+  MODEL_DIMENSIONS: ${{ secrets.MODEL_DIMENSIONS }}
+  GO_API_PORT: ${{ secrets.GO_API_PORT }}
+  REDIS_CACHE_URL: ${{ secrets.REDIS_CACHE_URL }}
+  RECOMMENDATION_TOP_N: ${{ secrets.RECOMMENDATION_TOP_N }}
+  RECOMMENDATION_MIN_SIMILARITY: ${{ secrets.RECOMMENDATION_MIN_SIMILARITY }}
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5436:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6381:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install Poetry
+      uses: snok/install-poetry@v1
+      with:
+        version: latest
+        virtualenvs-create: true
+        virtualenvs-in-project: true
+
+    - name: Load cached venv
+      id: cached-poetry-dependencies
+      uses: actions/cache@v3
+      with:
+        path: .venv
+        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
+
+    - name: Install dependencies
+      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
+      run: poetry install --no-interaction --no-root
+
+    - name: Setup database schema
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+      run: |
+        poetry run python -c "
+        from sqlalchemy import create_engine, text
+        engine = create_engine('${{ env.DATABASE_URL }}')
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+        "
+
+    - name: Run tests
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        GITHUB_ACCESS_TOKEN: ${{ env.GITHUB_ACCESS_TOKEN }}
+        MODEL_NAME: ${{ env.MODEL_NAME }}
+        MODEL_DIMENSIONS: ${{ env.MODEL_DIMENSIONS }}
+        GO_API_PORT: ${{ env.GO_API_PORT }}
+        REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
+        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
+        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+      run: |
+        poetry run python -m pytest tests/ -v
