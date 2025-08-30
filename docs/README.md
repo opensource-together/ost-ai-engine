@@ -22,11 +22,14 @@ Welcome to the OST Data Engine documentation. This project implements a machine 
 - [Setup Guide](development/setup.md) - Local development environment setup
 - [Code Structure](development/code-structure.md) - Project organization and conventions
 - [Testing](testing/overview.md) - Testing strategy and test organization
+- [dbt Test Models](testing/dbt-test-models.md) - Test data management with dbt
+- [Test Scripts](testing/scripts.md) - Testing scripts and utilities
 
 ### Deployment
 - [Environment Configuration](deployment/environment.md) - Environment variables and configuration
 - [Quick Start](deployment/quick-start.md) - Fast deployment guide
 - [GitHub Secrets](deployment/github-secrets.md) - CI/CD secrets management
+- [Go API Setup](deployment/go-api-setup.md) - Go API deployment and configuration
 
 ### ML Pipeline
 - [Pipeline Overview](ml-pipeline/overview.md) - Dagster pipeline architecture
@@ -36,18 +39,25 @@ Welcome to the OST Data Engine documentation. This project implements a machine 
 ### API
 - [Go API](api/go-api.md) - Go recommendation API documentation
 - [Endpoints](api/endpoints.md) - API endpoint specifications
+- [Examples](api/examples.md) - API usage examples and patterns
+
+### Database
+- [Schema Documentation](database/schema.md) - Complete database schema and relationships
 
 ## Quick Links
 
 - [Local Testing with Act](deployment/github-secrets.md#local-testing-with-act) - Test CI locally
 - [Environment Variables](deployment/environment.md) - All configuration options
 - [Test Structure](testing/overview.md) - Testing organization and best practices
+- [dbt Test Models](testing/dbt-test-models.md) - Test data management
+- [API Examples](api/examples.md) - Practical API usage examples
 
 ## Getting Started
 
 1. **Setup Environment**: Follow the [Quick Start Guide](deployment/quick-start.md)
 2. **Run Tests**: Use the [Testing Documentation](testing/overview.md)
 3. **Deploy**: Configure [GitHub Secrets](deployment/github-secrets.md) for CI/CD
+4. **Test API**: Check [API Examples](api/examples.md) for usage patterns
 
 ## Contributing
 
