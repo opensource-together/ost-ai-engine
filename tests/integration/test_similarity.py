@@ -238,12 +238,44 @@ def test_database_connection():
             assert result.scalar() == 1
             print("✅ Database connection successful")
             
-            # Test extensions
+            # Test extensions - get all extensions first
+            result = conn.execute(text("SELECT extname FROM pg_extension ORDER BY extname"))
+            all_extensions = [row[0] for row in result.fetchall()]
+            print(f"📋 Available extensions: {all_extensions}")
+            
+            # Check for required extensions
             result = conn.execute(text("SELECT extname FROM pg_extension WHERE extname IN ('vector', 'uuid-ossp')"))
-            extensions = [row[0] for row in result.fetchall()]
-            assert 'vector' in extensions, "pgvector extension not found"
-            assert 'uuid-ossp' in extensions, "uuid-ossp extension not found"
-            print("✅ Required extensions are installed")
+            required_extensions = [row[0] for row in result.fetchall()]
+            print(f"🔧 Required extensions found: {required_extensions}")
+            
+            # Check each extension individually
+            if 'vector' not in required_extensions:
+                print("❌ pgvector extension not found")
+                print("   Trying to create vector extension...")
+                try:
+                    conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+                    conn.commit()
+                    print("   ✅ Vector extension created successfully")
+                except Exception as e:
+                    print(f"   ❌ Failed to create vector extension: {e}")
+                    pytest.fail("pgvector extension not found and could not be created")
+            else:
+                print("✅ pgvector extension is installed")
+            
+            if 'uuid-ossp' not in required_extensions:
+                print("❌ uuid-ossp extension not found")
+                print("   Trying to create uuid-ossp extension...")
+                try:
+                    conn.execute(text('CREATE EXTENSION IF NOT EXISTS uuid-ossp'))
+                    conn.commit()
+                    print("   ✅ uuid-ossp extension created successfully")
+                except Exception as e:
+                    print(f"   ❌ Failed to create uuid-ossp extension: {e}")
+                    pytest.fail("uuid-ossp extension not found and could not be created")
+            else:
+                print("✅ uuid-ossp extension is installed")
+            
+            print("✅ All required extensions are available")
             
     except Exception as e:
         pytest.fail(f"Database connection failed: {e}")

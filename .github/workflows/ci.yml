@@ -85,12 +85,15 @@ jobs:
         POSTGRES_PORT: 5436
         POSTGRES_DB: ${{ env.POSTGRES_DB }}
       run: |
+        # Create PostgreSQL extensions
         poetry run python -c "
         from sqlalchemy import create_engine, text
         engine = create_engine('${{ env.DATABASE_URL }}')
         with engine.connect() as conn:
             conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
-            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS uuid-ossp'))
+            conn.commit()
+        print('✅ PostgreSQL extensions created successfully')
         "
         
         # Try to setup test database using dbt models
