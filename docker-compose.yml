@@ -1,5 +1,3 @@
-version: "3.8"
-
 # Define custom networks for better isolation
 networks:
   ost_backend:
@@ -8,36 +6,31 @@ networks:
     driver: bridge
 
 services:
-  # API Service
-  api:
-    build: .
-    container_name: ost_api
+  # Go API Service
+  go-api:
+    build: 
+      context: ./src/api/go
+      dockerfile: Dockerfile
+    container_name: ost_go_api
     environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_CACHE_URL=${REDIS_CACHE_URL}
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}?sslmode=disable
       - GITHUB_ACCESS_TOKEN=${GITHUB_ACCESS_TOKEN}
       - LOG_LEVEL=${LOG_LEVEL:-INFO}
     ports:
-      - "8000:8000"
+      - "${GO_API_PORT:-8080}:8080"
     depends_on:
       db:
-        condition: service_healthy
-      redis:
         condition: service_healthy
     networks:
       - ost_backend
       - ost_database
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
-    volumes:
-      - ./models:/app/models:ro
-      - ./logs:/app/logs
 
   # Database Service
   db:
@@ -49,7 +42,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - POSTGRES_INITDB_ARGS=--auth-host=scram-sha-256
     ports:
-      - "5434:5432"
+      - "${DB_PORT:-5434}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
       - ./scripts/database:/docker-entrypoint-initdb.d:ro
@@ -64,17 +57,17 @@ services:
     security_opt:
       - no-new-privileges:true
 
-  # Redis Service
+  # Redis Cache Service
   redis:
     image: redis:7-alpine
     container_name: ost_redis
-    command: redis-server --appendonly yes --requirepass ${REDIS_PASSWORD:-}
     ports:
-      - "6380:6379"
+      - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
     networks:
       - ost_backend
+      - ost_database
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
@@ -83,30 +76,6 @@ services:
     restart: unless-stopped
     security_opt:
       - no-new-privileges:true
-
-  # Celery Worker Service
-  worker:
-    build: .
-    container_name: ost_worker
-    command: celery -A src.infrastructure.celery.celery_app worker --loglevel=info
-    environment:
-      - DATABASE_URL=${DATABASE_URL}
-      - REDIS_CACHE_URL=${REDIS_CACHE_URL}
-      - MISTRAL_API_KEY=${MISTRAL_API_KEY}
-      - GITHUB_ACCESS_TOKEN=${GITHUB_ACCESS_TOKEN}
-      - LOG_LEVEL=${LOG_LEVEL:-INFO}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    networks:
-      - ost_backend
-      - ost_database
-    restart: unless-stopped
-    volumes:
-      - ./models:/app/models:ro
-      - ./logs:/app/logs
 
 volumes:
   postgres_data:

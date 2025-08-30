@@ -26,30 +26,7 @@ class Settings(BaseSettings):
         default=3600, description="Database pool recycle time"
     )
 
-    # --- Celery ---
-    CELERY_BROKER_URL: str = Field(
-        default="redis://localhost:6379/0", description="Celery broker URL"
-    )
-    CELERY_RESULT_BACKEND: str = Field(
-        default="redis://localhost:6379/0", description="Celery result backend URL"
-    )
-    CELERY_TASK_TIMEOUT: int = Field(
-        default=300, description="Celery task timeout in seconds"
-    )
-    CELERY_MAX_RETRIES: int = Field(default=3, description="Celery max retries")
 
-    # --- Redis ---
-    REDIS_URL: str = Field(
-        default="redis://localhost:6379/0", description="Redis connection URL"
-    )
-    REDIS_CACHE_URL: str = Field(
-        default="redis://localhost:6380", description="Separate Redis for caching"
-    )
-    REDIS_CACHE_TTL: int = Field(default=3600, description="Cache TTL in seconds")
-    REDIS_CONNECT_TIMEOUT: int = Field(
-        default=5, description="Redis connection timeout"
-    )
-    REDIS_READ_TIMEOUT: int = Field(default=5, description="Redis read timeout")
 
     # --- GitHub API ---
     GITHUB_ACCESS_TOKEN: str = Field(
@@ -79,15 +56,7 @@ class Settings(BaseSettings):
         description="Comma-separated list of programming languages to scrape"
     )
 
-    # --- Mistral API ---
-    MISTRAL_API_KEY: str = Field(
-        default="your_mistral_api_key_here", description="Mistral API key"
-    )
-    MISTRAL_REQUEST_TIMEOUT: int = Field(
-        default=60, description="Mistral API request timeout"
-    )
-    MISTRAL_MAX_RETRIES: int = Field(default=3, description="Mistral API max retries")
-    MISTRAL_BATCH_SIZE: int = Field(default=10, description="Mistral API batch size")
+
 
     # --- Logging ---
     LOG_LEVEL: str = Field(default="INFO", description="Logging level")
@@ -99,6 +68,21 @@ class Settings(BaseSettings):
     # --- Application Configuration ---
     PROJECT_ROOT: str = Field(
         default="", description="Project root directory path"
+    )
+
+    # --- Go API Configuration ---
+    GO_API_PORT: int = Field(
+        default=8080, description="Go API server port"
+    )
+
+    # --- Redis Cache Configuration ---
+    REDIS_CACHE_URL: str = Field(
+        default="redis://localhost:6379/0", 
+        description="Redis cache connection URL for ML pipeline embeddings"
+    )
+    REDIS_CACHE_TTL: int = Field(
+        default=86400, 
+        description="Default TTL for cached embeddings in seconds (24h)"
     )
 
     # --- dbt Configuration ---
@@ -157,8 +141,6 @@ class Settings(BaseSettings):
     )
 
     # --- Performance ---
-    CACHE_ENABLED: bool = Field(default=True, description="Enable caching")
-    CACHE_TTL: int = Field(default=3600, description="Cache TTL in seconds")
     BATCH_SIZE: int = Field(
         default=100, description="Default batch size for operations"
     )
@@ -212,15 +194,7 @@ class Settings(BaseSettings):
             raise ValueError("DATABASE_URL must start with postgresql://")
         return v
 
-    @field_validator(
-        "CELERY_BROKER_URL", "CELERY_RESULT_BACKEND", "REDIS_URL", "REDIS_CACHE_URL"
-    )
-    @classmethod
-    def validate_redis_url(cls, v):
-        """Validate Redis URL format."""
-        if not v.startswith("redis://"):
-            raise ValueError("Redis URLs must start with redis://")
-        return v
+
 
     @field_validator("GITHUB_ACCESS_TOKEN")
     @classmethod
@@ -233,16 +207,7 @@ class Settings(BaseSettings):
             raise ValueError("GitHub token too short")
         return v
 
-    @field_validator("MISTRAL_API_KEY")
-    @classmethod
-    def validate_mistral_key(cls, v):
-        """Validate Mistral API key security."""
-        if v == "your_mistral_api_key_here":
-            # In production, this should be a real key
-            return v
-        if len(v) < 10:
-            raise ValueError("Mistral API key too short")
-        return v
+
 
     @field_validator("LOG_LEVEL")
     @classmethod
