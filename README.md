@@ -116,6 +116,14 @@ GO_API_PORT=8080
 # Tests
 > poetry run pytest tests/ -v
 
+# Run tests with markers
+> poetry run pytest tests/ -v -m "unit"
+> poetry run pytest tests/ -v -m "integration"
+> poetry run pytest tests/ -v -m "api"
+
+# Run with coverage
+> poetry run pytest tests/ -v --cov=src --cov-report=html
+
 # MLflow UI
 > python scripts/start_mlflow_ui.py
 
@@ -130,6 +138,30 @@ GO_API_PORT=8080
 
 ---
 
+## Testing
+
+Our testing strategy is organized into two main categories:
+
+### Test Structure
+```
+tests/
+├── unit/                    # Unit tests (fast, isolated)
+│   └── test_basic.py       # Configuration and basic functionality
+├── integration/             # Integration tests (require services)
+│   └── test_similarity.py  # Database and API integration
+├── conftest.py             # Shared fixtures and configuration
+└── setup_test_db.py        # Test database setup for CI
+```
+
+### Test Categories
+
+- **Unit Tests** (`tests/unit/`): Fast tests that verify individual components in isolation
+- **Integration Tests** (`tests/integration/`): Tests that verify component interactions and external services
+
+For detailed testing documentation, see [Testing Overview](docs/testing/overview.md).
+
+---
+
 ## Documentation
 
 📚 **Complete Documentation**: [docs/](docs/)
@@ -141,6 +173,7 @@ GO_API_PORT=8080
 - **[Go API Implementation](docs/api/go-api.md)** - Go API technical details
 - **[ML Pipeline Overview](docs/ml-pipeline/overview.md)** - Machine learning pipeline architecture
 - **[Database Schema](docs/database/schema.md)** - Complete database schema documentation
+- **[Tests](docs/testing/overview.md)** - Tests documentation
 
 ---
 

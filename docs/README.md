@@ -1,115 +1,54 @@
-# OST Data Engine - Documentation
+# OST Data Engine Documentation
 
-## Architecture Overview
+Welcome to the OST Data Engine documentation. This project implements a machine learning pipeline for GitHub project recommendations using semantic embeddings and similarity calculations.
 
-The OST Data Engine is a comprehensive recommendation system that combines machine learning pipelines with high-performance APIs to provide personalized project recommendations.
+## Core Components
 
-### **Core Components**
-
-- **ML Pipeline** (Python/Dagster): Generates embeddings and calculates similarities
-- **Go API**: High-performance REST API for recommendations
-- **PostgreSQL**: Vector storage with pgvector extension
+- **ML Pipeline**: Dagster-based pipeline for data processing and model training
+- **Database**: PostgreSQL with pgvector for efficient vector storage and similarity queries
+- **API**: Go-based recommendation API for high-performance project suggestions
+- **MLflow**: Model tracking and versioning for embeddings and ML artifacts
 - **Redis**: Cache layer for ML pipeline optimization
-- **MLflow**: Model versioning and experiment tracking
+- **dbt**: Data transformation and modeling layer
 
+## Documentation Sections
 
-### **Data Flow**
+### Architecture
+- [System Overview](architecture/overview.md) - High-level architecture and design decisions
+- [Data Flow](architecture/data-flow.md) - How data moves through the system
+- [Technology Stack](architecture/technology-stack.md) - Detailed technology choices
 
-```
-GitHub Data → ML Pipeline → Embeddings → Similarities → Go API → Recommendations
-```
+### Development
+- [Setup Guide](development/setup.md) - Local development environment setup
+- [Code Structure](development/code-structure.md) - Project organization and conventions
+- [Testing](testing/overview.md) - Testing strategy and test organization
 
-## Documentation Structure
+### Deployment
+- [Environment Configuration](deployment/environment.md) - Environment variables and configuration
+- [Quick Start](deployment/quick-start.md) - Fast deployment guide
+- [GitHub Secrets](deployment/github-secrets.md) - CI/CD secrets management
 
-### **Architecture & Overview**
-- [System Architecture](architecture/overview.md) - Complete system architecture and design
+### ML Pipeline
+- [Pipeline Overview](ml-pipeline/overview.md) - Dagster pipeline architecture
+- [Model Management](ml-pipeline/models.md) - MLflow model tracking
+- [Embeddings](ml-pipeline/embeddings.md) - Semantic and hybrid embeddings
 
-### **Getting Started**
-- [Quick Start Guide](deployment/quick-start.md)
-- [Environment Configuration](deployment/environment.md)
+### API
+- [Go API](api/go-api.md) - Go recommendation API documentation
+- [Endpoints](api/endpoints.md) - API endpoint specifications
 
-### **API Documentation**
-- [Go API Implementation](api/go-api.md)
-- [API Examples](api/examples.md)
-- [Go API Setup](deployment/go-api-setup.md)
+## Quick Links
 
-### **ML Pipeline**
-- [Pipeline Overview](ml-pipeline/overview.md)
-- [Dagster Assets](ml-pipeline/dagster-assets.md)
-- [Embedding Generation](ml-pipeline/embeddings.md)
-- [Similarity Calculations](ml-pipeline/similarity.md)
+- [Local Testing with Act](deployment/github-secrets.md#local-testing-with-act) - Test CI locally
+- [Environment Variables](deployment/environment.md) - All configuration options
+- [Test Structure](testing/overview.md) - Testing organization and best practices
 
-### **Database**
-- [Schema Documentation](database/schema.md)
-- [Vector Operations](database/vector-operations.md)
-- [Performance Optimization](database/performance.md)
+## Getting Started
 
-### **Deployment**
-- [Quick Start Guide](deployment/quick-start.md)
-- [Environment Configuration](deployment/environment.md)
-- [GitHub Secrets](deployment/github-secrets.md)
-- [Go API Setup](deployment/go-api-setup.md)
-
-## Quick Start
-
-1. **Setup Environment**
-   ```bash
-   cp .env.example .env
-   # Configure your environment variables
-   ```
-
-2. **Run ML Pipeline**
-   ```bash
-   dagster asset materialize --select user_project_similarities
-   ```
-
-3. **Start Go API**
-   ```bash
-   cd src/api/go
-   go build -o recommendations-api recommendations.go
-   ./recommendations-api
-   ```
-
-4. **Test API**
-   ```bash
-   curl "http://localhost:8080/recommendations?user_id={USER_ID}"
-   ```
-
-## Local Testing with Act
-
-### Setup Act for Local CI/CD Testing
-
-```bash
-# Install Act
-brew install act
-
-# Create secrets file for testing
-cp .secrets.example .secrets
-# Edit .secrets with your test values
-
-# Run local CI tests (macOS)
-act -j test --secret-file .secrets --pull=false --container-daemon-socket /var/run/docker.sock
-```
-
-### Troubleshooting Act on macOS
-
-If you encounter Docker socket errors, use the specific command above. For more details, see [GitHub Secrets Configuration](deployment/github-secrets.md#local-testing-with-act).
-
-## Configuration
-
-All configuration is managed through environment variables. See [Environment Configuration](deployment/environment.md) for details.
-
-## Performance
-
-- **ML Pipeline**: ~30-60 seconds for full similarity calculation
-- **API Response**: <10ms latency
-- **Throughput**: 1000+ requests/second
-- **Database**: Optimized with pgvector indexes for fast similarity search
+1. **Setup Environment**: Follow the [Quick Start Guide](deployment/quick-start.md)
+2. **Run Tests**: Use the [Testing Documentation](testing/overview.md)
+3. **Deploy**: Configure [GitHub Secrets](deployment/github-secrets.md) for CI/CD
 
 ## Contributing
 
-1. Follow the existing code structure
-2. Use environment variables for configuration
-3. Add comprehensive logging
-4. Update documentation for new features
-5. Test locally with Act before pushing
+Please refer to the [Development Guide](development/setup.md) for contribution guidelines and local setup instructions.
