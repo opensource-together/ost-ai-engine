@@ -1,6 +1,6 @@
 """
-eSimilarity test to evaluate recommendation quality
-Uses USER_PROJECT_SIMILARITY table and .env parameters
+Integration tests for similarity calculations and recommendations.
+Tests the interaction between database, ML pipeline, and Go API.
 """
 
 import pytest
@@ -11,6 +11,7 @@ from sqlalchemy import create_engine, text
 from src.infrastructure.config import settings
 
 
+@pytest.mark.integration
 def test_similarity_data_quality():
     """Test the quality of similarity data in USER_PROJECT_SIMILARITY."""
     print("🔍 SIMILARITY DATA QUALITY TEST")
@@ -109,6 +110,8 @@ def test_similarity_data_quality():
         print(f"   Percentage: {(correct_count/rec_stats.users_with_recs)*100:.1f}%")
 
 
+@pytest.mark.integration
+@pytest.mark.api
 def test_go_api_recommendations():
     """Test the Go API for recommendations."""
     print("\n🔍 GO API TEST")
@@ -160,6 +163,7 @@ def test_go_api_recommendations():
         print(f"   Check that Go API is running on port {settings.GO_API_PORT}")
 
 
+@pytest.mark.integration
 def test_similarity_consistency():
     """Test similarity data consistency."""
     print("\n🔍 CONSISTENCY TEST")
@@ -219,6 +223,33 @@ def test_similarity_consistency():
         print(f"✅ All projects exist in PROJECT table")
 
 
+@pytest.mark.integration
+def test_database_connection():
+    """Test database connectivity and basic operations."""
+    print("\n🔍 DATABASE CONNECTION TEST")
+    print("=" * 80)
+    
+    engine = create_engine(settings.DATABASE_URL)
+    
+    try:
+        with engine.connect() as conn:
+            # Test basic connectivity
+            result = conn.execute(text("SELECT 1"))
+            assert result.scalar() == 1
+            print("✅ Database connection successful")
+            
+            # Test extensions
+            result = conn.execute(text("SELECT extname FROM pg_extension WHERE extname IN ('vector', 'uuid-ossp')"))
+            extensions = [row[0] for row in result.fetchall()]
+            assert 'vector' in extensions, "pgvector extension not found"
+            assert 'uuid-ossp' in extensions, "uuid-ossp extension not found"
+            print("✅ Required extensions are installed")
+            
+    except Exception as e:
+        pytest.fail(f"Database connection failed: {e}")
+
+
+@pytest.mark.integration
 def test_environment_configuration():
     """Test environment configuration."""
     print("\n🔍 CONFIGURATION TEST")
@@ -251,8 +282,9 @@ def test_environment_configuration():
 if __name__ == "__main__":
     # Run all tests
     test_environment_configuration()
+    test_database_connection()
     test_similarity_data_quality()
     test_similarity_consistency()
     test_go_api_recommendations()
     
-    print("\n✅ All similarity tests passed!")
+    print("\n✅ All integration tests passed!")

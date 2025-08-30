@@ -1,9 +1,10 @@
 """
-Basic tests to ensure the CI pipeline works.
+Unit tests for basic functionality and configuration.
 """
 
 import pytest
 import os
+from unittest.mock import patch, MagicMock
 
 
 def test_environment_variables():
@@ -17,22 +18,6 @@ def test_environment_variables():
     
     for var in required_vars:
         assert os.getenv(var) is not None, f"Environment variable {var} is not set"
-
-
-def test_database_connection():
-    """Test basic database connectivity."""
-    from sqlalchemy import create_engine, text
-    
-    database_url = os.getenv('DATABASE_URL')
-    assert database_url is not None, "DATABASE_URL not set"
-    
-    try:
-        engine = create_engine(database_url)
-        with engine.connect() as conn:
-            result = conn.execute(text("SELECT 1"))
-            assert result.scalar() == 1
-    except Exception as e:
-        pytest.fail(f"Database connection failed: {e}")
 
 
 def test_model_configuration():
@@ -56,6 +41,29 @@ def test_project_structure():
     
     for file_path in essential_files:
         assert os.path.exists(file_path), f"Essential file/directory {file_path} not found"
+
+
+def test_settings_import():
+    """Test that settings can be imported correctly."""
+    try:
+        from src.infrastructure.config import settings
+        assert settings is not None
+    except ImportError as e:
+        pytest.fail(f"Failed to import settings: {e}")
+
+
+def test_database_url_format():
+    """Test that DATABASE_URL has correct format."""
+    database_url = os.getenv('DATABASE_URL')
+    assert database_url is not None, "DATABASE_URL not set"
+    assert database_url.startswith('postgresql://'), "DATABASE_URL should start with postgresql://"
+
+
+def test_github_token_length():
+    """Test that GitHub token has reasonable length."""
+    token = os.getenv('GITHUB_ACCESS_TOKEN')
+    assert token is not None, "GITHUB_ACCESS_TOKEN not set"
+    assert len(token) >= 40, "GitHub token seems too short"
 
 
 if __name__ == "__main__":
