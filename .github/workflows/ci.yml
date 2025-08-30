@@ -245,6 +245,31 @@ jobs:
   coverage:
     runs-on: ubuntu-latest
     needs: [unit-tests, integration-tests]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5436:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6381:6379
+
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -271,7 +296,47 @@ jobs:
       if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
       run: poetry install --no-interaction --no-root
 
+    - name: Setup database schema
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
+      run: |
+        # Create PostgreSQL extensions
+        poetry run python -c "
+        from sqlalchemy import create_engine, text
+        engine = create_engine('${{ env.DATABASE_URL }}')
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+            conn.commit()
+        print('✅ PostgreSQL extensions created successfully')
+        "
+        
+        # Try to setup test database using dbt models
+        echo "🔧 Attempting to setup test data with dbt..."
+        cd $GITHUB_WORKSPACE/src/dbt
+        if poetry run dbt run --select tag:test --target ci; then
+            echo "✅ dbt models run successfully"
+        else
+            echo "⚠️  dbt failed, using fallback method..."
+            cd $GITHUB_WORKSPACE
+            poetry run python scripts/setup_test_data_fallback.py
+        fi
+
     - name: Run coverage report
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        GITHUB_ACCESS_TOKEN: ${{ env.GITHUB_ACCESS_TOKEN }}
+        MODEL_NAME: ${{ env.MODEL_NAME }}
+        MODEL_DIMENSIONS: ${{ env.MODEL_DIMENSIONS }}
+        GO_API_PORT: ${{ env.GO_API_PORT }}
+        REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
+        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
+        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
       run: |
         echo "📊 Running coverage report..."
         poetry run pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
