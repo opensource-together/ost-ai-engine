@@ -23,9 +23,14 @@ def setup_test_data_fallback():
     engine = create_engine(settings.DATABASE_URL)
     
     with engine.connect() as conn:
+        # Drop existing tables if they exist (to avoid constraint conflicts)
+        conn.execute(text('DROP TABLE IF EXISTS "test_similarities" CASCADE'))
+        conn.execute(text('DROP TABLE IF EXISTS "test_projects" CASCADE'))
+        conn.execute(text('DROP TABLE IF EXISTS "test_users" CASCADE'))
+        
         # Create test users
         conn.execute(text('''
-            CREATE TABLE IF NOT EXISTS "test_users" (
+            CREATE TABLE "test_users" (
                 id UUID PRIMARY KEY,
                 username VARCHAR(30) NOT NULL UNIQUE,
                 email VARCHAR(255) NOT NULL UNIQUE,
@@ -40,12 +45,11 @@ def setup_test_data_fallback():
             ('123e4567-e89b-12d3-a456-426614174000'::uuid, 'test_user_1', 'user1@test.com', 'Python', 'Data Science'),
             ('123e4567-e89b-12d3-a456-426614174001'::uuid, 'test_user_2', 'user2@test.com', 'JavaScript', 'Web Development'),
             ('123e4567-e89b-12d3-a456-426614174002'::uuid, 'test_user_3', 'user3@test.com', 'Go', 'Backend Development')
-            ON CONFLICT (username) DO NOTHING
         '''))
         
         # Create test projects
         conn.execute(text('''
-            CREATE TABLE IF NOT EXISTS "test_projects" (
+            CREATE TABLE "test_projects" (
                 id UUID PRIMARY KEY,
                 title VARCHAR(100) NOT NULL,
                 description TEXT,
@@ -63,12 +67,11 @@ def setup_test_data_fallback():
             ('123e4567-e89b-12d3-a456-426614174005'::uuid, 'Go Microservice', 'High-performance microservice', 'Go', 'Backend Development', 1200),
             ('123e4567-e89b-12d3-a456-426614174006'::uuid, 'Data Science Tool', 'Data analysis and visualization', 'Python', 'Data Science', 2000),
             ('123e4567-e89b-12d3-a456-426614174007'::uuid, 'React Component Library', 'Reusable React components', 'TypeScript', 'Web Development', 950)
-            ON CONFLICT (id) DO NOTHING
         '''))
         
         # Create test similarities
         conn.execute(text('''
-            CREATE TABLE IF NOT EXISTS "test_similarities" (
+            CREATE TABLE "test_similarities" (
                 user_id UUID REFERENCES "test_users"(id),
                 project_id UUID REFERENCES "test_projects"(id),
                 similarity_score FLOAT NOT NULL,
@@ -98,7 +101,6 @@ def setup_test_data_fallback():
             ('123e4567-e89b-12d3-a456-426614174002'::uuid, '123e4567-e89b-12d3-a456-426614174004'::uuid, 0.71, 0.68, 0.75, 0.65, 0.40),
             ('123e4567-e89b-12d3-a456-426614174002'::uuid, '123e4567-e89b-12d3-a456-426614174006'::uuid, 0.69, 0.66, 0.72, 0.62, 1.00),
             ('123e4567-e89b-12d3-a456-426614174002'::uuid, '123e4567-e89b-12d3-a456-426614174007'::uuid, 0.64, 0.61, 0.68, 0.58, 0.48)
-            ON CONFLICT (user_id, project_id) DO NOTHING
         '''))
         
         conn.commit()
@@ -117,7 +119,7 @@ def setup_test_data_fallback():
         print(f"     Projects: {project_count}")
         print(f"     Similarities: {similarity_count}")
         
-    print("✅ Test data setup completed using fallback method!")
+        print("✅ Test data setup completed using fallback method!")
 
 
 if __name__ == "__main__":
