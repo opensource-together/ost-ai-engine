@@ -1,11 +1,11 @@
 # OST Data Engine
 
-> **A data processing platform for GitHub repository analysis and intelligent project recommendations**  
-> Part of the [OpenSource Together](https://github.com/opensource-together) platform.
+Part of the [OpenSource Together](https://github.com/opensource-together) platform.
+> **A data processing platform for GitHub repository analysis and intelligent project recommendations.**
 
 <div align="center">
 
-[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-green.svg)](https://postgresql.org) [![Redis](https://img.shields.io/badge/Redis-6+-red.svg)](https://redis.io) [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com) [![MLflow](https://img.shields.io/badge/MLflow-Enabled-orange.svg)](https://mlflow.org)
+[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org) [![Go](https://img.shields.io/badge/Go-1.24+-cyan.svg)](https://golang.org) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-green.svg)](https://postgresql.org) [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com) [![MLflow](https://img.shields.io/badge/MLflow-Enabled-orange.svg)](https://mlflow.org)
 
 </div>
 
@@ -50,36 +50,36 @@ For detailed setup instructions, see our [Quick Start Guide](docs/deployment/qui
 
 #### 1. **Environment Setup**
 ```bash
-git clone <repository-url>
-cd ost-data-engine
-conda create -n data-engine-py13 python=3.13
-conda activate data-engine-py13
-poetry install
-cp .env.example .env
+> git clone <repository-url>
+> cd ost-data-engine
+> conda create -n data-engine-py13 python=3.13
+> conda activate data-engine-py13
+> poetry install
+> cp .env.example .env
 ```
 
 #### 2. **Services Launch**
 ```bash
-docker-compose up -d db redis
-psql -d OST_PROD -f scripts/database/recreate_schema.sql
-python scripts/database/create_test_users.py
+> docker-compose up -d db redis
+> psql -d OST_PROD -f scripts/database/recreate_schema.sql
+> python scripts/database/create_test_users.py
 ```
 
 #### 3. **Pipeline Execution**
 ```bash
-poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select training_data_pipeline
+> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select training_data_pipeline
 ```
 
 #### 4. **Start Go API**
 ```bash
-cd src/api/go
-go build -o recommendations-api recommendations.go
-./recommendations-api
+> cd src/api/go
+> go build -o recommendations-api recommendations.go
+> ./recommendations-api
 ```
 
 #### 5. **Test API**
 ```bash
-curl "http://localhost:8080/recommendations?user_id={USER_ID}"
+> curl "http://localhost:8080/recommendations?user_id={USER_ID}"
 ```
 
 ---
@@ -94,6 +94,9 @@ Key settings in `.env`:
 # Database
 DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
 
+# Redis Cache
+REDIS_CACHE_URL=redis://localhost:6379/0
+
 # External APIs
 GITHUB_ACCESS_TOKEN=your_github_token
 
@@ -101,9 +104,7 @@ GITHUB_ACCESS_TOKEN=your_github_token
 MLFLOW_TRACKING_URI=sqlite:///logs/mlflow.db
 MLFLOW_ARTIFACT_ROOT=models/mlruns
 
-# API
-API_HOST=0.0.0.0
-API_PORT=8000
+# Go API
 GO_API_PORT=8080
 ```
 
@@ -113,22 +114,18 @@ GO_API_PORT=8080
 
 ```bash
 # Tests
-poetry run pytest tests/ -v
-
-# Code Quality
-poetry run ruff check .
-poetry run ruff format .
+> poetry run pytest tests/ -v
 
 # MLflow UI
-python scripts/start_mlflow_ui.py
+> python scripts/start_mlflow_ui.py
 
 # Dagster UI
-dagster dev
+> dagster dev
 
 # Start Go API
-cd src/api/go
-go build -o recommendations-api recommendations.go
-./recommendations-api
+> cd src/api/go
+> go build -o recommendations-api recommendations.go
+> ./recommendations-api
 ```
 
 ---
@@ -141,7 +138,6 @@ go build -o recommendations-api recommendations.go
 
 - **[Quick Start Guide](docs/deployment/quick-start.md)** - Get up and running quickly
 - **[Environment Configuration](docs/deployment/environment.md)** - All environment variables explained
-- **[REST API Reference](docs/api/rest-api.md)** - Complete API documentation
 - **[Go API Implementation](docs/api/go-api.md)** - Go API technical details
 - **[ML Pipeline Overview](docs/ml-pipeline/overview.md)** - Machine learning pipeline architecture
 - **[Database Schema](docs/database/schema.md)** - Complete database schema documentation
