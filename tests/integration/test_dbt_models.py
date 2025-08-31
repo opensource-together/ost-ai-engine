@@ -32,10 +32,12 @@ def test_dbt_models_execution():
         # Run dbt models
         print("📊 Running dbt models...")
         result = subprocess.run([
-            'poetry', 'run', 'dbt', 'run', 
-            '--select', 'tag:test', 
+            'poetry', 'run', 'dbt', 'run',
+            '--project-dir', str(dbt_dir),
+            '--profiles-dir', str(dbt_dir),
+            '--select', 'tag:test',
             '--target', 'dev'
-        ], cwd=dbt_dir, env=env, check=True, capture_output=True, text=True)
+        ], env=env, check=True, capture_output=True, text=True)
         
         print("✅ dbt models executed successfully")
         print(f"Output: {result.stdout[:500]}...")  # Show first 500 chars
@@ -43,10 +45,12 @@ def test_dbt_models_execution():
         # Run dbt tests
         print("\n🧪 Running dbt tests...")
         result = subprocess.run([
-            'poetry', 'run', 'dbt', 'test', 
-            '--select', 'tag:test', 
+            'poetry', 'run', 'dbt', 'test',
+            '--project-dir', str(dbt_dir),
+            '--profiles-dir', str(dbt_dir),
+            '--select', 'tag:test',
             '--target', 'dev'
-        ], cwd=dbt_dir, env=env, check=True, capture_output=True, text=True)
+        ], env=env, check=True, capture_output=True, text=True)
         
         print("✅ dbt tests passed")
         print(f"Output: {result.stdout[:500]}...")  # Show first 500 chars
@@ -139,10 +143,12 @@ def test_dbt_model_compilation():
     try:
         # Compile dbt models
         result = subprocess.run([
-            'poetry', 'run', 'dbt', 'compile', 
-            '--select', 'tag:test', 
+            'poetry', 'run', 'dbt', 'compile',
+            '--project-dir', str(dbt_dir),
+            '--profiles-dir', str(dbt_dir),
+            '--select', 'tag:test',
             '--target', 'dev'
-        ], cwd=dbt_dir, capture_output=True, text=True, timeout=60)
+        ], capture_output=True, text=True, timeout=60)
         
         if result.returncode == 0:
             print("✅ dbt models compiled successfully")

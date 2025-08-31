@@ -26,6 +26,23 @@ class Settings(BaseSettings):
         default=3600, description="Database pool recycle time"
     )
 
+    # --- PostgreSQL Connection Details (for dbt) ---
+    POSTGRES_USER: str = Field(
+        default="user", description="PostgreSQL username"
+    )
+    POSTGRES_PASSWORD: str = Field(
+        default="password", description="PostgreSQL password"
+    )
+    POSTGRES_DB: str = Field(
+        default="OST_PROD", description="PostgreSQL database name"
+    )
+    POSTGRES_HOST: str = Field(
+        default="localhost", description="PostgreSQL host"
+    )
+    POSTGRES_PORT: int = Field(
+        default=5434, description="PostgreSQL port"
+    )
+
 
 
     # --- GitHub API ---
@@ -173,7 +190,7 @@ class Settings(BaseSettings):
         default=0.1, description="Weight for popularity in recommendations"
     )
     RECOMMENDATION_TOP_N: int = Field(
-        default=10, description="Number of top recommendations to return"
+        default=5, description="Number of top recommendations to return"
     )
     RECOMMENDATION_MIN_SIMILARITY: float = Field(
         default=0.1, description="Minimum similarity threshold for recommendations"
