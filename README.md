@@ -199,6 +199,29 @@ conda activate data-engine-py13 && pytest -v -m "performance"
 
 For detailed testing documentation, see [Testing Overview](docs/testing/overview.md).
 
+### Local CI/CD Testing
+
+Test GitHub Actions workflows locally using our unified script:
+
+```bash
+# Test all CI jobs
+python scripts/tests/ci_local.py all
+
+# Test specific job
+python scripts/tests/ci_local.py tests-unit
+python scripts/tests/ci_local.py tests-integration
+python scripts/tests/ci_local.py tests-performance
+
+# Available jobs: setup, tests-unit, tests-integration, tests-performance, go-lint, coverage
+```
+
+**Prerequisites:**
+- Install [Act](https://github.com/nektos/act)
+- Docker running
+- `.env` file configured
+
+For detailed Act testing documentation, see [Local CI Testing](docs/testing/act-local-testing.md).
+
 ---
 
 ## Documentation

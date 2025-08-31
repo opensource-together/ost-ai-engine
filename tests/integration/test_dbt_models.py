@@ -18,6 +18,10 @@ def test_dbt_models_execution():
     
     dbt_dir = Path(__file__).parent.parent.parent / "src" / "dbt"
     
+    # Load environment variables from .env file
+    from dotenv import load_dotenv
+    load_dotenv()
+    
     # Set environment variables for dbt
     env = os.environ.copy()
     env.update({
@@ -29,13 +33,13 @@ def test_dbt_models_execution():
     })
     
     try:
-        # Run dbt models
+        # Run dbt models (only test models that don't depend on external tables)
         print("📊 Running dbt models...")
         result = subprocess.run([
             'poetry', 'run', 'dbt', 'run',
             '--project-dir', str(dbt_dir),
             '--profiles-dir', str(dbt_dir),
-            '--select', 'tag:test',
+            '--select', 'test_users test_projects test_similarities',
             '--target', 'dev'
         ], env=env, check=True, capture_output=True, text=True)
         
@@ -48,7 +52,7 @@ def test_dbt_models_execution():
             'poetry', 'run', 'dbt', 'test',
             '--project-dir', str(dbt_dir),
             '--profiles-dir', str(dbt_dir),
-            '--select', 'tag:test',
+            '--select', 'test_users test_projects test_similarities',
             '--target', 'dev'
         ], env=env, check=True, capture_output=True, text=True)
         
@@ -105,6 +109,10 @@ def test_dbt_configuration():
     
     dbt_dir = Path(__file__).parent.parent.parent / "src" / "dbt"
     
+    # Load environment variables from .env file
+    from dotenv import load_dotenv
+    load_dotenv()
+    
     # Check dbt_project.yml exists and is valid
     dbt_project_file = dbt_dir / "dbt_project.yml"
     assert dbt_project_file.exists(), "dbt_project.yml not found"
@@ -113,12 +121,22 @@ def test_dbt_configuration():
     profiles_file = dbt_dir / "profiles.yml"
     assert profiles_file.exists(), "profiles.yml not found"
     
+    # Set environment variables for dbt
+    env = os.environ.copy()
+    env.update({
+        'POSTGRES_HOST': 'localhost',
+        'POSTGRES_USER': settings.POSTGRES_USER,
+        'POSTGRES_PASSWORD': settings.POSTGRES_PASSWORD,
+        'POSTGRES_PORT': str(settings.POSTGRES_PORT),
+        'POSTGRES_DB': settings.POSTGRES_DB,
+    })
+    
     # Check that dev target is configured
     try:
         result = subprocess.run([
             'poetry', 'run', 'dbt', 'debug', 
             '--target', 'dev'
-        ], cwd=dbt_dir, capture_output=True, text=True, timeout=30)
+        ], cwd=dbt_dir, env=env, capture_output=True, text=True, timeout=30)
         
         if result.returncode == 0:
             print("✅ dbt debug successful")
@@ -140,15 +158,29 @@ def test_dbt_model_compilation():
     
     dbt_dir = Path(__file__).parent.parent.parent / "src" / "dbt"
     
+    # Load environment variables from .env file
+    from dotenv import load_dotenv
+    load_dotenv()
+    
+    # Set environment variables for dbt
+    env = os.environ.copy()
+    env.update({
+        'POSTGRES_HOST': 'localhost',
+        'POSTGRES_USER': settings.POSTGRES_USER,
+        'POSTGRES_PASSWORD': settings.POSTGRES_PASSWORD,
+        'POSTGRES_PORT': str(settings.POSTGRES_PORT),
+        'POSTGRES_DB': settings.POSTGRES_DB,
+    })
+    
     try:
         # Compile dbt models
         result = subprocess.run([
             'poetry', 'run', 'dbt', 'compile',
             '--project-dir', str(dbt_dir),
             '--profiles-dir', str(dbt_dir),
-            '--select', 'tag:test',
+            '--select', 'test_users test_projects test_similarities',
             '--target', 'dev'
-        ], capture_output=True, text=True, timeout=60)
+        ], env=env, capture_output=True, text=True, timeout=60)
         
         if result.returncode == 0:
             print("✅ dbt models compiled successfully")

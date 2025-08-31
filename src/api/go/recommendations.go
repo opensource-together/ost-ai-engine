@@ -54,8 +54,18 @@ func loadConfig() Config {
 	minSim, _ := strconv.ParseFloat(getEnv("RECOMMENDATION_MIN_SIMILARITY", "0.1"), 64)
 	cacheTTL, _ := strconv.Atoi(getEnv("CACHE_TTL", "3600"))
 
+	// Build database URL from individual components for better compatibility
+	dbHost := getEnv("POSTGRES_HOST", "localhost")
+	dbPort := getEnv("POSTGRES_PORT", "5434")
+	dbUser := getEnv("POSTGRES_USER", "user")
+	dbPassword := getEnv("POSTGRES_PASSWORD", "password")
+	dbName := getEnv("POSTGRES_DB", "OST_PROD")
+
+	databaseURL := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable",
+		dbUser, dbPassword, dbHost, dbPort, dbName)
+
 	return Config{
-		DatabaseURL:          getEnv("DATABASE_URL", "postgresql://user:password@localhost:5434/OST_PROD?sslmode=disable"),
+		DatabaseURL:          getEnv("DATABASE_URL", databaseURL),
 		RecommendationTopN:   topN,
 		RecommendationMinSim: minSim,
 		CacheEnabled:         getEnv("CACHE_ENABLED", "true") == "true",

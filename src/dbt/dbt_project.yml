@@ -18,3 +18,6 @@ models:
   ost_transform:
     materialized: table
 
+# Auto-install dependencies
+require-dbt-version: ">=1.0.0"
+

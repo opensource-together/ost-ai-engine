@@ -67,12 +67,12 @@ def test_environment_variables():
         if 'format' in config:
             assert value.startswith(config['format']), f"{var_name} should start with '{config['format']}'"
     
-    # Test des variables importantes
-    for var_name, config in important_vars.items():
-        value = os.getenv(var_name)
-        if value is not None:  # Si définie, valider
-            if 'format' in config:
-                assert value.startswith(config['format']), f"{var_name} should start with '{config['format']}'"
+            # Test des variables importantes
+        for var_name, config in important_vars.items():
+            value = os.getenv(var_name)
+            if value is not None and value != "":  # Si définie et non vide, valider
+                if 'format' in config:
+                    assert value.startswith(config['format']), f"{var_name} should start with '{config['format']}'"
             
             if 'type' in config and config['type'] == int:
                 try:

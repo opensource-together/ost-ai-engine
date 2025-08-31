@@ -98,16 +98,7 @@ jobs:
         print('✅ PostgreSQL extensions created successfully')
         "
         
-        # Try to setup test database using dbt models
-        echo "🔧 Attempting to setup test data with dbt..."
-        cd $GITHUB_WORKSPACE/src/dbt
-        if poetry run dbt run --select tag:test --target ci; then
-            echo "✅ dbt models run successfully"
-        else
-            echo "⚠️  dbt failed, using fallback method..."
-            cd $GITHUB_WORKSPACE
-            poetry run python scripts/setup_test_data_fallback.py
-        fi
+                poetry run python scripts/setup_dbt.py
 
   tests-unit:
     runs-on: ubuntu-latest
@@ -217,16 +208,7 @@ jobs:
         print('✅ PostgreSQL extensions created successfully')
         "
         
-        # Try to setup test database using dbt models
-        echo "🔧 Attempting to setup test data with dbt..."
-        cd $GITHUB_WORKSPACE/src/dbt
-        if poetry run dbt run --select tag:test --target ci; then
-            echo "✅ dbt models run successfully"
-        else
-            echo "⚠️  dbt failed, using fallback method..."
-            cd $GITHUB_WORKSPACE
-            poetry run python scripts/setup_test_data_fallback.py
-        fi
+                poetry run python scripts/setup_dbt.py
 
     - name: Run integration tests
       env:
@@ -316,20 +298,16 @@ jobs:
         print('✅ PostgreSQL extensions created successfully')
         "
         
-        # Try to setup test database using dbt models
-        echo "🔧 Attempting to setup test data with dbt..."
-        cd $GITHUB_WORKSPACE/src/dbt
-        if poetry run dbt run --select tag:test --target ci; then
-            echo "✅ dbt models run successfully"
-        else
-            echo "⚠️  dbt failed, using fallback method..."
-            cd $GITHUB_WORKSPACE
-            poetry run python scripts/setup_test_data_fallback.py
-        fi
+                poetry run python scripts/setup_dbt.py
 
     - name: Start Go API
       env:
         DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
         GO_API_PORT: ${{ env.GO_API_PORT }}
         RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
         RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
@@ -341,10 +319,18 @@ jobs:
         echo "✅ Go API started in background"
         
         # Wait for API to be ready
-        sleep 5
+        sleep 10
         
-        # Test API health
-        curl -f http://localhost:${{ env.GO_API_PORT }}/health || echo "⚠️  API health check failed"
+        # Test API health with retry
+        for i in {1..5}; do
+          if curl -f http://localhost:${{ env.GO_API_PORT }}/health; then
+            echo "✅ API health check passed"
+            break
+          else
+            echo "⚠️  API health check attempt $i failed, retrying..."
+            sleep 2
+          fi
+        done
 
     - name: Run performance tests
       env:
@@ -365,6 +351,26 @@ jobs:
       run: |
         echo "🛑 Stopping Go API..."
         pkill -f recommendations-api || echo "No API process found"
+
+  go-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+
+    - name: Install golangci-lint
+      uses: golangci/golangci-lint-action@v4
+      with:
+        version: latest
+
+    - name: Run golangci-lint
+      working-directory: src/infrastructure/services/go/github-scraper
+      run: golangci-lint run --timeout=5m
 
   coverage:
     runs-on: ubuntu-latest
@@ -440,16 +446,7 @@ jobs:
         print('✅ PostgreSQL extensions created successfully')
         "
         
-        # Try to setup test database using dbt models
-        echo "🔧 Attempting to setup test data with dbt..."
-        cd $GITHUB_WORKSPACE/src/dbt
-        if poetry run dbt run --select tag:test --target ci; then
-            echo "✅ dbt models run successfully"
-        else
-            echo "⚠️  dbt failed, using fallback method..."
-            cd $GITHUB_WORKSPACE
-            poetry run python scripts/setup_test_data_fallback.py
-        fi
+                poetry run python scripts/setup_dbt.py
 
     - name: Run coverage report
       env:
