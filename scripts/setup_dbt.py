@@ -85,14 +85,14 @@ def main():
     
     print("📦 Installing dbt dependencies...")
     # Use absolute path for dbt commands
-    dbt_cmd = ['poetry', 'run', 'dbt', 'deps', '--target', 'ci', '--project-dir', str(dbt_dir)]
+    dbt_cmd = ['poetry', 'run', 'dbt', 'deps', '--target', 'ci', '--project-dir', str(dbt_dir), '--profiles-dir', str(dbt_dir)]
     if not run_command(dbt_cmd, env=env):
         print("❌ Failed to install dbt dependencies")
         return False
     
     print("🔧 Running dbt models...")
     # Use absolute path for dbt commands
-    dbt_cmd = ['poetry', 'run', 'dbt', 'run', '--select', 'tag:test', '--target', 'ci', '--project-dir', str(dbt_dir)]
+    dbt_cmd = ['poetry', 'run', 'dbt', 'run', '--select', 'tag:test', '--target', 'ci', '--project-dir', str(dbt_dir), '--profiles-dir', str(dbt_dir)]
     if not run_command(dbt_cmd, env=env):
         print("⚠️  dbt models failed, using fallback method...")
         # Run fallback script
