@@ -1,6 +1,6 @@
 # Testing Overview
 
-This document describes the testing strategy and structure for the OST Data Engine.
+This document provides an overview of the testing strategy and structure for the OST Data Engine project.
 
 ## Test Structure
 
@@ -8,281 +8,215 @@ This document describes the testing strategy and structure for the OST Data Engi
 tests/
 ├── conftest.py              # Shared fixtures and configuration
 ├── unit/                    # Unit tests (fast, isolated)
-│   ├── __init__.py
-│   ├── test_basic.py        # Basic functionality tests
+│   ├── test_env.py          # Environment and configuration tests
 │   ├── test_config.py       # Configuration management tests
 │   └── test_services.py     # Application services tests
 ├── integration/             # Integration tests (require services)
-│   ├── __init__.py
 │   ├── test_similarity.py   # Database and API integration tests
-│   └── test_cache.py        # Redis cache integration tests
-└── performance/             # Performance tests (slow, comprehensive)
-    ├── __init__.py
-    └── test_api_performance.py  # API performance and load tests
-
-src/dbt/models/test/         # Test data models (dbt)
-├── schema.yml              # Documentation and tests
-├── test_users.sql          # Test users data
-├── test_projects.sql       # Test projects data
-└── test_similarities.sql   # Test similarity data
-```
-
-## Test Data Management
-
-### dbt Models for Test Data
-
-We use **dbt models** to manage test data instead of hardcoded SQL or Python scripts. This approach provides:
-
-- **Version Control**: Test data is versioned with Git
-- **Documentation**: Automatic documentation with dbt
-- **Data Quality**: Built-in tests for data validation
-- **Consistency**: Same data across all environments
-- **Maintainability**: Easy to update and extend
-
-### Test Data Models
-
-1. **`test_users.sql`**: Creates test users with different profiles
-2. **`test_projects.sql`**: Creates test projects with various technologies  
-3. **`test_similarities.sql`**: Generates realistic similarity scores
-
-### Running Test Data Setup
-
-```bash
-# Local development
-> cd src/dbt
-> poetry run dbt run --select tag:test --target dev
-
-# CI/CD
-> cd src/dbt
-> poetry run dbt run --select tag:test --target ci
-
-# Using the helper script
-> python scripts/test_dbt_models.py
+│   ├── test_cache.py        # Redis cache integration tests
+│   └── test_dbt_models.py   # dbt models integration tests
+└── performance/             # Performance tests (require external services)
+    └── test_api_performance.py  # API performance tests
 ```
 
 ## Test Categories
 
-### Unit Tests (`tests/unit/`)
+### Unit Tests
+Fast, isolated tests that don't depend on external services.
 
-**Purpose**: Test individual components in isolation
-**Characteristics**:
-- Fast execution (< 1 second per test)
-- No external dependencies
-- Mock external services
-- Test configuration, imports, and basic functionality
+**Examples:**
+- Configuration validation
+- Service initialization
+- Vector parsing
+- Environment variable checks
 
-**Examples**:
-- Environment variable validation
-- Configuration loading
-- Project structure verification
-- Import statements
+**Running:**
+```bash
+# Unit tests only
+conda activate data-engine-py13 && pytest tests/unit/ -v
 
-### Integration Tests (`tests/integration/`)
+# With coverage
+conda activate data-engine-py13 && pytest tests/unit/ -v --cov=src --cov-report=html
+```
 
-**Purpose**: Test component interactions and external services
-**Characteristics**:
-- Require running services (database, API)
-- Slower execution
-- Test real data flows
-- Verify end-to-end functionality
+### Integration Tests
+Tests that verify interactions between components and external services.
 
-**Examples**:
-- Database connectivity and operations
-- API endpoint testing
-- Data quality validation
-- Similarity calculations
-- Redis cache operations
+**Examples:**
+- Database connectivity
+- Cache operations
+- API responses
+- Data consistency
+- **dbt models execution and validation**
 
-### Performance Tests (`tests/performance/`)
+**Running:**
+```bash
+# Integration tests only
+conda activate data-engine-py13 && pytest tests/integration/ -v
 
-**Purpose**: Test system performance and scalability
-**Characteristics**:
-- Slow execution (several minutes)
-- Require full system setup
-- Test under load conditions
-- Measure response times and throughput
+# Integration tests without slow tests
+conda activate data-engine-py13 && pytest tests/integration/ -v -m "not slow"
+```
 
-**Examples**:
-- API response time under normal load
+### Performance Tests
+Tests that measure system performance under load.
+
+**Examples:**
+- API response times
 - Concurrent request handling
-- Memory usage under stress
+- Memory usage under load
 - Error handling performance
-- Throughput measurements
+
+**Running:**
+```bash
+# Performance tests only (requires API Go to be running)
+conda activate data-engine-py13 && pytest tests/performance/ -v
+```
 
 ## Running Tests
 
-### Local Development
-
+### Development Workflow
 ```bash
-# Run all tests
-> poetry run pytest tests/ -v
+# Daily development (fast)
+conda activate data-engine-py13 && pytest tests/unit/ -v
 
-# Run only unit tests (fast)
-> poetry run pytest tests/unit/ -v
+# Before commits (complete)
+conda activate data-engine-py13 && pytest -v
 
-# Run only integration tests
-> poetry run pytest tests/integration/ -v
+# Quick validation (without slow tests)
+conda activate data-engine-py13 && pytest tests/unit/ tests/integration/ -v -m "not slow"
 
-# Run tests with specific markers
-> poetry run pytest tests/ -v -m "unit"
-> poetry run pytest tests/ -v -m "integration"
-> poetry run pytest tests/ -v -m "performance"
-> poetry run pytest tests/ -v -m "api"
-
-# Run tests excluding slow ones
-> poetry run pytest tests/ -v -m "not slow"
-
-# Run with coverage
-> poetry run pytest tests/ -v --cov=src --cov-report=html
-
-# Setup test data first
-> python scripts/test_dbt_models.py
+# All tests with coverage
+conda activate data-engine-py13 && pytest -v --cov=src --cov-report=html
 ```
 
-### CI/CD Pipeline
+### Test Markers
+```bash
+# Run specific test categories
+conda activate data-engine-py13 && pytest -v -m "unit"
+conda activate data-engine-py13 && pytest -v -m "integration"
+conda activate data-engine-py13 && pytest -v -m "performance"
 
-The CI pipeline runs tests in stages:
+# Exclude slow tests
+conda activate data-engine-py13 && pytest -v -m "not slow"
+```
 
-1. **Setup Database**: Create extensions and run dbt test models
-2. **Unit Tests**: Fast validation of basic functionality
-3. **Integration Tests**: Full system validation with test database
-4. **Performance Tests**: API performance and load testing
-5. **Coverage Report**: Overall test coverage analysis
+## Centralized Test Fixtures
 
-## Test Data
-
-### Test Database Setup
-
-Integration tests use dbt models to create:
-
-- **3 test users** with different profiles (Python, JavaScript, Go)
-- **5 test projects** with various technologies
-- **15 similarity records** with realistic scores
-- **Consistent data relationships** (e.g., Python dev → Python projects = high similarity)
-
-### Data Quality Tests
-
-dbt automatically runs data quality tests:
-
-- **Uniqueness**: Ensure no duplicate IDs
-- **Not null**: Required fields are populated
-- **Accepted values**: Fields contain expected values
-- **Relationships**: Foreign key constraints are valid
-- **Range checks**: Numeric values are within expected ranges
-
-### Data Isolation
-
-- Test data is created fresh for each CI run
-- No production data is used in tests
-- Database is destroyed after tests complete
-- Local development uses separate test database
-
-## Test Markers
-
-Pytest markers help categorize and filter tests:
-
-- `@pytest.mark.unit`: Unit tests
-- `@pytest.mark.integration`: Integration tests
-- `@pytest.mark.performance`: Performance tests
-- `@pytest.mark.api`: API-specific tests
-- `@pytest.mark.slow`: Slow-running tests
-
-## Best Practices
-
-### Writing Unit Tests
+All test data and mocks are centralized in `tests/conftest.py`:
 
 ```python
-def test_functionality():
-    """Test description."""
-    # Arrange
-    expected = "expected_value"
-    
-    # Act
-    result = function_under_test()
-    
-    # Assert
-    assert result == expected
+@pytest.fixture
+def mock_settings():
+    """Mock settings for unit tests."""
+    return {
+        'DATABASE_URL': 'postgresql://test:test@localhost:5432/test',
+        'MODEL_DIMENSIONS': 384,
+        # ... other settings
+    }
+
+@pytest.fixture
+def mock_user_profile():
+    """Mock user profile for testing."""
+    return {
+        'user_id': '123e4567-e89b-12d3-a456-426614174000',
+        'username': 'test_user',
+        'embedding': [0.1, 0.2, 0.3, 0.4, 0.5],
+        # ... other data
+    }
+
+@pytest.fixture
+def sample_vectors():
+    """Sample vectors for testing."""
+    return {
+        'postgresql_format': '{0.1,0.2,0.3,0.4,0.5}',
+        'json_format': '[0.1,0.2,0.3,0.4,0.5]',
+        'invalid_format': 'invalid_vector_string'
+    }
 ```
 
-### Writing Integration Tests
+## Writing Unit Tests
+
+Example using centralized fixtures:
+
+```python
+@pytest.mark.unit
+def test_parse_vector_string(sample_vectors):
+    """Test vector string parsing using centralized sample vectors."""
+    with patch('src.application.services.recommendation_service.settings'):
+        with patch('src.application.services.recommendation_service.create_engine'):
+            service = RecommendationService()
+            
+            # Test PostgreSQL format
+            result = service.parse_vector_string(sample_vectors['postgresql_format'])
+            expected = np.array([0.1, 0.2, 0.3, 0.4, 0.5])
+            np.testing.assert_array_almost_equal(result, expected)
+```
+
+## Writing Integration Tests
+
+Example using database fixtures:
 
 ```python
 @pytest.mark.integration
-def test_database_operation():
-    """Test database operation."""
-    engine = create_engine(settings.DATABASE_URL)
-    
-    with engine.connect() as conn:
-        result = conn.execute(text("SELECT COUNT(*) FROM test_similarities"))
-        count = result.scalar()
-        assert count > 0
+def test_similarity_data_quality(db_connection):
+    """Test the quality of similarity data."""
+    with db_connection as conn:
+        result = conn.execute(text('SELECT COUNT(*) FROM "test_similarities"'))
+        total_records = result.scalar()
+        assert total_records > 0, "test_similarities table is empty"
 ```
 
-### Writing Performance Tests
+## dbt Integration Tests
+
+The project includes comprehensive dbt integration tests:
 
 ```python
-@pytest.mark.performance
+@pytest.mark.integration
 @pytest.mark.slow
-def test_api_response_time():
-    """Test API response time under normal load."""
-    start_time = time.time()
-    response = requests.get(f"{api_url}?user_id={test_user_id}")
-    response_time = (time.time() - start_time) * 1000
-    
-    assert response.status_code == 200
-    assert response_time < 100  # Less than 100ms
+def test_dbt_models_execution():
+    """Test that dbt models can be executed successfully."""
+    # Tests dbt model execution and validation
+    # Ensures data transformation pipeline works correctly
 ```
 
-### Test Dependencies
+**dbt tests include:**
+- Model compilation validation
+- Project structure verification
+- Configuration testing
+- Model execution testing
+- Data quality validation
 
-- **Unit tests**: No external dependencies
-- **Integration tests**: Require database and services
-- **Performance tests**: Require full system setup and Go API
-- **API tests**: Require running Go API
+## Model Dimensions Testing
 
-## Troubleshooting
+The `MODEL_DIMENSIONS` setting is a **model property**, not a data property:
 
-### Common Issues
-
-1. **Database Connection Failed**
-   - Check `DATABASE_URL` environment variable
-   - Ensure PostgreSQL is running
-   - Verify database extensions are installed
-
-2. **dbt Models Failed**
-   - Check dbt profile configuration
-   - Verify database credentials
-   - Run `dbt debug` to diagnose issues
-
-3. **Go API Not Responding**
-   - Check `GO_API_PORT` environment variable
-   - Ensure Go API is running
-   - Verify API endpoint is accessible
-
-4. **Redis Cache Issues**
-   - Check `REDIS_CACHE_URL` environment variable
-   - Ensure Redis is running
-   - Verify Redis connection
-
-5. **Test Data Missing**
-   - Run `python scripts/test_dbt_models.py` to create test data
-   - Check dbt model execution logs
-   - Verify database schema matches expectations
-
-### Debug Mode
-
-```bash
-# Run tests with detailed output
-> poetry run pytest tests/ -v -s --tb=long
-
-# Run specific test with debug
-> poetry run pytest tests/integration/test_similarity.py::test_similarity_data_quality -v -s
-
-# Run performance tests locally
-> poetry run pytest tests/performance/ -v -m "performance"
-
-# Debug dbt models
-> cd src/dbt
-> poetry run dbt debug --target dev
-> poetry run dbt run --select tag:test --target dev --debug
+```python
+@pytest.mark.unit
+def test_model_dimensions_consistency():
+    """Test that model dimensions are consistent and match the model."""
+    # all-MiniLM-L6-v2 always has 384 dimensions
+    # Even with more input data, output dimensions remain 384
+    assert settings.MODEL_DIMENSIONS == 384, "all-MiniLM-L6-v2 should always have 384 dimensions"
 ```
+
+## Test Data Management
+
+Test data is managed through dbt models in `src/dbt/models/test/`:
+
+```
+src/dbt/models/test/         # Test data models (dbt)
+├── schema.yml               # Documentation and tests
+├── test_users.sql           # Test users data
+├── test_projects.sql        # Test projects data
+└── test_similarities.sql    # Test similarity data
+```
+
+## CI/CD Integration
+
+Tests are automatically run in the CI/CD pipeline with proper service dependencies.
+
+## Related Documentation
+
+- [Pytest Best Practices](pytest-best-practices.md) - Detailed testing guidelines
+- [DBT Test Models](dbt-test-models.md) - Test data management

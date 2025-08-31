@@ -140,23 +140,62 @@ GO_API_PORT=8080
 
 ## Testing
 
-Our testing strategy is organized into two main categories:
+Our testing strategy is organized into three main categories:
 
 ### Test Structure
 ```
 tests/
 ├── unit/                    # Unit tests (fast, isolated)
-│   └── test_basic.py       # Configuration and basic functionality
+│   ├── test_env.py         # Environment and configuration tests
+│   ├── test_config.py      # Configuration management tests
+│   └── test_services.py    # Application services tests
 ├── integration/             # Integration tests (require services)
-│   └── test_similarity.py  # Database and API integration
-├── conftest.py             # Shared fixtures and configuration
-└── setup_test_db.py        # Test database setup for CI
+│   ├── test_similarity.py  # Database and API integration
+│   ├── test_cache.py       # Redis cache integration
+│   └── test_dbt_models.py  # dbt models integration
+└── performance/             # Performance tests (require external services)
+    └── test_api_performance.py  # API performance tests
 ```
 
 ### Test Categories
 
 - **Unit Tests** (`tests/unit/`): Fast tests that verify individual components in isolation
-- **Integration Tests** (`tests/integration/`): Tests that verify component interactions and external services
+- **Integration Tests** (`tests/integration/`): Tests that verify component interactions and external services (including dbt models)
+- **Performance Tests** (`tests/performance/`): Tests that measure system performance under load
+
+### Running Tests
+
+#### Development Workflow
+```bash
+# Daily development (fast)
+conda activate data-engine-py13 && pytest tests/unit/ -v
+
+# Before commits (complete)
+conda activate data-engine-py13 && pytest -v
+
+# Quick validation (without slow tests)
+conda activate data-engine-py13 && pytest tests/unit/ tests/integration/ -v -m "not slow"
+
+# All tests with coverage
+conda activate data-engine-py13 && pytest -v --cov=src --cov-report=html
+```
+
+#### Test Categories
+```bash
+# Unit tests only
+conda activate data-engine-py13 && pytest tests/unit/ -v
+
+# Integration tests only
+conda activate data-engine-py13 && pytest tests/integration/ -v
+
+# Performance tests only (requires API Go)
+conda activate data-engine-py13 && pytest tests/performance/ -v
+
+# Using markers
+conda activate data-engine-py13 && pytest -v -m "unit"
+conda activate data-engine-py13 && pytest -v -m "integration"
+conda activate data-engine-py13 && pytest -v -m "performance"
+```
 
 For detailed testing documentation, see [Testing Overview](docs/testing/overview.md).
 

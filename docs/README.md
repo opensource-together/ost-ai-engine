@@ -23,7 +23,6 @@ Welcome to the OST Data Engine documentation. This project implements a machine 
 - [Code Structure](development/code-structure.md) - Project organization and conventions
 - [Testing](testing/overview.md) - Testing strategy and test organization
 - [dbt Test Models](testing/dbt-test-models.md) - Test data management with dbt
-- [Test Scripts](testing/scripts.md) - Testing scripts and utilities
 
 ### Deployment
 - [Environment Configuration](deployment/environment.md) - Environment variables and configuration

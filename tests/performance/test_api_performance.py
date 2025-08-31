@@ -18,7 +18,7 @@ def test_api_response_time():
     print("=" * 80)
     
     # Test user ID (should exist in test data)
-    test_user_id = "123e4567-e89b-12d3-a456-426614174000"
+    test_user_id = "ab18fc24-40d9-4055-ac46-393e25eb3736"  # eve_data
     api_url = f"http://localhost:{settings.GO_API_PORT}/recommendations"
     
     response_times = []
@@ -66,7 +66,7 @@ def test_api_concurrent_load():
     print("\n🔍 API CONCURRENT LOAD TEST")
     print("=" * 80)
     
-    test_user_id = "123e4567-e89b-12d3-a456-426614174000"
+    test_user_id = "ab18fc24-40d9-4055-ac46-393e25eb3736"  # eve_data
     api_url = f"http://localhost:{settings.GO_API_PORT}/recommendations"
     
     num_concurrent = 10
@@ -133,7 +133,8 @@ def test_api_memory_usage():
     # This would require monitoring the Go API process
     # For now, we'll test that the API doesn't crash under load
     
-    test_user_id = "123e4567-e89b-12d3-a456-426614174000"
+    # Use a real user_id that exists in the database
+    test_user_id = "ab18fc24-40d9-4055-ac46-393e25eb3736"  # eve_data
     api_url = f"http://localhost:{settings.GO_API_PORT}/recommendations"
     
     # Make many requests to stress the API
