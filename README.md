@@ -160,7 +160,7 @@ tests/
 ### Test Categories
 
 - **Unit Tests** (`tests/unit/`): Fast tests that verify individual components in isolation
-- **Integration Tests** (`tests/integration/`): Tests that verify component interactions and external services (including dbt models)
+- **Integration Tests** (`tests/integration/`): Tests that verify component interactions and external services
 - **Performance Tests** (`tests/performance/`): Tests that measure system performance under load
 
 ### Running Tests

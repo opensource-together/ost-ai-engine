@@ -47,7 +47,6 @@ Tests that verify interactions between components and external services.
 - Cache operations
 - API responses
 - Data consistency
-- **dbt models execution and validation**
 
 **Running:**
 ```bash

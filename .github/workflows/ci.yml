@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main, feature/*, release/*, hotfix/*, ci-cd ]
   pull_request:
-    branches: [ main, develop, staging ]
+    branches: [ main, staging ]
 
 env:
   POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
