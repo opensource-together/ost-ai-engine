@@ -102,7 +102,7 @@ def user_embeddings(context, config: UserEmbeddingConfig) -> Dict[str, Any]:
                 "model_name": settings.MODEL_DISPLAY_NAME,
                 "embedding_dimension": embeddings_array.shape[1],
                 "count": len(user_ids),
-                "generation_time": 0  # TODO: Add actual generation time
+                "generation_time": 0  # Placeholder for generation time tracking
             }
             
 
