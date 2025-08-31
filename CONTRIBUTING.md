@@ -80,7 +80,7 @@ MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
 MODEL_DIMENSIONS=384
 ```
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 ost-data-engine/
@@ -99,7 +99,7 @@ ost-data-engine/
 └── docker-compose.yml     # Local development
 ```
 
-## 📝 Coding Standards
+## Coding Standards
 
 ### Python
 
@@ -143,7 +143,7 @@ func ProcessData(data []map[string]interface{}) ([]Result, error) {
 - **Documentation**: Document all models in `schema.yml`
 - **Testing**: Add tests for all models
 
-## 🧪 Testing Guidelines
+## Testing Guidelines
 
 ### Running Tests
 
@@ -190,7 +190,7 @@ def test_process_data():
     assert result[0]["name"] == "test"
 ```
 
-## 🔄 Pull Request Process
+## Pull Request Process
 
 ### Before Submitting
 
@@ -241,7 +241,7 @@ Brief description of changes
 - [ ] CHANGELOG updated (if needed)
 ```
 
-## 🚀 Release Process
+## Release Process
 
 ### Versioning
 
@@ -260,7 +260,7 @@ We follow [Semantic Versioning](https://semver.org/):
 5. **Tag release**: Create GitHub release
 6. **Deploy**: Deploy to production
 
-## 🆘 Getting Help
+## Getting Help
 
 ### Communication Channels
 
@@ -282,14 +282,14 @@ Use the appropriate issue template:
 - **Feature Request**: For new features
 - **Documentation**: For doc improvements
 
-## 📚 Additional Resources
+## Additional Resources
 
 - [Architecture Overview](docs/architecture/overview.md)
 - [API Documentation](docs/api/go-api.md)
 - [Testing Guide](docs/testing/overview.md)
 - [Deployment Guide](docs/deployment/quick-start.md)
 
-## 🎯 Contribution Areas
+## Contribution Areas
 
 We welcome contributions in these areas:
 
@@ -301,7 +301,7 @@ We welcome contributions in these areas:
 - **Performance**: Optimization, monitoring
 - **Security**: Security improvements, audits
 
-## 🙏 Recognition
+## Recognition
 
 Contributors will be recognized in:
 - [Contributors list](https://github.com/opensource-together/ost-data-engine/graphs/contributors)

@@ -1,7 +1,7 @@
 # OST Data Engine
 
 Part of the [OpenSource Together](https://github.com/opensource-together) platform.
-> **A data processing platform for GitHub repository analysis and intelligent project recommendations.**
+**A data processing platform for GitHub repository analysis and intelligent project recommendations.**
 
 <div align="center">
 
@@ -16,7 +16,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 | Component | Technology | Purpose |
 |-----------|------------|---------|
 | **Data extraction & API** | [@Golang](https://github.com/golang/go) | Recommendation endpoints |
-| **Data Transformation** | [@dbt](https://github.com/golang/go) | Transformation models |
+| **Data Transformation** | [@dbt](https://github.com/dbt-labs/dbt-core) | Transformation models |
 | **Recommendation Engine** | [@Python](https://github.com/python) | User-project scoring |
 | **ML Processing** | [@all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | Semantic embeddings |
 | **Model Persistence** | [@MLFlow](https://github.com/mlflow/mlflow) | Versioning & artifacts |
@@ -30,13 +30,15 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 src/
 ├──  api/             # Go API recommendation service
 ├──  domain/          # Business logic and models
-├──  application/     # Use cases and services
+├──  application/     # Application services
 │   └──  services/    # Recommendation engine
 ├──  infrastructure/  # External adapters
 │   ├──  pipeline/    # Dagster orchestration
-│   ├──  services/    # MLflow, Redis, external APIs
+│   ├──  services/    # MLflow, Redis, external APIs, Go scraper
 │   ├──  postgres/    # Database connections
-│   └──  cache/       # Redis caching layer
+│   ├──  cache/       # Redis caching layer
+│   ├──  analysis/    # Model persistence services
+│   └──  monitoring/  # Metrics and observability
 └──  dbt/             # Data transformation models
 ```
 
@@ -50,7 +52,7 @@ For detailed setup instructions, see our [Quick Start Guide](docs/deployment/qui
 
 #### 1. **Environment Setup**
 ```bash
-> git clone <repository-url>
+> git clone https://github.com/opensource-together/ost-data-engine.git
 > cd ost-data-engine
 > conda create -n data-engine-py13 python=3.13
 > conda activate data-engine-py13
@@ -67,7 +69,13 @@ For detailed setup instructions, see our [Quick Start Guide](docs/deployment/qui
 
 #### 3. **Pipeline Execution**
 ```bash
-> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select training_data_pipeline
+# Run complete pipeline
+> poetry run dagster job execute -j training_data_pipeline
+
+# Or run individual components
+> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select github_scraping
+> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select user_embeddings
+> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select project_hybrid_embeddings
 ```
 
 #### 4. **Start Go API**
@@ -151,8 +159,7 @@ tests/
 │   └── test_services.py    # Application services tests
 ├── integration/             # Integration tests (require services)
 │   ├── test_similarity.py  # Database and API integration
-│   ├── test_cache.py       # Redis cache integration
-│   └── test_dbt_models.py  # dbt models integration
+│   └── test_cache.py       # Redis cache integration
 └── performance/             # Performance tests (require external services)
     └── test_api_performance.py  # API performance tests
 ```

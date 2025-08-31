@@ -213,7 +213,7 @@ poetry run dbt test --select tag:test --target ci
 
 ```bash
 # Use the helper script
-python scripts/test_dbt_models.py
+python scripts/setup_test_data_fallback.py
 ```
 
 ## Configuration

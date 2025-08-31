@@ -14,7 +14,7 @@ tests/
 ├── integration/             # Integration tests (require services)
 │   ├── test_similarity.py   # Database and API integration tests
 │   ├── test_cache.py        # Redis cache integration tests
-│   └── test_dbt_models.py   # dbt models integration tests
+│   └── test_cache.py        # Redis cache integration tests
 └── performance/             # Performance tests (require external services)
     └── test_api_performance.py  # API performance tests
 ```
@@ -173,18 +173,18 @@ The project includes comprehensive dbt integration tests:
 ```python
 @pytest.mark.integration
 @pytest.mark.slow
-def test_dbt_models_execution():
-    """Test that dbt models can be executed successfully."""
-    # Tests dbt model execution and validation
-    # Ensures data transformation pipeline works correctly
+def test_cache_integration():
+    """Test that Redis cache integration works correctly."""
+    # Tests cache operations and data consistency
+    # Ensures caching layer functions properly
 ```
 
-**dbt tests include:**
-- Model compilation validation
-- Project structure verification
-- Configuration testing
-- Model execution testing
-- Data quality validation
+**Cache tests include:**
+- Redis connection validation
+- Cache operations testing
+- Data consistency verification
+- Performance testing
+- Error handling validation
 
 ## Model Dimensions Testing
 

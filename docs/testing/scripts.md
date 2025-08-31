@@ -8,7 +8,6 @@ The OST Data Engine includes several scripts to support testing and development 
 
 ```
 scripts/
-├── test_dbt_models.py              # Run dbt test models locally
 ├── setup_test_data_fallback.py     # Fallback for test data creation
 └── database/                       # Database setup scripts
     ├── create_test_users.py        # Create test users
@@ -18,31 +17,7 @@ scripts/
 
 ## Test Scripts
 
-### test_dbt_models.py
 
-**Purpose**: Run dbt test models locally for development and testing.
-
-**Usage**:
-```bash
-python scripts/test_dbt_models.py
-```
-
-**Features**:
-- Runs dbt test models with proper environment variables
-- Executes data quality tests
-- Provides detailed output and error handling
-- Uses local development profile
-
-**Example Output**:
-```
-🔧 Running dbt test models...
-✅ dbt models run successfully
-  Found 3 models, 0 tests, 0 snapshots, 0 analyses, 0 macros, 0 operations, 0 seed files, 0 sources, 0 exposures, 0 metrics
-
-🧪 Running dbt tests...
-✅ dbt tests passed
-  Found 3 models, 15 tests, 0 snapshots, 0 analyses, 0 macros, 0 operations, 0 seed files, 0 sources, 0 exposures, 0 metrics
-```
 
 ### setup_test_data_fallback.py
 
@@ -131,15 +106,12 @@ def setup_test_database():
     dbt_dir = os.path.join(os.path.dirname(__file__), '..', 'src', 'dbt')
     
     try:
-        subprocess.run([
-            'poetry', 'run', 'dbt', 'run', 
-            '--select', 'tag:test', 
-            '--target', 'ci'
-        ], cwd=dbt_dir, env=env, check=True)
-    except subprocess.CalledProcessError as e:
-        # Use fallback if dbt fails
+        # Use fallback script for test data
         fallback_script = os.path.join(os.path.dirname(__file__), '..', 'scripts', 'setup_test_data_fallback.py')
         subprocess.run([sys.executable, fallback_script], check=True)
+    except subprocess.CalledProcessError as e:
+        print(f"Failed to setup test data: {e}")
+        raise
 ```
 
 ### CI/CD Integration
@@ -150,15 +122,9 @@ The scripts are used in the CI pipeline:
 # .github/workflows/ci.yml
 - name: Setup database schema
   run: |
-    # Try dbt first
-    cd $GITHUB_WORKSPACE/src/dbt
-    if poetry run dbt run --select tag:test --target ci; then
-        echo "✅ dbt models run successfully"
-    else
-        echo "⚠️  dbt failed, using fallback method..."
-        cd $GITHUB_WORKSPACE
-        poetry run python scripts/setup_test_data_fallback.py
-    fi
+    # Use fallback script for test data
+    cd $GITHUB_WORKSPACE
+    poetry run python scripts/setup_test_data_fallback.py
 ```
 
 ## Environment Configuration
@@ -181,7 +147,7 @@ DBT_PROJECT_DIR=src/dbt
 ### Script-Specific Variables
 
 ```env
-# For test_dbt_models.py
+# For local development
 LOG_LEVEL=INFO
 ENVIRONMENT=development
 
@@ -254,7 +220,7 @@ Enable debug logging for scripts:
 export LOG_LEVEL=DEBUG
 
 # Run script with debug output
-python scripts/test_dbt_models.py
+python scripts/setup_test_data_fallback.py
 ```
 
 ### Common Issues
@@ -262,7 +228,7 @@ python scripts/test_dbt_models.py
 1. **Permission Denied**
    ```bash
    # Make script executable
-   chmod +x scripts/test_dbt_models.py
+   chmod +x scripts/setup_test_data_fallback.py
    ```
 
 2. **Module Not Found**

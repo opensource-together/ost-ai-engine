@@ -85,7 +85,7 @@ python scripts/database/create_test_users.py
 ### **4. Run Dagster pipeline**
 ```bash
 export DAGSTER_HOME=$(pwd)/logs/dagster
-poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select training_data_pipeline
+poetry run dagster job execute -j training_data_pipeline
 ```
 
 ## ⚠️ Important Notes

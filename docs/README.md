@@ -15,12 +15,8 @@ Welcome to the OST Data Engine documentation. This project implements a machine 
 
 ### Architecture
 - [System Overview](architecture/overview.md) - High-level architecture and design decisions
-- [Data Flow](architecture/data-flow.md) - How data moves through the system
-- [Technology Stack](architecture/technology-stack.md) - Detailed technology choices
 
 ### Development
-- [Setup Guide](development/setup.md) - Local development environment setup
-- [Code Structure](development/code-structure.md) - Project organization and conventions
 - [Testing](testing/overview.md) - Testing strategy and test organization
 - [dbt Test Models](testing/dbt-test-models.md) - Test data management with dbt
 
@@ -33,12 +29,9 @@ Welcome to the OST Data Engine documentation. This project implements a machine 
 
 ### ML Pipeline
 - [Pipeline Overview](ml-pipeline/overview.md) - Dagster pipeline architecture
-- [Model Management](ml-pipeline/models.md) - MLflow model tracking
-- [Embeddings](ml-pipeline/embeddings.md) - Semantic and hybrid embeddings
 
 ### API
 - [Go API](api/go-api.md) - Go recommendation API documentation
-- [Endpoints](api/endpoints.md) - API endpoint specifications
 - [Examples](api/examples.md) - API usage examples and patterns
 
 ### Database
@@ -61,4 +54,4 @@ Welcome to the OST Data Engine documentation. This project implements a machine 
 
 ## Contributing
 
-Please refer to the [Development Guide](development/setup.md) for contribution guidelines and local setup instructions.
+Please refer to the [CONTRIBUTING.md](../CONTRIBUTING.md) for contribution guidelines and local setup instructions.
