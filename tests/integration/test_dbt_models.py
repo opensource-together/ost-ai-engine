@@ -40,7 +40,7 @@ def test_dbt_models_execution():
             '--project-dir', str(dbt_dir),
             '--profiles-dir', str(dbt_dir),
             '--select', 'test_users test_projects test_similarities',
-            '--target', 'dev'
+            '--target', 'ci'
         ], env=env, check=True, capture_output=True, text=True)
         
         print("✅ dbt models executed successfully")
@@ -53,7 +53,7 @@ def test_dbt_models_execution():
             '--project-dir', str(dbt_dir),
             '--profiles-dir', str(dbt_dir),
             '--select', 'test_users test_projects test_similarities',
-            '--target', 'dev'
+            '--target', 'ci'
         ], env=env, check=True, capture_output=True, text=True)
         
         print("✅ dbt tests passed")
@@ -179,7 +179,7 @@ def test_dbt_model_compilation():
             '--project-dir', str(dbt_dir),
             '--profiles-dir', str(dbt_dir),
             '--select', 'test_users test_projects test_similarities',
-            '--target', 'dev'
+            '--target', 'ci'
         ], env=env, capture_output=True, text=True, timeout=60)
         
         if result.returncode == 0:

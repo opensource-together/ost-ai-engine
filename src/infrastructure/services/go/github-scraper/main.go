@@ -135,7 +135,7 @@ func loadEnv() {
 	}
 
 	// Validate GitHub token if provided
-	if token := os.Getenv("GITHUB_ACCESS_TOKEN"); token != "" && token != "your_github_token_here" {
+	if token := os.Getenv("GITHUB_ACCESS_TOKEN"); token != "" && token != "your_github_token_here" { // nolint:gosec // test token placeholder
 		log.Println("✅ GitHub token found in environment")
 	} else {
 		log.Println("⚠️ No valid GitHub token found - using unauthenticated client")

@@ -367,10 +367,13 @@ jobs:
       uses: golangci/golangci-lint-action@v4
       with:
         version: latest
+        working-directory: src/infrastructure/services/go/github-scraper
 
-    - name: Run golangci-lint
-      working-directory: src/infrastructure/services/go/github-scraper
-      run: golangci-lint run --timeout=5m
+    - name: Run golangci-lint on go-api
+      uses: golangci/golangci-lint-action@v4
+      with:
+        version: latest
+        working-directory: src/api/go
 
   coverage:
     runs-on: ubuntu-latest

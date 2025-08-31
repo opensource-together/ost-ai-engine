@@ -24,7 +24,7 @@ func NewGitHubScraper(token string) *GitHubScraper {
 	ctx := context.Background()
 	var client *github.Client
 
-	if token != "" && token != "your_github_token_here" {
+	if token != "" && token != "your_github_token_here" { // nolint:gosec // test token placeholder
 		// Use authenticated client with optimized settings
 		ts := oauth2.StaticTokenSource(
 			&oauth2.Token{AccessToken: token},
@@ -176,7 +176,7 @@ func (s *GitHubScraper) enrichRepository(repo *github.Repository) (Repository, e
 		}
 		repository.Topics = sanitizedTopics
 		if len(sanitizedTopics) > 0 {
-			log.Printf("   📂 Topics: %s", strings.Join(sanitizedTopics[:min(len(sanitizedTopics), 3)], ", "))
+			log.Printf("   📂 Topics: %s", strings.Join(sanitizedTopics[:minInt(len(sanitizedTopics), 3)], ", "))
 			if len(sanitizedTopics) > 3 {
 				log.Printf("   ... and %d more topics", len(sanitizedTopics)-3)
 			}
@@ -315,7 +315,8 @@ func (s *GitHubScraper) basicRepository(repo *github.Repository) Repository {
 func (s *GitHubScraper) logSummary(repositories []Repository) {
 	// Language distribution with efficient counting
 	languageCounts := make(map[string]int)
-	for _, repo := range repositories {
+	for i := range repositories {
+		repo := &repositories[i]
 		if repo.Language != "" {
 			languageCounts[repo.Language]++
 		}
@@ -328,7 +329,8 @@ func (s *GitHubScraper) logSummary(repositories []Repository) {
 
 	// Total stars calculation
 	totalStars := 0
-	for _, repo := range repositories {
+	for i := range repositories {
+		repo := &repositories[i]
 		totalStars += repo.StargazersCount
 	}
 	avgStars := totalStars / len(repositories)
@@ -340,16 +342,8 @@ func (s *GitHubScraper) logSummary(repositories []Repository) {
 	}
 }
 
-// stringValue safely gets string value from pointer with nil check
-func stringValue(s *string) string {
-	if s == nil {
-		return ""
-	}
-	return *s
-}
-
-// min returns the minimum of two integers (optimized)
-func min(a, b int) int {
+// minInt returns the minimum of two integers (optimized)
+func minInt(a, b int) int {
 	if a < b {
 		return a
 	}

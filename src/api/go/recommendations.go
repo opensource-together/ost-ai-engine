@@ -185,10 +185,14 @@ func getRecommendations(db *sql.DB, config Config, userID string) (*Recommendati
 func healthHandler() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(map[string]interface{}{
+		if err := json.NewEncoder(w).Encode(map[string]interface{}{
 			"status":    "healthy",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
-		})
+		}); err != nil {
+			log.Printf("Error encoding health response: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 
@@ -212,7 +216,11 @@ func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 
 		// Return JSON response
 		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(response)
+		if err := json.NewEncoder(w).Encode(response); err != nil {
+			log.Printf("Error encoding recommendations response: %v", err)
+			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			return
+		}
 	}
 }
 

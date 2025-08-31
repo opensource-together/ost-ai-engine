@@ -93,7 +93,8 @@ func upsertRepositories(dbURL string, repos []Repository) error {
 	`
 
 	batch := &pgx.Batch{}
-	for _, r := range repos {
+	for i := range repos {
+		r := &repos[i]
 		languagesJSON, _ := json.Marshal(r.LanguagesMap)
 
 		// Create a sanitized copy for raw JSON
