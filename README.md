@@ -1,6 +1,6 @@
 # OST Data Engine
 
-Part of the [OpenSource Together](https://github.com/opensource-together) platform.
+Part of the [OpenSource Together](https://github.com/opensource-together) platform.  
 **A data processing platform for GitHub repository analysis and intelligent project recommendations.**
 
 <div align="center">
