@@ -126,6 +126,18 @@ func defaultIfEmpty(v, d string) string {
 	return v
 }
 
+// writes a JSON response with the given status code
+func writeJSON(w http.ResponseWriter, status int, v any) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+	_ = json.NewEncoder(w).Encode(v)
+}
+
+// writes a standardized JSON error response
+func writeError(w http.ResponseWriter, status int, message string) {
+	writeJSON(w, status, map[string]string{"error": message})
+}
+
 // Parse PostgreSQL array string to slice
 func parseArray(arrayStr string) []string {
 	if arrayStr == "" || arrayStr == "{}" {
@@ -229,15 +241,12 @@ func getRecommendations(db *sql.DB, config Config, userID string) (*Recommendati
 // HTTP handler for health check endpoint (checks DB connectivity)
 func healthHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Type", "application/json")
-
 		ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
 		defer cancel()
 
 		if err := db.PingContext(ctx); err != nil {
 			// Unhealthy - DB not reachable
-			w.WriteHeader(http.StatusServiceUnavailable)
-			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			writeJSON(w, http.StatusServiceUnavailable, map[string]interface{}{
 				"status":    "unhealthy",
 				"timestamp": time.Now().UTC().Format(time.RFC3339),
 				"error":     "database ping failed",
@@ -246,8 +255,7 @@ func healthHandler(db *sql.DB) http.HandlerFunc {
 		}
 
 		// Healthy
-		w.WriteHeader(http.StatusOK)
-		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+		writeJSON(w, http.StatusOK, map[string]interface{}{
 			"status":    "healthy",
 			"timestamp": time.Now().UTC().Format(time.RFC3339),
 		})
@@ -260,7 +268,7 @@ func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 		// Extract user_id from URL path
 		userID := r.URL.Query().Get("user_id")
 		if userID == "" {
-			http.Error(w, "user_id parameter is required", http.StatusBadRequest)
+			writeError(w, http.StatusBadRequest, "user_id parameter is required")
 			return
 		}
 
@@ -268,15 +276,14 @@ func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 		response, err := getRecommendations(db, config, userID)
 		if err != nil {
 			log.Printf("Error getting recommendations: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			writeError(w, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
 		// Return JSON response
-		w.Header().Set("Content-Type", "application/json")
 		if err := json.NewEncoder(w).Encode(response); err != nil {
 			log.Printf("Error encoding recommendations response: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+			writeError(w, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 	}
