@@ -57,9 +57,64 @@ pytest-dotenv = "^0.5.2"
 faker = "^26.0.0"
 httpx = "^0.28.1"
 
+[project]
+name = "data-engine"
+version = "1.0.0"
+description = "Data Engine for GitHub repository analysis and recommendations"
+readme = "README.md"
+requires-python = ">=3.13,<3.14"
+authors = [
+  { name = "spideystreet", email = "dhicham.pro@gmail.com" }
+]
+dependencies = [
+  "fastapi>=0.115.13",
+  "uvicorn>=0.34.3",
+  "sqlalchemy>=2.0.41",
+  "psycopg2-binary>=2.9.10",
+  "celery[redis]>=5.5.3",
+  "scikit-learn>=1.7.0",
+  "pandas>=2.3.0",
+  "pydantic-settings>=2.4.0",
+  "prefect>=3.0.0",
+  "prefect-docker>=0.5.0",
+  "joblib>=1.4.0",
+  "numpy>=2.3.0",
+  "matplotlib>=3.10.0",
+  "seaborn>=0.13.0",
+  "pydantic>=2.0.0",
+  "pgvector>=0.4.1",
+  "mistralai>=1.9.3",
+  "sentence-transformers>=3.3.1",
+  "python-dotenv>=1.1.1",
+  "redis>=5.0.0",
+  "requests>=2.31.0",
+  "dagster>=1.11.5",
+  "dagster-webserver>=1.11.5",
+  "PyGithub>=2.6.1",
+  "dbt>=1.0.0.40.5",
+  "dbt-core>=1.10.8",
+  "dbt-postgres>=1.9.0",
+  "dagster-dbt>=0.27.5",
+  "mlflow>=3.3.1",
+  "cachetools>=2,<6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "ruff>=0.12.0",
+  "pytest>=8.4.1",
+  "pytest-cov>=6.0.0",
+  "pytest-dotenv>=0.5.2",
+  "faker>=26.0.0",
+  "httpx>=0.28.1",
+  "bandit>=1.8.6",
+  "mypy>=1.8.0",
+  "safety>=2.3.0",
+]
+
 [build-system]
-requires = ["poetry-core>=2.0.0"]
-build-backend = "poetry.core.masonry.api"
+requires = ["setuptools>=65", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [tool.ruff]
 target-version = "py313"
