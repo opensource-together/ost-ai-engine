@@ -34,6 +34,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
+## [1.0.2] - 2025-09-08
+
+### Added
+- Go API: Health endpoint now checks database connectivity with 500ms timeout and returns 200/503 accordingly
+
+### Changed
+- Improved operational readiness by surfacing DB issues via /health
+
+### Notes
+- Patch release focusing on operational health reporting. Backward-compatible.
+
 ## [1.0.1] - 2025-09-08
 
 ### Changed
