@@ -12,6 +12,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/lib/pq"
 )
 
@@ -313,16 +315,25 @@ func main() {
 	}
 	log.Println("✅ Database connection established")
 
-	// Setup HTTP routes
-	http.HandleFunc("/health", healthHandler(db))
-	http.HandleFunc("/recommendations", recommendationsHandler(db, config))
+	// Setup router with middlewares
+	r := chi.NewRouter()
+	r.Use(
+		middleware.RequestID,
+		middleware.RealIP,
+		middleware.Recoverer,
+		middleware.Timeout(5*time.Second),
+	)
+
+	// Routes
+	r.Get("/health", func(w http.ResponseWriter, r *http.Request) { healthHandler(db)(w, r) })
+	r.Get("/recommendations", func(w http.ResponseWriter, r *http.Request) { recommendationsHandler(db, config)(w, r) })
 
 	// Start server
 	port := fmt.Sprintf("%d", config.Port)
 	log.Printf("🚀 Starting recommendation API server on port %s", port)
 	log.Printf("📊 Using RECOMMENDATION_TOP_N=%d from environment", config.RecommendationTopN)
 
-	err = http.ListenAndServe(":"+port, nil)
+	err = http.ListenAndServe(":"+port, r)
 	if err != nil {
 		log.Fatalf("Failed to start server: %v", err)
 	}
