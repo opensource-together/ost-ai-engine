@@ -35,7 +35,7 @@ This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDU
 - **PostgreSQL 15+** with pgvector extension
 - **Redis 7+**
 - **Docker & Docker Compose**
-- **Poetry** (Python package manager)
+- **uv** (Python package installer/resolver)
 
 ### Local Development
 
@@ -44,10 +44,12 @@ This project adheres to the [Contributor Covenant Code of Conduct](CODE_OF_CONDU
 git clone https://github.com/YOUR_USERNAME/ost-data-engine.git
 cd ost-data-engine
 
-# 2. Set up Python environment
-conda create -n data-engine-py13 python=3.13
-conda activate data-engine-py13
-poetry install
+# 2. Set up Python environment (uv)
+# If uv is not installed:
+# curl -LsSf https://astral.sh/uv/install.sh | sh
+uv venv .venv
+source .venv/bin/activate
+uv sync --group dev
 
 # 3. Set up environment variables
 cp .env.example .env
@@ -63,21 +65,30 @@ python scripts/database/create_test_users.py
 
 ### Environment Configuration
 
-Copy `.env.example` to `.env` and configure:
+Copy `.env.example` to `.env` and configure the required variables (no defaults in production):
 
 ```env
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
+DATABASE_URL=postgresql://user:password@localhost:5434/DB_NAME
 POSTGRES_USER=user
 POSTGRES_PASSWORD=password
-POSTGRES_DB=OST_PROD
+POSTGRES_DB=DB_NAME
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5434
 
-# GitHub API (for testing)
+# GitHub API
 GITHUB_ACCESS_TOKEN=your_github_token_here
 
 # Model Configuration
 MODEL_NAME=sentence-transformers/all-MiniLM-L6-v2
 MODEL_DIMENSIONS=384
+
+# Go API (required)
+GO_API_PORT=8080
+RECOMMENDATION_TOP_N=5
+RECOMMENDATION_MIN_SIMILARITY=0.1
+CACHE_ENABLED=false
+CACHE_TTL=3600
 ```
 
 ## Project Structure
@@ -149,19 +160,19 @@ func ProcessData(data []map[string]interface{}) ([]Result, error) {
 
 ```bash
 # All tests
-poetry run pytest
+uv run pytest
 
 # Unit tests only
-poetry run pytest tests/unit/
+uv run pytest tests/unit/
 
 # Integration tests
-poetry run pytest tests/integration/
+uv run pytest tests/integration/
 
 # Performance tests
-poetry run pytest tests/performance/
+uv run pytest tests/performance/
 
 # With coverage
-poetry run pytest --cov=src --cov-report=html
+uv run pytest --cov=src --cov-report=html
 ```
 
 ### Test Requirements
