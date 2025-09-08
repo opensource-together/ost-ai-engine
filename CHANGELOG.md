@@ -34,6 +34,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
+## [1.1.1] - 2025-09-08
+
+### Changed
+- CI: Switch Python setup from Poetry to uv (setup-uv, `uv sync`, `uv run`)
+- Docs: Update CONTRIBUTING to use uv and align `.env.example` variables
+
+### Notes
+- Maintenance release; no runtime behavior changes. Improves developer experience and CI reliability.
+
 ## [1.1.0] - 2025-09-08
 
 ### Highlights
