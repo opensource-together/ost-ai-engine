@@ -87,8 +87,10 @@ For detailed setup instructions, see our [Quick Start Guide](docs/deployment/qui
 
 #### 5. **Test API**
 ```bash
-> curl "http://localhost:8080/recommendations?user_id={USER_ID}"
+> curl "http://localhost:${GO_API_PORT}/recommendations?user_id={USER_ID}"
 ```
+
+Note: The Go API uses strict environment configuration (no defaults). Ensure `DATABASE_URL`, `GO_API_PORT`, `RECOMMENDATION_TOP_N`, `RECOMMENDATION_MIN_SIMILARITY`, `CACHE_ENABLED`, and `CACHE_TTL` are set (e.g., via Docker Compose) before starting the API.
 
 ---
 

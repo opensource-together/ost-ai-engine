@@ -115,10 +115,12 @@ CREATE INDEX idx_user_project_similarity_project ON "USER_PROJECT_SIMILARITY" (p
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `DATABASE_URL` | `postgresql://user:password@localhost:5434/OST_PROD?sslmode=disable` | PostgreSQL connection string |
-| `RECOMMENDATION_TOP_N` | `5` | Number of recommendations to return |
-| `RECOMMENDATION_MIN_SIMILARITY` | `0.1` | Minimum similarity threshold |
-| `GO_API_PORT` | `8080` | API server port |
+| `DATABASE_URL` | `postgresql://user:password@localhost:port/db_name?sslmode=disable` | PostgreSQL connection string |
+| `RECOMMENDATION_TOP_N` | — | Number of recommendations to return (required) |
+| `RECOMMENDATION_MIN_SIMILARITY` | — | Minimum similarity threshold (required) |
+| `GO_API_PORT` | — | API server port (required) |
+
+Note: The API does not use default values in production/dev; all required variables must be provided at runtime (Docker/K8s/systemd/shell). The process will exit with a clear error if any are missing or invalid.
 
 
 ## Build and Run
