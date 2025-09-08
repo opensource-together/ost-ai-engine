@@ -145,6 +145,7 @@ func getRecommendations(db *sql.DB, config Config, userID string) (*Recommendati
 // HTTP handler for recommendations endpoint
 func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
+		start := time.Now()
 		// Extract user_id from URL path
 		userID := r.URL.Query().Get("user_id")
 		if userID == "" {
@@ -155,17 +156,19 @@ func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 		// Get recommendations
 		response, err := getRecommendations(db, config, userID)
 		if err != nil {
-			log.Printf("Error getting recommendations: %v", err)
+			log.Printf("recommendations: error user=%s err=%v", userID, err)
 			writeError(w, http.StatusInternalServerError, "Internal server error")
 			return
 		}
 
 		// Return JSON response
 		if err := json.NewEncoder(w).Encode(response); err != nil {
-			log.Printf("Error encoding recommendations response: %v", err)
+			log.Printf("recommendations: encode error user=%s err=%v", userID, err)
 			writeError(w, http.StatusInternalServerError, "Internal server error")
 			return
 		}
+
+		log.Printf("recommendations: ok user=%s total=%d elapsed_ms=%d", userID, response.TotalCount, time.Since(start).Milliseconds())
 	}
 }
 

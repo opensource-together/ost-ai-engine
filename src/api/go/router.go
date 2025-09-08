@@ -13,6 +13,7 @@ func buildRouter(db *sql.DB, cfg Config) *chi.Mux {
 	r.Use(
 		middleware.RequestID,
 		middleware.RealIP,
+		middleware.Logger,
 		middleware.Recoverer,
 		middleware.Timeout(5*time.Second),
 	)

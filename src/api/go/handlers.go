@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"encoding/json"
+	"log"
 	"net/http"
 	"time"
 )
@@ -27,6 +28,7 @@ func healthHandler(db *sql.DB) http.HandlerFunc {
 		defer cancel()
 
 		if err := db.PingContext(ctx); err != nil {
+			log.Printf("health: database ping failed: %v", err)
 			writeJSON(w, http.StatusServiceUnavailable, map[string]interface{}{
 				"status":    "unhealthy",
 				"timestamp": time.Now().UTC().Format(time.RFC3339),
