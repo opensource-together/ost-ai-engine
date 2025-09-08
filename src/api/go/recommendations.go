@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
@@ -21,6 +22,8 @@ type Config struct {
 	RecommendationMinSim float64
 	CacheEnabled         bool
 	CacheTTL             int
+	Port                 int
+	Env                  string
 }
 
 // Project recommendation structure
@@ -48,29 +51,63 @@ type RecommendationsResponse struct {
 	GeneratedAt     string                  `json:"generated_at"`
 }
 
-// Load configuration from environment variables
-func loadConfig() Config {
-	topN, _ := strconv.Atoi(getEnv("RECOMMENDATION_TOP_N", "5"))
-	minSim, _ := strconv.ParseFloat(getEnv("RECOMMENDATION_MIN_SIMILARITY", "0.1"), 64)
-	cacheTTL, _ := strconv.Atoi(getEnv("CACHE_TTL", "3600"))
+// Load configuration from environment variables (strict validation)
+func loadConfig() (Config, error) {
+	env := getEnv("ENVIRONMENT", "development")
 
-	// Build database URL from individual components for better compatibility
-	dbHost := getEnv("POSTGRES_HOST", "localhost")
-	dbPort := getEnv("POSTGRES_PORT", "5434")
-	dbUser := getEnv("POSTGRES_USER", "user")
-	dbPassword := getEnv("POSTGRES_PASSWORD", "password")
-	dbName := getEnv("POSTGRES_DB", "OST_PROD")
+	// Recommendation parameters
+	topNStr := os.Getenv("RECOMMENDATION_TOP_N")
+	topN, err := strconv.Atoi(defaultIfEmpty(topNStr, "5"))
+	if err != nil || topN <= 0 {
+		return Config{}, fmt.Errorf("invalid RECOMMENDATION_TOP_N: %q", topNStr)
+	}
 
-	databaseURL := fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable",
-		dbUser, dbPassword, dbHost, dbPort, dbName)
+	minSimStr := os.Getenv("RECOMMENDATION_MIN_SIMILARITY")
+	minSim, err := strconv.ParseFloat(defaultIfEmpty(minSimStr, "0.1"), 64)
+	if err != nil || minSim < 0 || minSim > 1 {
+		return Config{}, fmt.Errorf("invalid RECOMMENDATION_MIN_SIMILARITY: %q", minSimStr)
+	}
+
+	cacheTTLStr := os.Getenv("CACHE_TTL")
+	cacheTTL, err := strconv.Atoi(defaultIfEmpty(cacheTTLStr, "3600"))
+	if err != nil || cacheTTL < 0 {
+		return Config{}, fmt.Errorf("invalid CACHE_TTL: %q", cacheTTLStr)
+	}
+
+	// Database URL: required in non-development
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		if env != "development" {
+			return Config{}, fmt.Errorf("DATABASE_URL is required in %s", env)
+		}
+		// Build database URL from individual components for better compatibility in dev
+		dbHost := getEnv("POSTGRES_HOST", "localhost")
+		dbPort := getEnv("POSTGRES_PORT", "5434")
+		dbUser := getEnv("POSTGRES_USER", "user")
+		dbPassword := getEnv("POSTGRES_PASSWORD", "password")
+		dbName := getEnv("POSTGRES_DB", "OST_PROD")
+		dbURL = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
+	}
+
+	// Port: required in non-development
+	portStr := os.Getenv("GO_API_PORT")
+	if portStr == "" && env != "development" {
+		return Config{}, fmt.Errorf("GO_API_PORT is required in %s", env)
+	}
+	port, err := strconv.Atoi(defaultIfEmpty(portStr, "8080"))
+	if err != nil || port <= 0 {
+		return Config{}, fmt.Errorf("invalid GO_API_PORT: %q", portStr)
+	}
 
 	return Config{
-		DatabaseURL:          getEnv("DATABASE_URL", databaseURL),
+		DatabaseURL:          dbURL,
 		RecommendationTopN:   topN,
 		RecommendationMinSim: minSim,
 		CacheEnabled:         getEnv("CACHE_ENABLED", "true") == "true",
 		CacheTTL:             cacheTTL,
-	}
+		Port:                 port,
+		Env:                  env,
+	}, nil
 }
 
 // Get environment variable with default
@@ -79,6 +116,14 @@ func getEnv(key, defaultValue string) string {
 		return value
 	}
 	return defaultValue
+}
+
+// defaultIfEmpty returns d if v is empty, otherwise v
+func defaultIfEmpty(v, d string) string {
+	if v == "" {
+		return d
+	}
+	return v
 }
 
 // Parse PostgreSQL array string to slice
@@ -225,9 +270,12 @@ func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 }
 
 func main() {
-	// Load configuration
-	config := loadConfig()
-	log.Printf("Configuration loaded: TOP_N=%d, MIN_SIM=%.2f", config.RecommendationTopN, config.RecommendationMinSim)
+	// Load configuration (fail-fast)
+	config, err := loadConfig()
+	if err != nil {
+		log.Fatalf("config error: %v", err)
+	}
+	log.Printf("Configuration loaded: TOP_N=%d, MIN_SIM=%.2f, ENV=%s", config.RecommendationTopN, config.RecommendationMinSim, config.Env)
 
 	// Connect to database
 	db, err := sql.Open("postgres", config.DatabaseURL)
@@ -236,8 +284,10 @@ func main() {
 	}
 	defer db.Close()
 
-	// Test database connection
-	err = db.Ping()
+	// Test database connection with timeout (fail-fast)
+	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
+	defer cancel()
+	err = db.PingContext(ctx)
 	if err != nil {
 		log.Fatalf("Failed to ping database: %v", err)
 	}
@@ -248,7 +298,7 @@ func main() {
 	http.HandleFunc("/recommendations", recommendationsHandler(db, config))
 
 	// Start server
-	port := getEnv("GO_API_PORT", "8080")
+	port := fmt.Sprintf("%d", config.Port)
 	log.Printf("🚀 Starting recommendation API server on port %s", port)
 	log.Printf("📊 Using RECOMMENDATION_TOP_N=%d from environment", config.RecommendationTopN)
 
