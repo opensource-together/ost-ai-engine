@@ -34,6 +34,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
+## [1.1.0] - 2025-09-08
+
+### Highlights
+- API hardening and operational reliability
+- Cleaner structure and faster DX with uv package manager
+- Documentation updates for strict configuration
+
+### Changes (aggregated from 1.0.1 → 1.0.6)
+- Configuration & startup
+  - Enforce strict configuration validation; remove silent defaults; fail-fast on invalid/missing env (1.0.1, 1.0.6)
+  - Database connectivity check at startup with timeout (1.0.1)
+- Health & observability
+  - Health endpoint checks DB; returns 200/503 with timeout (1.0.2)
+  - Add request logging (chi Logger), timing logs in handlers, and health failure logs (1.0.6)
+- API behavior & responses
+  - Standardized JSON helpers and unified error responses (1.0.3)
+  - Input validation improvements (bad/missing parameters return proper 4xx) (1.0.3)
+- Router & structure
+  - Switch to go-chi with RequestID, RealIP, Recoverer, Timeout middlewares (1.0.4)
+  - Modularize API into config/db/handlers/router and slim main (1.0.5)
+- Tooling & build
+  - Adopt uv with PEP 621 [project] metadata; remove poetry.lock, commit uv.lock (1.0.6)
+- Docs
+  - README and Go API docs updated to note strict env requirements and examples (1.0.6)
+
+### Notes
+- Backward-compatible API behavior; significantly improved operational characteristics and developer experience.
+
 ## [1.0.6] - 2025-09-08
 
 ### Changed
