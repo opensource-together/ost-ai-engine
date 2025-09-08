@@ -34,6 +34,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
+## [1.0.6] - 2025-09-08
+
+### Changed
+- Go API: Strict env (no defaults), improved logging, chi router, modular layout
+- Build: Adopt uv (PEP 621 metadata); remove poetry.lock and commit uv.lock
+- Docs: README and Go API docs updated to note env requirements
+
+### Notes
+- Backward-compatible API behavior; operational characteristics improved
+
 ## [1.0.5] - 2025-09-08
 
 ### Changed
