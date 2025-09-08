@@ -314,7 +314,8 @@ jobs:
       run: |
         echo "🚀 Starting Go API..."
         cd $GITHUB_WORKSPACE/src/api/go
-        go build -o recommendations-api recommendations.go
+        # Build full module to include all files (config/db/handlers/router)
+        go build -o recommendations-api .
         ./recommendations-api &
         echo "✅ Go API started in background"
         

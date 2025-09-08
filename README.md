@@ -159,65 +159,23 @@ go build -o recommendations-api recommendations.go
 
 ---
 
-## Testing
+## Testing (quick)
 
-Our testing strategy is organized into three main categories:
-
-### Test Structure
-```
-tests/
-├── unit/                    # Unit tests (fast, isolated)
-│   ├── test_env.py         # Environment and configuration tests
-│   ├── test_config.py      # Configuration management tests
-│   └── test_services.py    # Application services tests
-├── integration/             # Integration tests (require services)
-│   ├── test_similarity.py  # Database and API integration
-│   └── test_cache.py       # Redis cache integration
-└── performance/             # Performance tests (require external services)
-    └── test_api_performance.py  # API performance tests
-```
-
-### Test Categories
-
-- **Unit Tests** (`tests/unit/`): Fast tests that verify individual components in isolation
-- **Integration Tests** (`tests/integration/`): Tests that verify component interactions and external services
-- **Performance Tests** (`tests/performance/`): Tests that measure system performance under load
-
-### Running Tests
-
-#### Development Workflow
 ```bash
-# Daily development (fast)
+# Unit
 uv run pytest tests/unit/ -v
 
-# Before commits (complete)
-uv run pytest -v
+# Integration
+uv run pytest tests/integration/ -v
 
-# Quick validation (without slow tests)
-uv run pytest tests/unit/ tests/integration/ -v -m "not slow"
+# Performance (API running required)
+uv run pytest tests/performance/ -v
 
-# All tests with coverage
+# Coverage
 uv run pytest -v --cov=src --cov-report=html
 ```
 
-#### Test Categories
-```bash
-# Unit tests only
-uv run pytest tests/unit/ -v
-
-# Integration tests only
-uv run pytest tests/integration/ -v
-
-# Performance tests only (requires API Go)
-uv run pytest tests/performance/ -v
-
-# Using markers
-uv run pytest -v -m "unit"
-uv run pytest -v -m "integration"
-uv run pytest -v -m "performance"
-```
-
-For detailed testing documentation, see [Testing Overview](docs/testing/overview.md).
+More details: [docs/testing/overview.md](docs/testing/overview.md)
 
 ### Local CI/CD Testing
 
