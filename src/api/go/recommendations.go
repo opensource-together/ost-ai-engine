@@ -1,32 +1,21 @@
 package main
 
 import (
-	"context"
 	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
-	"os"
-	"strconv"
 	"strings"
 	"time"
 
-	"github.com/go-chi/chi/v5"
-	"github.com/go-chi/chi/v5/middleware"
 	_ "github.com/lib/pq"
 )
 
-// Configuration from environment variables
-type Config struct {
-	DatabaseURL          string
-	RecommendationTopN   int
-	RecommendationMinSim float64
-	CacheEnabled         bool
-	CacheTTL             int
-	Port                 int
-	Env                  string
-}
+// Config and loadConfig moved to config.go
+// writeJSON/writeError and healthHandler moved to handlers.go
+// DB connection helper moved to db.go
+// Router setup moved to router.go
 
 // Project recommendation structure
 type ProjectRecommendation struct {
@@ -51,93 +40,6 @@ type RecommendationsResponse struct {
 	Recommendations []ProjectRecommendation `json:"recommendations"`
 	TotalCount      int                     `json:"total_count"`
 	GeneratedAt     string                  `json:"generated_at"`
-}
-
-// Load configuration from environment variables (strict validation)
-func loadConfig() (Config, error) {
-	env := getEnv("ENVIRONMENT", "development")
-
-	// Recommendation parameters
-	topNStr := os.Getenv("RECOMMENDATION_TOP_N")
-	topN, err := strconv.Atoi(defaultIfEmpty(topNStr, "5"))
-	if err != nil || topN <= 0 {
-		return Config{}, fmt.Errorf("invalid RECOMMENDATION_TOP_N: %q", topNStr)
-	}
-
-	minSimStr := os.Getenv("RECOMMENDATION_MIN_SIMILARITY")
-	minSim, err := strconv.ParseFloat(defaultIfEmpty(minSimStr, "0.1"), 64)
-	if err != nil || minSim < 0 || minSim > 1 {
-		return Config{}, fmt.Errorf("invalid RECOMMENDATION_MIN_SIMILARITY: %q", minSimStr)
-	}
-
-	cacheTTLStr := os.Getenv("CACHE_TTL")
-	cacheTTL, err := strconv.Atoi(defaultIfEmpty(cacheTTLStr, "3600"))
-	if err != nil || cacheTTL < 0 {
-		return Config{}, fmt.Errorf("invalid CACHE_TTL: %q", cacheTTLStr)
-	}
-
-	// Database URL: required in non-development
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		if env != "development" {
-			return Config{}, fmt.Errorf("DATABASE_URL is required in %s", env)
-		}
-		// Build database URL from individual components for better compatibility in dev
-		dbHost := getEnv("POSTGRES_HOST", "localhost")
-		dbPort := getEnv("POSTGRES_PORT", "5434")
-		dbUser := getEnv("POSTGRES_USER", "user")
-		dbPassword := getEnv("POSTGRES_PASSWORD", "password")
-		dbName := getEnv("POSTGRES_DB", "OST_PROD")
-		dbURL = fmt.Sprintf("postgresql://%s:%s@%s:%s/%s?sslmode=disable", dbUser, dbPassword, dbHost, dbPort, dbName)
-	}
-
-	// Port: required in non-development
-	portStr := os.Getenv("GO_API_PORT")
-	if portStr == "" && env != "development" {
-		return Config{}, fmt.Errorf("GO_API_PORT is required in %s", env)
-	}
-	port, err := strconv.Atoi(defaultIfEmpty(portStr, "8080"))
-	if err != nil || port <= 0 {
-		return Config{}, fmt.Errorf("invalid GO_API_PORT: %q", portStr)
-	}
-
-	return Config{
-		DatabaseURL:          dbURL,
-		RecommendationTopN:   topN,
-		RecommendationMinSim: minSim,
-		CacheEnabled:         getEnv("CACHE_ENABLED", "true") == "true",
-		CacheTTL:             cacheTTL,
-		Port:                 port,
-		Env:                  env,
-	}, nil
-}
-
-// Get environment variable with default
-func getEnv(key, defaultValue string) string {
-	if value := os.Getenv(key); value != "" {
-		return value
-	}
-	return defaultValue
-}
-
-// defaultIfEmpty returns d if v is empty, otherwise v
-func defaultIfEmpty(v, d string) string {
-	if v == "" {
-		return d
-	}
-	return v
-}
-
-// writes a JSON response with the given status code
-func writeJSON(w http.ResponseWriter, status int, v any) {
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(status)
-	_ = json.NewEncoder(w).Encode(v)
-}
-
-// writes a standardized JSON error response
-func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
 }
 
 // Parse PostgreSQL array string to slice
@@ -240,30 +142,6 @@ func getRecommendations(db *sql.DB, config Config, userID string) (*Recommendati
 	}, nil
 }
 
-// HTTP handler for health check endpoint (checks DB connectivity)
-func healthHandler(db *sql.DB) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
-		defer cancel()
-
-		if err := db.PingContext(ctx); err != nil {
-			// Unhealthy - DB not reachable
-			writeJSON(w, http.StatusServiceUnavailable, map[string]interface{}{
-				"status":    "unhealthy",
-				"timestamp": time.Now().UTC().Format(time.RFC3339),
-				"error":     "database ping failed",
-			})
-			return
-		}
-
-		// Healthy
-		writeJSON(w, http.StatusOK, map[string]interface{}{
-			"status":    "healthy",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-		})
-	}
-}
-
 // HTTP handler for recommendations endpoint
 func recommendationsHandler(db *sql.DB, config Config) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -299,34 +177,16 @@ func main() {
 	}
 	log.Printf("Configuration loaded: TOP_N=%d, MIN_SIM=%.2f, ENV=%s", config.RecommendationTopN, config.RecommendationMinSim, config.Env)
 
-	// Connect to database
-	db, err := sql.Open("postgres", config.DatabaseURL)
+	// Connect to database (fail-fast)
+	db, err := openAndPingDB(config.DatabaseURL)
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		log.Fatalf("database error: %v", err)
 	}
 	defer db.Close()
-
-	// Test database connection with timeout (fail-fast)
-	ctx, cancel := context.WithTimeout(context.Background(), 3*time.Second)
-	defer cancel()
-	err = db.PingContext(ctx)
-	if err != nil {
-		log.Fatalf("Failed to ping database: %v", err)
-	}
 	log.Println("✅ Database connection established")
 
-	// Setup router with middlewares
-	r := chi.NewRouter()
-	r.Use(
-		middleware.RequestID,
-		middleware.RealIP,
-		middleware.Recoverer,
-		middleware.Timeout(5*time.Second),
-	)
-
-	// Routes
-	r.Get("/health", func(w http.ResponseWriter, r *http.Request) { healthHandler(db)(w, r) })
-	r.Get("/recommendations", func(w http.ResponseWriter, r *http.Request) { recommendationsHandler(db, config)(w, r) })
+	// Setup router
+	r := buildRouter(db, config)
 
 	// Start server
 	port := fmt.Sprintf("%d", config.Port)
