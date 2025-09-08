@@ -34,6 +34,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
+## [1.0.1] - 2025-09-08
+
+### Changed
+- Go API: Enforce strict configuration validation (no silent defaults in non-dev)
+- Go API: Fail-fast startup with database PingContext timeout
+
+### Removed
+- Dropped non-essential dbt integration test (`tests/integration/test_dbt_models.py`) to avoid flaky CI deps
+
+### Fixed
+- Minor robustness improvements in API startup and configuration parsing
+
+### Notes
+- This is a backward-compatible patch release focusing on reliability of the Go API service.
+
 ## [1.0.0] - 2024-12-20
 
 ### Added
