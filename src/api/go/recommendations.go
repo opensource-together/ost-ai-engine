@@ -226,18 +226,31 @@ func getRecommendations(db *sql.DB, config Config, userID string) (*Recommendati
 	}, nil
 }
 
-// HTTP handler for health check endpoint
-func healthHandler() http.HandlerFunc {
+// HTTP handler for health check endpoint (checks DB connectivity)
+func healthHandler(db *sql.DB) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
-		if err := json.NewEncoder(w).Encode(map[string]interface{}{
-			"status":    "healthy",
-			"timestamp": time.Now().UTC().Format(time.RFC3339),
-		}); err != nil {
-			log.Printf("Error encoding health response: %v", err)
-			http.Error(w, "Internal server error", http.StatusInternalServerError)
+
+		ctx, cancel := context.WithTimeout(r.Context(), 500*time.Millisecond)
+		defer cancel()
+
+		if err := db.PingContext(ctx); err != nil {
+			// Unhealthy - DB not reachable
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(w).Encode(map[string]interface{}{
+				"status":    "unhealthy",
+				"timestamp": time.Now().UTC().Format(time.RFC3339),
+				"error":     "database ping failed",
+			})
 			return
 		}
+
+		// Healthy
+		w.WriteHeader(http.StatusOK)
+		_ = json.NewEncoder(w).Encode(map[string]interface{}{
+			"status":    "healthy",
+			"timestamp": time.Now().UTC().Format(time.RFC3339),
+		})
 	}
 }
 
@@ -294,7 +307,7 @@ func main() {
 	log.Println("✅ Database connection established")
 
 	// Setup HTTP routes
-	http.HandleFunc("/health", healthHandler())
+	http.HandleFunc("/health", healthHandler(db))
 	http.HandleFunc("/recommendations", recommendationsHandler(db, config))
 
 	// Start server
