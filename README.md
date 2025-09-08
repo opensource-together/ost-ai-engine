@@ -50,14 +50,16 @@ For detailed setup instructions, see our [Quick Start Guide](docs/deployment/qui
 
 ### Setup
 
-#### 1. **Environment Setup**
+#### 1. **Environment Setup (uv)**
 ```bash
-> git clone https://github.com/opensource-together/ost-data-engine.git
-> cd ost-data-engine
-> conda create -n data-engine-py13 python=3.13
-> conda activate data-engine-py13
-> poetry install
-> cp .env.example .env
+git clone https://github.com/opensource-together/ost-data-engine.git
+cd ost-data-engine
+
+# Create and sync venv with uv (uses pyproject [project] deps)
+uv sync --group dev
+
+# Copy env file
+cp .env.example .env
 ```
 
 #### 2. **Services Launch**
@@ -70,12 +72,12 @@ For detailed setup instructions, see our [Quick Start Guide](docs/deployment/qui
 #### 3. **Pipeline Execution**
 ```bash
 # Run complete pipeline
-> poetry run dagster job execute -j training_data_pipeline
+uv run dagster job execute -j training_data_pipeline
 
 # Or run individual components
-> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select github_scraping
-> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select user_embeddings
-> poetry run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select project_hybrid_embeddings
+uv run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select github_scraping
+uv run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select user_embeddings
+uv run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select project_hybrid_embeddings
 ```
 
 #### 4. **Start Go API**
@@ -133,26 +135,26 @@ CACHE_TTL=3600
 
 ```bash
 # Tests
-> poetry run pytest tests/ -v
+uv run pytest tests/ -v
 
 # Run tests with markers
-> poetry run pytest tests/ -v -m "unit"
-> poetry run pytest tests/ -v -m "integration"
-> poetry run pytest tests/ -v -m "api"
+uv run pytest tests/ -v -m "unit"
+uv run pytest tests/ -v -m "integration"
+uv run pytest tests/ -v -m "api"
 
 # Run with coverage
-> poetry run pytest tests/ -v --cov=src --cov-report=html
+uv run pytest tests/ -v --cov=src --cov-report=html
 
 # MLflow UI
-> python scripts/start_mlflow_ui.py
+uv run python scripts/start_mlflow_ui.py
 
 # Dagster UI
-> dagster dev
+uv run dagster dev
 
 # Start Go API
-> cd src/api/go
-> go build -o recommendations-api recommendations.go
-> ./recommendations-api
+cd src/api/go
+go build -o recommendations-api recommendations.go
+./recommendations-api
 ```
 
 ---
@@ -186,33 +188,33 @@ tests/
 #### Development Workflow
 ```bash
 # Daily development (fast)
-conda activate data-engine-py13 && pytest tests/unit/ -v
+uv run pytest tests/unit/ -v
 
 # Before commits (complete)
-conda activate data-engine-py13 && pytest -v
+uv run pytest -v
 
 # Quick validation (without slow tests)
-conda activate data-engine-py13 && pytest tests/unit/ tests/integration/ -v -m "not slow"
+uv run pytest tests/unit/ tests/integration/ -v -m "not slow"
 
 # All tests with coverage
-conda activate data-engine-py13 && pytest -v --cov=src --cov-report=html
+uv run pytest -v --cov=src --cov-report=html
 ```
 
 #### Test Categories
 ```bash
 # Unit tests only
-conda activate data-engine-py13 && pytest tests/unit/ -v
+uv run pytest tests/unit/ -v
 
 # Integration tests only
-conda activate data-engine-py13 && pytest tests/integration/ -v
+uv run pytest tests/integration/ -v
 
 # Performance tests only (requires API Go)
-conda activate data-engine-py13 && pytest tests/performance/ -v
+uv run pytest tests/performance/ -v
 
 # Using markers
-conda activate data-engine-py13 && pytest -v -m "unit"
-conda activate data-engine-py13 && pytest -v -m "integration"
-conda activate data-engine-py13 && pytest -v -m "performance"
+uv run pytest -v -m "unit"
+uv run pytest -v -m "integration"
+uv run pytest -v -m "performance"
 ```
 
 For detailed testing documentation, see [Testing Overview](docs/testing/overview.md).
