@@ -34,6 +34,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Security
 - N/A
 
+## [1.0.5] - 2025-09-08
+
+### Changed
+- Go API: Refactor into modular files (config.go, db.go, handlers.go, router.go) and slim main()
+
+### Notes
+- Internal structural change only; no behavior change. Backward-compatible.
+
 ## [1.0.4] - 2025-09-08
 
 ### Added
