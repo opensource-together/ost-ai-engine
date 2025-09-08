@@ -102,7 +102,12 @@ Key settings in `.env`:
 
 ```env
 # Database
-DATABASE_URL=postgresql://user:password@localhost:5434/OST_PROD
+DATABASE_URL=postgresql://user:password@localhost:5434/DB_NAME?sslmode=disable
+POSTGRES_USER=user
+POSTGRES_PASSWORD=password
+POSTGRES_DB=DB_NAME
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5434
 
 # Redis Cache
 REDIS_CACHE_URL=redis://localhost:6379/0
@@ -114,8 +119,12 @@ GITHUB_ACCESS_TOKEN=your_github_token
 MLFLOW_TRACKING_URI=sqlite:///logs/mlflow.db
 MLFLOW_ARTIFACT_ROOT=models/mlruns
 
-# Go API
+# Go API (strict env, no defaults)
 GO_API_PORT=8080
+RECOMMENDATION_TOP_N=5
+RECOMMENDATION_MIN_SIMILARITY=0.1
+CACHE_ENABLED=true
+CACHE_TTL=3600
 ```
 
 ---
