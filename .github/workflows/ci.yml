@@ -18,13 +18,13 @@ env:
   REDIS_CACHE_URL: ${{ secrets.REDIS_CACHE_URL }}
   RECOMMENDATION_TOP_N: ${{ secrets.RECOMMENDATION_TOP_N }}
   RECOMMENDATION_MIN_SIMILARITY: ${{ secrets.RECOMMENDATION_MIN_SIMILARITY }}
+  CACHE_ENABLED: false
+  CACHE_TTL: 3600
   PYTHON_VERSION: '3.13'
 
 jobs:
   setup:
     runs-on: ubuntu-latest
-    outputs:
-      cache-hit: ${{ steps.cached-poetry-dependencies.outputs.cache-hit }}
     
     services:
       postgres:
@@ -112,98 +112,9 @@ jobs:
     - name: Run unit tests
       run: |
         echo "🧪 Running unit tests..."
-        poetry run pytest tests/unit/ -v -m "unit"
+        uv run pytest tests/unit/ -v -m "unit"
 
   tests-integration:
-    runs-on: ubuntu-latest
-    needs: setup
-    services:
-      postgres:
-        image: pgvector/pgvector:pg15
-        env:
-          POSTGRES_USER: ${{ env.POSTGRES_USER }}
-          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-          POSTGRES_DB: ${{ env.POSTGRES_DB }}
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 5436:5432
-      
-      redis:
-        image: redis:7-alpine
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-        ports:
-          - 6381:6379
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
-      with:
-        python-version: ${{ env.PYTHON_VERSION }}
-
-    - name: Install Poetry
-      uses: snok/install-poetry@v1
-      with:
-        version: latest
-        virtualenvs-create: true
-        virtualenvs-in-project: true
-
-    - name: Load cached venv
-      uses: actions/cache@v3
-      with:
-        path: .venv
-        key: venv-${{ runner.os }}-${{ steps.setup-python.outputs.python-version }}-${{ hashFiles('**/poetry.lock') }}
-
-    - name: Install dependencies
-      if: steps.cached-poetry-dependencies.outputs.cache-hit != 'true'
-      run: poetry install --no-interaction --no-root
-
-    - name: Setup database schema
-      env:
-        DATABASE_URL: ${{ env.DATABASE_URL }}
-        POSTGRES_HOST: localhost
-        POSTGRES_USER: ${{ env.POSTGRES_USER }}
-        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
-        POSTGRES_PORT: 5436
-        POSTGRES_DB: ${{ env.POSTGRES_DB }}
-      run: |
-        # Create PostgreSQL extensions
-        uv run python -c "
-        from sqlalchemy import create_engine, text
-        engine = create_engine('${{ env.DATABASE_URL }}')
-        with engine.connect() as conn:
-            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
-            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
-            conn.commit()
-        print('✅ PostgreSQL extensions created successfully')
-        "
-        uv run python scripts/setup_dbt.py
-
-    - name: Run integration tests
-      env:
-        DATABASE_URL: ${{ env.DATABASE_URL }}
-        GITHUB_ACCESS_TOKEN: ${{ env.GITHUB_ACCESS_TOKEN }}
-        MODEL_NAME: ${{ env.MODEL_NAME }}
-        MODEL_DIMENSIONS: ${{ env.MODEL_DIMENSIONS }}
-        GO_API_PORT: ${{ env.GO_API_PORT }}
-        REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
-        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
-        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
-      run: |
-        echo "🔗 Running integration tests..."
-        uv run pytest tests/integration/ -v -m "integration"
-
-  tests-performance:
     runs-on: ubuntu-latest
     needs: setup
     services:
@@ -269,6 +180,93 @@ jobs:
         "
         uv run python scripts/setup_dbt.py
 
+    - name: Run integration tests
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        GITHUB_ACCESS_TOKEN: ${{ env.GITHUB_ACCESS_TOKEN }}
+        MODEL_NAME: ${{ env.MODEL_NAME }}
+        MODEL_DIMENSIONS: ${{ env.MODEL_DIMENSIONS }}
+        GO_API_PORT: ${{ env.GO_API_PORT }}
+        REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
+        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
+        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+        CACHE_ENABLED: ${{ env.CACHE_ENABLED }}
+        CACHE_TTL: ${{ env.CACHE_TTL }}
+      run: |
+        echo "🔗 Running integration tests..."
+        uv run pytest tests/integration/ -v -m "integration"
+
+  tests-performance:
+    runs-on: ubuntu-latest
+    needs: setup
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5436:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6381:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Set up Go 1.24
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+
+    - name: Sync project (uv)
+      run: uv sync --locked --group dev
+
+    - name: Setup database schema
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
+      run: |
+        # Create PostgreSQL extensions
+        uv run python -c "
+        from sqlalchemy import create_engine, text
+        engine = create_engine('${{ env.DATABASE_URL }}')
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+            conn.commit()
+        print('✅ PostgreSQL extensions created successfully')
+        "
+        uv run python scripts/setup_dbt.py
+
     - name: Start Go API
       env:
         DATABASE_URL: ${{ env.DATABASE_URL }}
@@ -280,6 +278,8 @@ jobs:
         GO_API_PORT: ${{ env.GO_API_PORT }}
         RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
         RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+        CACHE_ENABLED: ${{ env.CACHE_ENABLED }}
+        CACHE_TTL: ${{ env.CACHE_TTL }}
       run: |
         echo "🚀 Starting Go API..."
         cd $GITHUB_WORKSPACE/src/api/go
@@ -312,6 +312,8 @@ jobs:
         REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
         RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
         RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+        CACHE_ENABLED: ${{ env.CACHE_ENABLED }}
+        CACHE_TTL: ${{ env.CACHE_TTL }}
       run: |
         echo "🏃 Running performance tests..."
         uv run pytest tests/performance/ -v -m "performance" --tb=short
@@ -331,7 +333,7 @@ jobs:
     - name: Set up Go
       uses: actions/setup-go@v4
       with:
-        go-version: '1.21'
+        go-version: '1.24'
 
     - name: Install golangci-lint
       uses: golangci/golangci-lint-action@v4
