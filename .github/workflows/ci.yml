@@ -55,18 +55,31 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version-file: "pyproject.toml"
 
-    - name: Install uv
+    - name: Install uv (GitHub Actions)
+      if: ${{ !env.ACT }}
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: true
+        version: "0.8.17"
 
-    - name: Sync project (uv)
-      run: uv sync --locked --group dev
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ !env.ACT }}
+      run: uv sync --locked --all-extras --dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT }}
+      run: uv sync --locked
 
     - name: Setup database schema
       env:
@@ -96,18 +109,31 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version-file: "pyproject.toml"
 
-    - name: Install uv
+    - name: Install uv (GitHub Actions)
+      if: ${{ !env.ACT }}
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: true
+        version: "0.8.17"
 
-    - name: Sync project (uv)
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ !env.ACT }}
       run: uv sync --locked --group dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT }}
+      run: uv sync --locked
 
     - name: Run unit tests
       run: |
@@ -146,18 +172,31 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version-file: "pyproject.toml"
 
-    - name: Install uv
+    - name: Install uv (GitHub Actions)
+      if: ${{ !env.ACT }}
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: true
+        version: "0.8.17"
 
-    - name: Sync project (uv)
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ !env.ACT }}
       run: uv sync --locked --group dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT }}
+      run: uv sync --locked
 
     - name: Setup database schema
       env:
@@ -228,23 +267,36 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Python ${{ env.PYTHON_VERSION }}
-      uses: actions/setup-python@v4
+    - name: Set up Python
+      uses: actions/setup-python@v5
       with:
-        python-version: ${{ env.PYTHON_VERSION }}
+        python-version-file: "pyproject.toml"
 
     - name: Set up Go 1.24
       uses: actions/setup-go@v4
       with:
         go-version: '1.24'
 
-    - name: Install uv
+    - name: Install uv (GitHub Actions)
+      if: ${{ !env.ACT }}
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: true
+        version: "0.8.17"
 
-    - name: Sync project (uv)
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ !env.ACT }}
       run: uv sync --locked --group dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT }}
+      run: uv sync --locked
 
     - name: Setup database schema
       env:
