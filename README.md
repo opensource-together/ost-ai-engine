@@ -1,9 +1,14 @@
-# OST Data Engine
-
 Part of the [OpenSource Together](https://github.com/opensource-together) platform.  
-**A data processing platform for GitHub repository analysis and intelligent project recommendations.**
 
 <div align="center">
+
+<img src="./docs/assets/ChevalierBOSS.png" alt="Chevalier" width="100%" />
+
+</div>
+
+[![Follow](https://img.shields.io/twitter/follow/OpenSTogether?style=social)](https://x.com/OpenSTogether)
+
+<br/>
 
 [![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org) [![Go](https://img.shields.io/badge/Go-1.24+-cyan.svg)](https://golang.org) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-green.svg)](https://postgresql.org) [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com) [![MLflow](https://img.shields.io/badge/MLflow-Enabled-orange.svg)](https://mlflow.org)
 
@@ -11,213 +16,11 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 ---
 
-## Key Components
-
-| Component | Technology | Purpose |
-|-----------|------------|---------|
-| **Data extraction & API** | [@Golang](https://github.com/golang/go) | Recommendation endpoints |
-| **Data Transformation** | [@dbt](https://github.com/dbt-labs/dbt-core) | Transformation models |
-| **Recommendation Engine** | [@Python](https://github.com/python) | User-project scoring |
-| **ML Processing** | [@all-MiniLM-L6-v2](https://huggingface.co/sentence-transformers/all-MiniLM-L6-v2) | Semantic embeddings |
-| **Model Persistence** | [@MLFlow](https://github.com/mlflow/mlflow) | Versioning & artifacts |
-| **Vector Storage** | [@Postgres](https://github.com/postgres/postgres) | Similarity search |
-
----
-
-## Architecture
-
-```
-src/
-├──  api/             # Go API recommendation service
-├──  domain/          # Business logic and models
-├──  application/     # Application services
-│   └──  services/    # Recommendation engine
-├──  infrastructure/  # External adapters
-│   ├──  pipeline/    # Dagster orchestration
-│   ├──  services/    # MLflow, Redis, external APIs, Go scraper
-│   ├──  postgres/    # Database connections
-│   ├──  cache/       # Redis caching layer
-│   ├──  analysis/    # Model persistence services
-│   └──  monitoring/  # Metrics and observability
-└──  dbt/             # Data transformation models
-```
-
----
-
-## Quick Start
-
-For detailed setup instructions, see our [Quick Start Guide](docs/deployment/quick-start.md).
-
-### Setup
-
-#### 1. **Environment Setup (uv)**
-```bash
-git clone https://github.com/opensource-together/ost-data-engine.git
-cd ost-data-engine
-
-# Create and sync venv with uv (uses pyproject [project] deps)
-uv sync --group dev
-
-# Copy env file
-cp .env.example .env
-```
-
-#### 2. **Services Launch**
-```bash
-> docker-compose up -d db redis
-> psql -d OST_PROD -f scripts/database/recreate_schema.sql
-> python scripts/database/create_test_users.py
-```
-
-#### 3. **Pipeline Execution**
-```bash
-# Run complete pipeline
-uv run dagster job execute -j training_data_pipeline
-
-# Or run individual components
-uv run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select github_scraping
-uv run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select user_embeddings
-uv run dagster asset materialize -m src.infrastructure.pipeline.dagster.definitions --select project_hybrid_embeddings
-```
-
-#### 4. **Start Go API**
-```bash
-> cd src/api/go
-> go build -o recommendations-api recommendations.go
-> ./recommendations-api
-```
-
-#### 5. **Test API**
-```bash
-> curl "http://localhost:${GO_API_PORT}/recommendations?user_id={USER_ID}"
-```
-
-Note: The Go API uses strict environment configuration (no defaults). Ensure `DATABASE_URL`, `GO_API_PORT`, `RECOMMENDATION_TOP_N`, `RECOMMENDATION_MIN_SIMILARITY`, `CACHE_ENABLED`, and `CACHE_TTL` are set (e.g., via Docker Compose) before starting the API.
-
----
-
-## Configuration
-
-For complete environment configuration details, see [Environment Configuration](docs/deployment/environment.md).
-
-Key settings in `.env`:
-
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5434/DB_NAME?sslmode=disable
-POSTGRES_USER=user
-POSTGRES_PASSWORD=password
-POSTGRES_DB=DB_NAME
-POSTGRES_HOST=localhost
-POSTGRES_PORT=5434
-
-# Redis Cache
-REDIS_CACHE_URL=redis://localhost:6379/0
-
-# External APIs
-GITHUB_ACCESS_TOKEN=your_github_token
-
-# MLflow
-MLFLOW_TRACKING_URI=sqlite:///logs/mlflow.db
-MLFLOW_ARTIFACT_ROOT=models/mlruns
-
-# Go API (strict env, no defaults)
-GO_API_PORT=8080
-RECOMMENDATION_TOP_N=5
-RECOMMENDATION_MIN_SIMILARITY=0.1
-CACHE_ENABLED=true
-CACHE_TTL=3600
-```
-
----
-
-## Development
-
-```bash
-# Tests
-uv run pytest tests/ -v
-
-# Run tests with markers
-uv run pytest tests/ -v -m "unit"
-uv run pytest tests/ -v -m "integration"
-uv run pytest tests/ -v -m "api"
-
-# Run with coverage
-uv run pytest tests/ -v --cov=src --cov-report=html
-
-# MLflow UI
-uv run python scripts/start_mlflow_ui.py
-
-# Dagster UI
-uv run dagster dev
-
-# Start Go API
-cd src/api/go
-go build -o recommendations-api recommendations.go
-./recommendations-api
-```
-
----
-
-## Testing (quick)
-
-```bash
-# Unit
-uv run pytest tests/unit/ -v
-
-# Integration
-uv run pytest tests/integration/ -v
-
-# Performance (API running required)
-uv run pytest tests/performance/ -v
-
-# Coverage
-uv run pytest -v --cov=src --cov-report=html
-```
-
-More details: [docs/testing/overview.md](docs/testing/overview.md)
-
-### Local CI/CD Testing
-
-Test GitHub Actions workflows locally using our unified script:
-
-```bash
-# Test all CI jobs
-python scripts/tests/ci_local.py all
-
-# Test specific job
-python scripts/tests/ci_local.py tests-unit
-python scripts/tests/ci_local.py tests-integration
-python scripts/tests/ci_local.py tests-performance
-
-# Available jobs: setup, tests-unit, tests-integration, tests-performance, go-lint, coverage
-```
-
-**Prerequisites:**
-- Install [Act](https://github.com/nektos/act)
-- Docker running
-- `.env` file configured
-
-For detailed Act testing documentation, see [Local CI Testing](docs/testing/act-local-testing.md).
-
----
-
 ## Documentation
 
 📚 **Complete Documentation**: [docs/](docs/)
 
-### Key Documentation Sections
-
-- **[Quick Start Guide](docs/deployment/quick-start.md)** - Get up and running quickly
-- **[Environment Configuration](docs/deployment/environment.md)** - All environment variables explained
-- **[Go API Implementation](docs/api/go-api.md)** - Go API technical details
-- **[ML Pipeline Overview](docs/ml-pipeline/overview.md)** - Machine learning pipeline architecture
-- **[Database Schema](docs/database/schema.md)** - Complete database schema documentation
-- **[Tests](docs/testing/overview.md)** - Tests documentation
-
 ---
-
-<div align="center">
 
 **Made with ❤️ by [@spideystreet](https://github.com/spideystreet) & the OST team**
 

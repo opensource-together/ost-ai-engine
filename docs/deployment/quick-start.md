@@ -13,8 +13,8 @@
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/opensource-together/ost-data-engine.git
-cd ost-data-engine
+git clone https://github.com/opensource-together/ost-ai-engine.git
+cd ost-ai-engine
 ```
 
 ### 2. Setup Python Environment
