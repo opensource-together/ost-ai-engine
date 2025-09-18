@@ -26,6 +26,6 @@ Complete [Documentation](docs/).
 
 <div align="center">
 
-*Made with love by [@spidey](https://github.com/spideystreet) & the [OST team](https://github.com/opensource-together)*
+*Made with love by [@Xspidey](https://github.com/spideystreet) & the [OST team](https://github.com/opensource-together)*
 
 </div>
