@@ -142,5 +142,4 @@ CLAUDE.md
 # Turbo
 node_modules/
 ./apps/*
-./package-lock.json
 ./turbo.json
