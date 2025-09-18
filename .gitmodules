@@ -1,3 +1,0 @@
-[submodule "apps/ost-backend"]
-	path = apps/ost-backend
-	url = https://github.com/opensource-together/ost-backend
