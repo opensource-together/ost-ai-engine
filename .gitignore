@@ -111,6 +111,7 @@ venv.bak
 Thumbs.db
 
 # Personal
+PR.md
 TODO.md
 
 # Linters
@@ -132,9 +133,7 @@ models/*.pkl
 *.db
 
 # Prisma files (from other repos)
-*.prisma
-src/domain/models/prisma.service.ts
-src/domain/models/schema.prisma
+*prisma*
 
 # Claude
 CLAUDE.md
