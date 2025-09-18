@@ -1,0 +1,122 @@
+### PR 2 — (Deprecated) License switch to Non-Commercial
+
+#### Summary
+- Moved to PR 1 originally; this item is now deprecated. Kept here only for history.
+
+#### Changes
+- N/A
+
+#### Testing
+- N/A
+
+#### Notes
+- Consolidated into baseline; keep license as defined in LICENSE.
+
+---
+
+### PR 3 — Orchestration plan: Redis + Dagster + Postgres (no temp tables)
+
+#### Summary
+- Define architecture to avoid temporary tables; clarify contracts between assets, cache, and storage.
+
+#### Changes
+- Add architecture notes in docs: final tables only for embeddings/similarities; Redis for intermediate caching; MLflow for artifacts.
+- Define MLflow artifact storage location as `models/` (repo root) for all persisted models/metrics.
+
+#### Testing
+- N/A (documentation only).
+
+#### Notes
+- See Dagster guides for asset-based modeling and scheduling: https://docs.dagster.io/etl-pipeline-tutorial
+- MLflow tracking will persist run artifacts under `models/` to centralize outputs in-repo.
+
+---
+
+### PR 4 — Go Trending Scraper asset with optional schedule flag
+
+#### Summary
+- Implement Go-based GitHub trending scraper; invoked by Dagster asset (`github_assets.py`). Scheduling flag present but disabled by default.
+
+#### Changes
+- Add Go scraper binary usage in asset with args: `--query`, `--max-repos`, `--db-url`, `--upsert`, `--schedule-disabled`.
+- Write directly to final tables; no temp tables.
+
+#### Testing
+- Materialize `github_scraping` locally; verify row counts; logs show upsert summary.
+
+#### Notes
+- Keep token/env usage outside of repo (env only). Future cron/Go routine can flip the scheduling flag.
+
+---
+
+### PR 5 — Global recommendations materialization job + MLflow persistence
+
+#### Summary
+- Compute global (user-agnostic) trending recommendations and persist for serving; store artifacts in MLflow.
+
+#### Changes
+- New Dagster asset: computes top-N projects based on trending signals; stores in `GLOBAL_PROJECT_RECOMMENDATION`.
+- Persist summary artifacts (top-N lists, metrics) to MLflow with artifacts stored under `models/`.
+
+#### Testing
+- Materialize asset; validate table counts and MLflow run created.
+
+#### Notes
+- Ensure MLflow artifact URI is configured to `models/` (local runs) so CI/dev parity is maintained.
+
+---
+
+### PR 6 — Per-user pipeline refactor to final tables (preserve cosine similarity)
+
+#### Summary
+- Update per-user similarity pipeline to read/write only final tables; cosine similarity preserved (hybrid vectors).
+
+#### Changes
+- Adjust assets to remove temp table usage; ensure idempotent updates to `embed_USERS`, `embed_PROJECTS`, `USER_PROJECT_SIMILARITY`.
+- Maintain MLflow persistence of embeddings and similarity metrics.
+
+#### Testing
+- Materialize full pipeline; validate average similarity stats and row counts; ensure existing tests pass.
+
+#### Notes
+- Follow Dagster asset best practices (durable assets, not temp staging).
+
+---
+
+### PR 7 — API docs: two endpoints + Swagger/OpenAPI
+
+#### Summary
+- Document and expose:
+  - GET `/recommendations/global`
+  - GET `/recommendations?user_id={id}`
+- Add OpenAPI spec and lightweight Swagger UI hosting.
+
+#### Changes
+- Add OpenAPI YAML/JSON under `docs/` and link from README/docs.
+- Optional: minimal Go handler wiring if needed (no breaking changes).
+
+#### Testing
+- Validate OpenAPI schema; render via Swagger UI; basic curl examples.
+
+#### Notes
+- Keep strict env config for Go service.
+
+---
+
+### PR 8 — Docker and .actrc developer experience
+
+#### Summary
+- Simplify local deployment; document private `.env` overrides for internal DB; update `.actrc` guidance.
+
+#### Changes
+- Compose services decoupled per best practices; healthchecks; environment via `.env` (private overrides not committed).
+- Document internal DB override example (do not commit secrets); maintain public placeholders.
+
+#### Testing
+- `docker compose up` for db/redis/api; verify healthchecks; run pipeline materializations.
+
+#### Notes
+- Docker best practices: https://docs.docker.com/build/building-best-practices/
+- Security best practices: https://docs.docker.com/develop/security-best-practices/
+
+
