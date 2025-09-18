@@ -2,7 +2,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 <div align="center">
 
-<img src="./docs/assets/images/chevalier.png" alt="Chevalier" width="100%" />
+<img src="./docs/assets/images/ost-chevalier.png" alt="Chevalier" width="100%" />
 
 </div>
 
@@ -14,6 +14,10 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 ---
 
+## Status
+
+This project is in progress state, build in public available here: [@Xspidey](https://x.com/spideystreet)
+
 ## Documentation
 
 Complete [Documentation](docs/).
@@ -22,6 +26,6 @@ Complete [Documentation](docs/).
 
 <div align="center">
 
-*Made with ❤️ by [@spideystreet](https://github.com/spideystreet) & the OST team*
+*Made with love by [@spidey](https://github.com/spideystreet) & the [OST team](https://github.com/opensource-together)*
 
 </div>
