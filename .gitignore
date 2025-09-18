@@ -126,9 +126,9 @@ postgres-data/
 models/*.npy
 models/*.pkl
 
-# Scripts (but allow our CI testing scripts)
+# Scripts (local-only for now)
+scripts/
 *.sh
-!scripts/tests/ci_local.py
 
 # DB test
 *.db

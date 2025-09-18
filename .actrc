@@ -1,3 +1,4 @@
 --container-architecture=linux/amd64
 --container-options=--privileged
 --env-file .env
+--container-daemon-socket=/var/run/docker.sock

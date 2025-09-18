@@ -18,7 +18,7 @@ engine = create_engine(
     pool_recycle=settings.DATABASE_POOL_RECYCLE,
     pool_pre_ping=True,  # Verify connections before use
     echo=False,
-    connect_args={"connect_timeout": 10, "application_name": "ost-data-engine"},
+    connect_args={"connect_timeout": 10, "application_name": "ost-ai-engine"},
 )
 
 # Enhanced session factory with error handling

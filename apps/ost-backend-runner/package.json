@@ -1,0 +1,11 @@
+{
+  "name": "ost-backend-runner",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "build": "cd ../ost-backend && go build ./...",
+    "test": "cd ../ost-backend && go test ./...",
+    "dev": "cd ../ost-backend && go run ./...",
+    "lint": "echo 'no lint for go here'"
+  }
+}

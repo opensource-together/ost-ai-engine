@@ -61,27 +61,28 @@ jobs:
         python-version-file: "pyproject.toml"
 
     - name: Install uv (GitHub Actions)
-      if: ${{ !env.ACT }}
+      if: ${{ env.ACT != 'true' }}
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: true
         version: "0.8.17"
 
     - name: Install uv (act fallback)
-      if: ${{ env.ACT }}
+      if: ${{ env.ACT == 'true' }}
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
     - name: Sync project (uv) [GA]
-      if: ${{ !env.ACT }}
+      if: ${{ env.ACT != 'true' }}
       run: uv sync --locked --all-extras --dev
 
     - name: Sync project (uv) [act]
-      if: ${{ env.ACT }}
+      if: ${{ env.ACT == 'true' }}
       run: uv sync --locked
 
     - name: Setup database schema
+      if: ${{ env.ACT != 'true' }}
       env:
         DATABASE_URL: ${{ env.DATABASE_URL }}
         POSTGRES_HOST: localhost
@@ -115,24 +116,24 @@ jobs:
         python-version-file: "pyproject.toml"
 
     - name: Install uv (GitHub Actions)
-      if: ${{ !env.ACT }}
+      if: ${{ env.ACT != 'true' }}
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: true
         version: "0.8.17"
 
     - name: Install uv (act fallback)
-      if: ${{ env.ACT }}
+      if: ${{ env.ACT == 'true' }}
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
     - name: Sync project (uv) [GA]
-      if: ${{ !env.ACT }}
+      if: ${{ env.ACT != 'true' }}
       run: uv sync --locked --group dev
 
     - name: Sync project (uv) [act]
-      if: ${{ env.ACT }}
+      if: ${{ env.ACT == 'true' }}
       run: uv sync --locked
 
     - name: Run unit tests
@@ -178,27 +179,28 @@ jobs:
         python-version-file: "pyproject.toml"
 
     - name: Install uv (GitHub Actions)
-      if: ${{ !env.ACT }}
+      if: ${{ env.ACT != 'true' }}
       uses: astral-sh/setup-uv@v6
       with:
         enable-cache: true
         version: "0.8.17"
 
     - name: Install uv (act fallback)
-      if: ${{ env.ACT }}
+      if: ${{ env.ACT == 'true' }}
       run: |
         curl -LsSf https://astral.sh/uv/install.sh | sh
         echo "${HOME}/.local/bin" >> $GITHUB_PATH
 
     - name: Sync project (uv) [GA]
-      if: ${{ !env.ACT }}
+      if: ${{ env.ACT != 'true' }}
       run: uv sync --locked --group dev
 
     - name: Sync project (uv) [act]
-      if: ${{ env.ACT }}
+      if: ${{ env.ACT == 'true' }}
       run: uv sync --locked
 
     - name: Setup database schema
+      if: ${{ env.ACT != 'true' }}
       env:
         DATABASE_URL: ${{ env.DATABASE_URL }}
         POSTGRES_HOST: localhost
@@ -299,6 +301,7 @@ jobs:
       run: uv sync --locked
 
     - name: Setup database schema
+      if: ${{ env.ACT != 'true' }}
       env:
         DATABASE_URL: ${{ env.DATABASE_URL }}
         POSTGRES_HOST: localhost
