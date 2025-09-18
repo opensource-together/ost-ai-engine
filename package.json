@@ -1,0 +1,36 @@
+{
+  "name": "ost-ai-engine",
+  "version": "1.0.0",
+  "description": "Part of the [OpenSource Together](https://github.com/opensource-together) platform.",
+  "main": "index.js",
+  "private": true,
+  "directories": {
+    "doc": "docs",
+    "test": "tests"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+    "dev": "turbo run dev"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/opensource-together/ost-ai-engine.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/opensource-together/ost-ai-engine/issues"
+  },
+  "homepage": "https://github.com/opensource-together/ost-ai-engine#readme",
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "devDependencies": {
+    "turbo": "^2.5.6"
+  }
+}

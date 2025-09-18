@@ -138,3 +138,9 @@ src/domain/models/schema.prisma
 
 # Claude
 CLAUDE.md
+
+# Turbo
+node_modules/
+./apps/*
+./package-lock.json
+./turbo.json
