@@ -141,5 +141,5 @@ CLAUDE.md
 
 # Turbo
 node_modules/
-./apps/*
-./turbo.json
+apps/
+turbo.json
