@@ -1,0 +1,4 @@
+load_from:
+  - python_file:
+      relative_path: src/ai-engine/pipeline/dagster/defs.py
+      attribute: defs
