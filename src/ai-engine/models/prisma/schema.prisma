@@ -181,36 +181,6 @@ model StgTrendingProject {
   @@schema("staging")
 }
 
-/// The underlying table does not contain a valid unique identifier and can therefore currently not be handled by Prisma Client.
-model stg_trending_project {
-  id                      String?   @db.Uuid
-  platform                String?
-  external_id             String?
-  name                    String?
-  full_name               String?
-  description             String?
-  html_url                String?
-  homepage                String?
-  default_branch          String?
-  visibility              String?
-  language                String?
-  topics                  Json?
-  license                 String?
-  stars                   Int?
-  forks                   Int?
-  open_issues             Int?
-  subscribers             Int?
-  archived                Boolean?
-  owner                   String?
-  namespace               String?
-  created_at_source       DateTime? @db.Timestamptz(6)
-  updated_at_source       DateTime? @db.Timestamptz(6)
-  last_activity_at_source DateTime? @db.Timestamptz(6)
-  loaded_at               DateTime? @map("_loaded_at") @db.Timestamptz(6)
-
-  @@ignore
-  @@schema("staging")
-}
 
 enum TechStackType {
   TECH
