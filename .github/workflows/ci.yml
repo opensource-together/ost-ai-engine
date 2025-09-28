@@ -1,0 +1,453 @@
+name: CI (disabled)
+
+on:
+  # Temporarily disabled automatic triggers. Run manually if needed.
+  workflow_dispatch:
+
+env:
+  POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+  POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+  POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+  DATABASE_URL: postgresql://${{ secrets.POSTGRES_USER }}:${{ secrets.POSTGRES_PASSWORD }}@localhost:5436/${{ secrets.POSTGRES_DB }}
+  GITHUB_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN }}
+  PYTHON_VERSION: '3.13'
+
+jobs:
+  setup:
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5436:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: "pyproject.toml"
+
+    - name: Install uv (GitHub Actions)
+      if: ${{ env.ACT != 'true' }}
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        version: "0.8.17"
+
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT == 'true' }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ env.ACT != 'true' }}
+      run: uv sync --locked --all-extras --dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT == 'true' }}
+      run: uv sync --locked
+
+    - name: Setup database schema
+      if: ${{ env.ACT != 'true' }}
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
+      run: |
+        # Create PostgreSQL extensions
+        uv run python -c "
+        from sqlalchemy import create_engine, text
+        engine = create_engine('${{ env.DATABASE_URL }}')
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+            conn.commit()
+        print('✅ PostgreSQL extensions created successfully')
+        "
+        uv run python scripts/setup_dbt.py
+
+  tests-unit:
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: "pyproject.toml"
+
+    - name: Install uv (GitHub Actions)
+      if: ${{ env.ACT != 'true' }}
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        version: "0.8.17"
+
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT == 'true' }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ env.ACT != 'true' }}
+      run: uv sync --locked --group dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT == 'true' }}
+      run: uv sync --locked
+
+    - name: Run unit tests
+      run: |
+        echo "🧪 Running unit tests..."
+        uv run pytest tests/unit/ -v -m "unit"
+
+  tests-integration:
+    runs-on: ubuntu-latest
+    needs: setup
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5436:5432
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: "pyproject.toml"
+
+    - name: Install uv (GitHub Actions)
+      if: ${{ env.ACT != 'true' }}
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        version: "0.8.17"
+
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT == 'true' }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ env.ACT != 'true' }}
+      run: uv sync --locked --group dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT == 'true' }}
+      run: uv sync --locked
+
+    - name: Setup database schema
+      if: ${{ env.ACT != 'true' }}
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
+      run: |
+        # Create PostgreSQL extensions
+        uv run python -c "
+        from sqlalchemy import create_engine, text
+        engine = create_engine('${{ env.DATABASE_URL }}')
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+            conn.commit()
+        print('✅ PostgreSQL extensions created successfully')
+        "
+        uv run python scripts/setup_dbt.py
+
+    - name: Run integration tests
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        GITHUB_ACCESS_TOKEN: ${{ env.GITHUB_ACCESS_TOKEN }}
+        MODEL_NAME: ${{ env.MODEL_NAME }}
+        MODEL_DIMENSIONS: ${{ env.MODEL_DIMENSIONS }}
+        GO_API_PORT: ${{ env.GO_API_PORT }}
+        REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
+        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
+        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+        CACHE_ENABLED: ${{ env.CACHE_ENABLED }}
+        CACHE_TTL: ${{ env.CACHE_TTL }}
+      run: |
+        echo "🔗 Running integration tests..."
+        uv run pytest tests/integration/ -v -m "integration"
+
+  tests-performance:
+    runs-on: ubuntu-latest
+    needs: setup
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5436:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6381:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version-file: "pyproject.toml"
+
+    - name: Set up Go 1.24
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Install uv (GitHub Actions)
+      if: ${{ !env.ACT }}
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+        version: "0.8.17"
+
+    - name: Install uv (act fallback)
+      if: ${{ env.ACT }}
+      run: |
+        curl -LsSf https://astral.sh/uv/install.sh | sh
+        echo "${HOME}/.local/bin" >> $GITHUB_PATH
+
+    - name: Sync project (uv) [GA]
+      if: ${{ !env.ACT }}
+      run: uv sync --locked --group dev
+
+    - name: Sync project (uv) [act]
+      if: ${{ env.ACT }}
+      run: uv sync --locked
+
+    - name: Setup database schema
+      if: ${{ env.ACT != 'true' }}
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
+      run: |
+        # Create PostgreSQL extensions
+        uv run python -c "
+        from sqlalchemy import create_engine, text
+        engine = create_engine('${{ env.DATABASE_URL }}')
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+            conn.commit()
+        print('✅ PostgreSQL extensions created successfully')
+        "
+        uv run python scripts/setup_dbt.py
+
+    - name: Start Go API
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        GO_API_PORT: ${{ env.GO_API_PORT }}
+        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
+        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+        CACHE_ENABLED: ${{ env.CACHE_ENABLED }}
+        CACHE_TTL: ${{ env.CACHE_TTL }}
+      run: |
+        echo "🚀 Starting Go API..."
+        cd $GITHUB_WORKSPACE/src/api/go
+        # Build full module to include all files (config/db/handlers/router)
+        go build -o recommendations-api .
+        ./recommendations-api &
+        echo "✅ Go API started in background"
+        
+        # Wait for API to be ready
+        sleep 10
+        
+        # Test API health with retry
+        for i in {1..5}; do
+          if curl -f http://localhost:${{ env.GO_API_PORT }}/health; then
+            echo "✅ API health check passed"
+            break
+          else
+            echo "⚠️  API health check attempt $i failed, retrying..."
+            sleep 2
+          fi
+        done
+
+    - name: Run performance tests
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        GITHUB_ACCESS_TOKEN: ${{ env.GITHUB_ACCESS_TOKEN }}
+        MODEL_NAME: ${{ env.MODEL_NAME }}
+        MODEL_DIMENSIONS: ${{ env.MODEL_DIMENSIONS }}
+        GO_API_PORT: ${{ env.GO_API_PORT }}
+        REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
+        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
+        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+        CACHE_ENABLED: ${{ env.CACHE_ENABLED }}
+        CACHE_TTL: ${{ env.CACHE_TTL }}
+      run: |
+        echo "🏃 Running performance tests..."
+        uv run pytest tests/performance/ -v -m "performance" --tb=short
+
+    - name: Stop Go API
+      if: always()
+      run: |
+        echo "🛑 Stopping Go API..."
+        pkill -f recommendations-api || echo "No API process found"
+
+  go-lint:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.24'
+
+    - name: Install golangci-lint
+      uses: golangci/golangci-lint-action@v4
+      with:
+        version: latest
+        working-directory: src/infrastructure/services/go/github-scraper
+
+    - name: Run golangci-lint on go-api
+      uses: golangci/golangci-lint-action@v4
+      with:
+        version: latest
+        working-directory: src/api/go
+
+  coverage:
+    runs-on: ubuntu-latest
+    needs: [tests-unit, tests-integration, tests-performance]
+    services:
+      postgres:
+        image: pgvector/pgvector:pg15
+        env:
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5436:5432
+      
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6381:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python ${{ env.PYTHON_VERSION }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ env.PYTHON_VERSION }}
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+        enable-cache: true
+
+    - name: Sync project (uv)
+      run: uv sync --locked --group dev
+
+    - name: Setup database schema
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        POSTGRES_HOST: localhost
+        POSTGRES_USER: ${{ env.POSTGRES_USER }}
+        POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        POSTGRES_PORT: 5436
+        POSTGRES_DB: ${{ env.POSTGRES_DB }}
+      run: |
+        # Create PostgreSQL extensions
+        uv run python -c "
+        from sqlalchemy import create_engine, text
+        engine = create_engine('${{ env.DATABASE_URL }}')
+        with engine.connect() as conn:
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS vector'))
+            conn.execute(text('CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\"'))
+            conn.commit()
+        print('✅ PostgreSQL extensions created successfully')
+        "
+        uv run python scripts/setup_dbt.py
+
+    - name: Run coverage report
+      env:
+        DATABASE_URL: ${{ env.DATABASE_URL }}
+        GITHUB_ACCESS_TOKEN: ${{ env.GITHUB_ACCESS_TOKEN }}
+        MODEL_NAME: ${{ env.MODEL_NAME }}
+        MODEL_DIMENSIONS: ${{ env.MODEL_DIMENSIONS }}
+        GO_API_PORT: ${{ env.GO_API_PORT }}
+        REDIS_CACHE_URL: ${{ env.REDIS_CACHE_URL }}
+        RECOMMENDATION_TOP_N: ${{ env.RECOMMENDATION_TOP_N }}
+        RECOMMENDATION_MIN_SIMILARITY: ${{ env.RECOMMENDATION_MIN_SIMILARITY }}
+      run: |
+        echo "📊 Running coverage report..."
+        uv run pytest tests/ -v --cov=src --cov-report=xml --cov-report=html
