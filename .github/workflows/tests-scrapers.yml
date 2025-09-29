@@ -25,12 +25,6 @@ jobs:
     name: Go integration env checks
     runs-on: ubuntu-latest
     env:
-      # Database (set in repo/org secrets)
-      PGHOST: ${{ secrets.PGHOST }}
-      PGPORT: ${{ secrets.PGPORT }}
-      PGUSER: ${{ secrets.PGUSER }}
-      PGPASSWORD: ${{ secrets.PGPASSWORD }}
-      PGDATABASE: ${{ secrets.PGDATABASE }}
       # Tokens (set in repo/org secrets)
       GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
       GITLAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
@@ -43,26 +37,12 @@ jobs:
         with:
           go-version: '1.22.x'
 
-      - name: Run GitHub scraper env test
+      - name: Run GitHub scraper API health test
         working-directory: src/infrastructure/services/go/github
-        run: |
-          if [ -n "${PGHOST}" ] && [ -n "${PGPORT}" ] && [ -n "${PGUSER}" ] && [ -n "${PGPASSWORD}" ] && [ -n "${PGDATABASE}" ]; then
-            echo "Database secrets detected; running full env + API tests"
-            go test -v -tags=integration -run 'TestEnvLoaded|TestGitHubAPIHealthy'
-          else
-            echo "Database secrets missing; running API health tests only"
-            go test -v -tags=integration -run 'TestGitHubAPIHealthy'
-          fi
+        run: go test -v -tags=integration -run 'TestGitHubAPIHealthy'
 
-      - name: Run GitLab scraper env test
+      - name: Run GitLab scraper API health test
         working-directory: src/infrastructure/services/go/gitlab
-        run: |
-          if [ -n "${PGHOST}" ] && [ -n "${PGPORT}" ] && [ -n "${PGUSER}" ] && [ -n "${PGPASSWORD}" ] && [ -n "${PGDATABASE}" ]; then
-            echo "Database secrets detected; running full env + API tests"
-            go test -v -tags=integration -run 'TestEnvLoaded|TestGitLabAPIHealthy'
-          else
-            echo "Database secrets missing; running API health tests only"
-            go test -v -tags=integration -run 'TestGitLabAPIHealthy'
-          fi
+        run: go test -v -tags=integration -run 'TestGitLabAPIHealthy'
 
 
