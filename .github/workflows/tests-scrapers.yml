@@ -45,10 +45,24 @@ jobs:
 
       - name: Run GitHub scraper env test
         working-directory: src/infrastructure/services/go/github
-        run: go test -v -tags=integration -run 'TestEnvLoaded|TestGitHubAPIHealthy'
+        run: |
+          if [ -n "${PGHOST}" ] && [ -n "${PGPORT}" ] && [ -n "${PGUSER}" ] && [ -n "${PGPASSWORD}" ] && [ -n "${PGDATABASE}" ]; then
+            echo "Database secrets detected; running full env + API tests"
+            go test -v -tags=integration -run 'TestEnvLoaded|TestGitHubAPIHealthy'
+          else
+            echo "Database secrets missing; running API health tests only"
+            go test -v -tags=integration -run 'TestGitHubAPIHealthy'
+          fi
 
       - name: Run GitLab scraper env test
         working-directory: src/infrastructure/services/go/gitlab
-        run: go test -v -tags=integration -run 'TestEnvLoaded|TestGitLabAPIHealthy'
+        run: |
+          if [ -n "${PGHOST}" ] && [ -n "${PGPORT}" ] && [ -n "${PGUSER}" ] && [ -n "${PGPASSWORD}" ] && [ -n "${PGDATABASE}" ]; then
+            echo "Database secrets detected; running full env + API tests"
+            go test -v -tags=integration -run 'TestEnvLoaded|TestGitLabAPIHealthy'
+          else
+            echo "Database secrets missing; running API health tests only"
+            go test -v -tags=integration -run 'TestGitLabAPIHealthy'
+          fi
 
 
