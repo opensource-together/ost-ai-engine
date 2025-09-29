@@ -45,10 +45,10 @@ jobs:
 
       - name: Run GitHub scraper env test
         working-directory: src/infrastructure/services/go/github
-        run: go test -v -tags=integration -run TestEnvLoaded
+        run: go test -v -tags=integration -run 'TestEnvLoaded|TestGitHubAPIHealthy'
 
       - name: Run GitLab scraper env test
         working-directory: src/infrastructure/services/go/gitlab
-        run: go test -v -tags=integration -run TestEnvLoaded
+        run: go test -v -tags=integration -run 'TestEnvLoaded|TestGitLabAPIHealthy'
 
 
