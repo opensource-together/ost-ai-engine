@@ -1,0 +1,54 @@
+name: scraper-env-tests
+
+on:
+  push:
+    branches: [ main, dev, ost* ]
+    paths:
+      - 'src/infrastructure/services/go/github/**'
+      - 'src/infrastructure/services/go/gitlab/**'
+      - '.github/workflows/ci.yml'
+      - '.env.example'
+  pull_request:
+    branches: [ main, dev, ost* ]
+    paths:
+      - 'src/infrastructure/services/go/github/**'
+      - 'src/infrastructure/services/go/gitlab/**'
+      - '.github/workflows/ci.yml'
+      - '.env.example'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  env-check:
+    name: Go integration env checks
+    runs-on: ubuntu-latest
+    env:
+      # Database (set in repo/org secrets)
+      PGHOST: ${{ secrets.PGHOST }}
+      PGPORT: ${{ secrets.PGPORT }}
+      PGUSER: ${{ secrets.PGUSER }}
+      PGPASSWORD: ${{ secrets.PGPASSWORD }}
+      PGDATABASE: ${{ secrets.PGDATABASE }}
+      # Tokens (set in repo/org secrets)
+      GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
+      GITLAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22.x'
+
+      - name: Run GitHub scraper env test
+        working-directory: src/infrastructure/services/go/github
+        run: go test -v -tags=integration -run TestEnvLoaded
+
+      - name: Run GitLab scraper env test
+        working-directory: src/infrastructure/services/go/gitlab
+        run: go test -v -tags=integration -run TestEnvLoaded
+
+
