@@ -3,10 +3,12 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -48,3 +50,39 @@ func TestEnvLoaded(t *testing.T) {
 }
 
 func must[T any](v T, _ error) T { return v }
+
+// TestGitHubAPIHealthy performs a minimal API call with a strict timeout
+// to ensure the GitHub API is reachable and responds successfully.
+func TestGitHubAPIHealthy(t *testing.T) {
+	// Load env as above (tokens may be set via secrets in CI or .env locally)
+	// Quick sanity: do not require DB vars for this test
+	token := os.Getenv("GITHUB_ACCESS_TOKEN")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, _ := http.NewRequest("GET", "https://api.github.com/rate_limit", nil)
+	req.Header.Set("User-Agent", "ost-ai-engine-ci-check")
+	if token != "" {
+		req.Header.Set("Authorization", "Bearer "+token)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("github api request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	// Retry once with legacy scheme if bearer is rejected
+	if resp.StatusCode == 401 && token != "" {
+		// retry with "token" scheme
+		req2, _ := http.NewRequest("GET", "https://api.github.com/rate_limit", nil)
+		req2.Header.Set("User-Agent", "ost-ai-engine-ci-check")
+		req2.Header.Set("Authorization", "token "+token)
+		resp.Body.Close()
+		resp, err = client.Do(req2)
+		if err != nil {
+			t.Fatalf("github api retry failed: %v", err)
+		}
+		defer resp.Body.Close()
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		t.Fatalf("unexpected status from github: %d", resp.StatusCode)
+	}
+}

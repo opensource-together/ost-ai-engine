@@ -3,10 +3,12 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"path/filepath"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/joho/godotenv"
 )
@@ -47,3 +49,36 @@ func TestEnvLoaded(t *testing.T) {
 }
 
 func must[T any](v T, _ error) T { return v }
+
+// TestGitLabAPIHealthy performs a minimal API call with a strict timeout
+// to ensure the GitLab API is reachable and responds successfully.
+func TestGitLabAPIHealthy(t *testing.T) {
+	token := os.Getenv("GITLAB_ACCESS_TOKEN")
+
+	client := &http.Client{Timeout: 5 * time.Second}
+	req, _ := http.NewRequest("GET", "https://gitlab.com/api/v4/projects?per_page=1&page=1", nil)
+	req.Header.Set("User-Agent", "ost-ai-engine-ci-check")
+	if token != "" {
+		req.Header.Set("PRIVATE-TOKEN", token)
+	}
+	resp, err := client.Do(req)
+	if err != nil {
+		t.Fatalf("gitlab api request failed: %v", err)
+	}
+	defer resp.Body.Close()
+	// Retry once with OAuth bearer if private token is rejected
+	if resp.StatusCode == 401 && token != "" {
+		req2, _ := http.NewRequest("GET", "https://gitlab.com/api/v4/projects?per_page=1&page=1", nil)
+		req2.Header.Set("User-Agent", "ost-ai-engine-ci-check")
+		req2.Header.Set("Authorization", "Bearer "+token)
+		resp.Body.Close()
+		resp, err = client.Do(req2)
+		if err != nil {
+			t.Fatalf("gitlab api retry failed: %v", err)
+		}
+		defer resp.Body.Close()
+	}
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		t.Fatalf("unexpected status from gitlab: %d", resp.StatusCode)
+	}
+}
