@@ -1,0 +1,64 @@
+# Dagster instance configuration
+# This file configures how Dagster stores run history, event logs, schedules, and sensors.
+
+# Run storage: where Dagster stores run history and metadata
+run_storage:
+  module: dagster_postgres.run_storage
+  class: PostgresRunStorage
+  config:
+    postgres_db:
+      username:
+        env: PGUSER
+      password:
+        env: PGPASSWORD
+      hostname:
+        env: PGHOST
+      db_name:
+        env: PGDATABASE
+      port:
+        env: PGPORT
+
+# Event log storage: where Dagster stores asset materializations and other events
+event_log_storage:
+  module: dagster_postgres.event_log
+  class: PostgresEventLogStorage
+  config:
+    postgres_db:
+      username:
+        env: PGUSER
+      password:
+        env: PGPASSWORD
+      hostname:
+        env: PGHOST
+      db_name:
+        env: PGDATABASE
+      port:
+        env: PGPORT
+
+# Schedule storage: where Dagster stores schedule/sensor state
+schedule_storage:
+  module: dagster_postgres.schedule_storage
+  class: PostgresScheduleStorage
+  config:
+    postgres_db:
+      username:
+        env: PGUSER
+      password:
+        env: PGPASSWORD
+      hostname:
+        env: PGHOST
+      db_name:
+        env: PGDATABASE
+      port:
+        env: PGPORT
+
+# Compute logs: where Dagster stores stdout/stderr from runs
+compute_logs:
+  module: dagster.core.storage.local_compute_log_manager
+  class: LocalComputeLogManager
+  config:
+    base_dir: /opt/dagster/dagster_home/logs
+
+# Telemetry: disable if you want
+telemetry:
+  enabled: false
