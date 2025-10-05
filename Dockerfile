@@ -6,7 +6,7 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     POETRY_NO_INTERACTION=1 \
     POETRY_VENV_IN_PROJECT=1 \
     POETRY_CACHE_DIR=/tmp/poetry_cache \
-    DAGSTER_HOME=/opt/dagster
+    DAGSTER_HOME=/opt/dagster/dagster_home
 
 WORKDIR /app
 
@@ -50,13 +50,16 @@ ENV PATH="/app/.venv/bin:$PATH"
 # Copy source code and configuration files to builder stage
 COPY src/ ./src/
 COPY workspace.yaml ./
+COPY dagster.yaml ./
 
 # Build Go scrapers for Linux
 RUN cd src/infrastructure/services/go/github && go build -o scraper main.go
 RUN cd src/infrastructure/services/go/gitlab && go build -o scraper main.go
 
-# Create dagster home and user in builder
+# Create dagster home and copy configuration to the correct location  
 RUN mkdir -p $DAGSTER_HOME \
+    && cp /app/dagster.yaml $DAGSTER_HOME/dagster.yaml \
+    && cp /app/workspace.yaml $DAGSTER_HOME/workspace.yaml \
     && groupadd -r appuser \
     && useradd -r -g appuser appuser \
     && chown -R appuser:appuser /app $DAGSTER_HOME
