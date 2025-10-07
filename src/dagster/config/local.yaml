@@ -10,14 +10,6 @@
 # dagster job launch -f src/pipeline/jobs.py -c local.yaml
 
 ops:
-# ========================================
-#  GLOBAL ASSET CONFIG (APPLIED TO ALL)
-# ========================================
-  # The '__all__' key applies this configuration to every asset (op)
-  # in the job. Since multiple assets share the same PipelineConfig,
-  # this is a convenient way to provide it once.
-  __all__:
+  github_scraper_asset:
     config:
-      db_url: { env: DATABASE_URL }
-      github_token: { env: GITHUB_ACCESS_TOKEN }
-      gitlab_token: { env: GITLAB_ACCESS_TOKEN }
+      env_file: ".env.local"
