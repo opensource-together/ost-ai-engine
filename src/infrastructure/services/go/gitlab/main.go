@@ -1,18 +1,15 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -64,19 +61,7 @@ func fetchGitLabProjects(client *http.Client, token string, perPage, page int) (
 }
 
 func main() {
-	// Load .env by walking up from CWD to repo root so direct runs work
-	_ = loadDotEnvUpwards()
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL is required")
-	}
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dbURL)
-	if err != nil {
-		log.Fatalf("connect: %v", err)
-	}
-	defer conn.Close(ctx)
-
+	_ = godotenv.Load()
 	token := os.Getenv("GITLAB_ACCESS_TOKEN")
 	if token == "" {
 		log.Println("warning: GITLAB_ACCESS_TOKEN not set; may hit rate limits")
@@ -91,6 +76,7 @@ func main() {
 	client := newHTTPClient()
 	perPage := 20
 	collected := 0
+	allProjects := []gitlabProject{}
 	for page := 1; collected < maxProjects; page++ {
 		items, err := fetchGitLabProjects(client, token, perPage, page)
 		if err != nil {
@@ -98,6 +84,15 @@ func main() {
 		}
 		if len(items) == 0 {
 			break
+		}
+		allProjects = append(allProjects, items...)
+		collected += len(items)
+	}
+
+	// Print all projects as JSON to stdout
+	if err := json.NewEncoder(os.Stdout).Encode(allProjects); err != nil {
+		log.Fatalf("json encode: %v", err)
+	}
 		}
 		for _, p := range items {
 			ns := p.PathWithNS

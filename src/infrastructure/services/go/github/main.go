@@ -1,18 +1,15 @@
 package main
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"path/filepath"
 	"strconv"
 	"time"
 
-	"github.com/jackc/pgx/v5"
 	"github.com/joho/godotenv"
 )
 
@@ -79,19 +76,7 @@ func fetchGitHubRepos(client *http.Client, token string, query string, perPage, 
 }
 
 func main() {
-	// Load .env by walking up from CWD to repo root so direct runs work
-	_ = loadDotEnvUpwards()
-	dbURL := os.Getenv("DATABASE_URL")
-	if dbURL == "" {
-		log.Fatal("DATABASE_URL is required")
-	}
-	ctx := context.Background()
-	conn, err := pgx.Connect(ctx, dbURL)
-	if err != nil {
-		log.Fatalf("connect: %v", err)
-	}
-	defer conn.Close(ctx)
-
+	_ = godotenv.Load()
 	token := os.Getenv("GITHUB_ACCESS_TOKEN")
 	if token == "" {
 		log.Println("warning: GITHUB_ACCESS_TOKEN not set; may hit rate limits")
