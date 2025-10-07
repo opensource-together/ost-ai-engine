@@ -1,0 +1,16 @@
+## Dagster pipeline configuration file.
+## Uses environment variables for secrets and connection info.
+## Example: { env: VAR_NAME } will be replaced by the value of $VAR_NAME at runtime.
+
+postgres:
+  host: { env: PGHOST }
+  port: { env: PGPORT }
+  user: { env: PGUSER }
+  password: { env: PGPASSWORD }
+  db: { env: PGDATABASE }
+
+github:
+  token: { env: GITHUB_ACCESS_TOKEN }
+
+gitlab:
+  token: { env: GITLAB_ACCESS_TOKEN }
