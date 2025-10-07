@@ -13,8 +13,7 @@ import (
 	"github.com/joho/godotenv"
 )
 
-const envFilePath = "../../../../../.env.local"
-
+var envFilePath = os.Getenv("ENV_PATH")
 
 type githubRepo struct {
 	ID          int64   `json:"id"`
@@ -79,6 +78,9 @@ func fetchGitHubRepos(client *http.Client, token string, query string, perPage, 
 }
 
 func main() {
+	if envFilePath == "" {
+		envFilePath = ".env.local"
+	}
 	_ = godotenv.Load(envFilePath)
 	token := os.Getenv("GITHUB_ACCESS_TOKEN")
 	if token == "" {
