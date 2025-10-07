@@ -1,12 +1,6 @@
-db:
-  url: { env: DATABASE_URL }
-
-github:
-  token: { env: GITHUB_ACCESS_TOKEN }
-
-gitlab:
-  token: { env: GITLAB_ACCESS_TOKEN }
-
+# ========================================
+# DAGSTER PIPELINE CONFIGURATION
+# ========================================
 # This file provides run-level configuration for the Dagster pipeline.
 # It's used to specify parameters like file paths, which can vary
 # between environments (e.g., local development vs. production).
@@ -16,6 +10,9 @@ gitlab:
 # dagster job launch -f src/pipeline/jobs.py -c local.yaml
 
 ops:
+# ========================================
+#  GLOBAL ASSET CONFIG (APPLIED TO ALL)
+# ========================================
   # The '__all__' key applies this configuration to every asset (op)
   # in the job. Since multiple assets share the same PipelineConfig,
   # this is a convenient way to provide it once.

@@ -1,3 +1,8 @@
+
+########################################
+# CONFIGURATION MODULE - OST AI ENGINE #
+########################################
+
 import os
 from dotenv import load_dotenv
 

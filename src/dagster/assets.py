@@ -1,8 +1,10 @@
-
 from dagster import asset, MetadataValue
 
-DEFAULT_OWNERS = ["team:spideyai-X"]
+DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
+# ========================================
+# GITHUB SCRAPER
+# ========================================
 @asset(kinds={"go", "github"}, owners=DEFAULT_OWNERS)
 def github_scraper_asset(context):
 	"""Run the GitHub Go scraper and emit results as metadata."""
@@ -12,6 +14,9 @@ def github_scraper_asset(context):
 	context.log.info("GitHub scraper executed.")
 	return "GitHub scraper result"
 
+# ========================================
+# GITLAB SCRAPER
+# ========================================
 @asset(kinds={"go", "gitlab"}, owners=DEFAULT_OWNERS)
 def gitlab_scraper_asset(context):
 	"""Run the GitLab Go scraper and emit results as metadata."""
