@@ -16,7 +16,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 ## Status
 
-This project is in progress state, build in public available here: [@Xspidey](https://x.com/spideystreet)
+This project is in progress state, build in public available here: [@spideyX](https://x.com/spideyai_X)
 
 ## Documentation
 
@@ -26,6 +26,6 @@ Complete [Documentation](docs/).
 
 <div align="center">
 
-*Made with love by [@Xspidey](https://github.com/spideystreet) & the [OST team](https://github.com/opensource-together)*
+*Made with love by [@spideyX](https://x.com/spideyai_X) & the [OST team](https://github.com/opensource-together)*
 
 </div>
