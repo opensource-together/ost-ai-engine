@@ -1,4 +1,0 @@
-load_from:
-  - python_file:
-      relative_path: src/ai-engine/pipeline/dagster/definitions.py
-      location_name: ost_ai_engine
