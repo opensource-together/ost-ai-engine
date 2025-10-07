@@ -1,4 +1,4 @@
 from dagster import Definitions
-from .assets import hello_asset
+from .assets import github_scraper_asset, gitlab_scraper_asset
 
-defs = Definitions(assets=[hello_asset])
+defs = Definitions(assets=[github_scraper_asset, gitlab_scraper_asset])
