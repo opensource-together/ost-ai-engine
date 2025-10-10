@@ -13,8 +13,6 @@ import (
 	"github.com/joho/godotenv"
 )
 
-var envFilePath = os.Getenv("ENV_PATH")
-
 type githubRepo struct {
 	ID          int64   `json:"id"`
 	Name        string  `json:"name"`
@@ -78,10 +76,9 @@ func fetchGitHubRepos(client *http.Client, token string, query string, perPage, 
 }
 
 func main() {
-	if envFilePath == "" {
-		envFilePath = ".env.local"
-	}
-	_ = godotenv.Load(envFilePath)
+	_ = godotenv.Load(".env.local")
+	log.Printf("GITHUB_ACCESS_TOKEN: %s", os.Getenv("GITHUB_ACCESS_TOKEN"))
+	log.Printf("GITHUB_SCRAPING_QUERY: %s", os.Getenv("GITHUB_SCRAPING_QUERY"))
 	token := os.Getenv("GITHUB_ACCESS_TOKEN")
 	if token == "" {
 		log.Println("warning: GITHUB_ACCESS_TOKEN not set; may hit rate limits")
