@@ -1,4 +1,3 @@
-var envPath = "../../../../../.env.local"
 package main
 
 import (

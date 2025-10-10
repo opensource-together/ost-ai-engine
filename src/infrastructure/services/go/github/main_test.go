@@ -13,12 +13,14 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var envPath = "../../../../../.env.local"
+
 // TestEnvLoaded validates that the minimal set of environment variables
 // required by the scraper are present and well-formed.
 func TestEnvLoaded(t *testing.T) {
 	// Load .env from repo root if present; ignore error to allow CI overrides.
 	// Try current dir and walk up a few parents to reach repo root regardless of cwd.
-	candidatePaths := []string{".env"}
+	candidatePaths := []string{envPath}
 	up := ".."
 	for i := 0; i < 8; i++ {
 		candidatePaths = append(candidatePaths, filepath.Join(up, ".env"))
@@ -29,13 +31,15 @@ func TestEnvLoaded(t *testing.T) {
 	}
 
 	required := []string{
-		"PGHOST",
-		"PGPORT",
-		"PGUSER",
-		"PGPASSWORD",
-		"PGDATABASE",
+		"POSTGRES_DB",
+		"POSTGRES_USER",
+		"POSTGRES_PASSWORD",
 		"GITHUB_ACCESS_TOKEN",
 	}
+
+POSTGRES_PASSWORD="ai-engine"
+POSTGRES_USER="ai-engine"
+POSTGRES_DB="ai-engine"
 
 	for _, k := range required {
 		v := os.Getenv(k)
