@@ -9,15 +9,16 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 # GITHUB SCRAPER
 # ========================================
 @asset(
-    kinds={"go", "github"},
-    owners=DEFAULT_OWNERS,
-    config_schema={"env_file": str}
+	kinds={"go", "github"},
+	owners=DEFAULT_OWNERS
 )
 def github_scraper_asset(context):
 	"""Run the GitHub Go scraper and emit results as metadata."""
-	env_file = context.op_config["env_file"]
+	from src.dagster.config.config import PipelineConfig
+	config = PipelineConfig()
 	env = os.environ.copy()
-	env["ENV_PATH"] = env_file
+	env["GITHUB_SCRAPING_QUERY"] = config.github_scraping_query
+	env["GITHUB_ACCESS_TOKEN"] = config.github_token
 	try:
 		result = subprocess.run([
 			"go", "run", "src/infrastructure/services/go/github/main.go"
