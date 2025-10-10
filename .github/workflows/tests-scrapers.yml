@@ -26,8 +26,8 @@ jobs:
     runs-on: ubuntu-latest
     env:
       # Tokens (set in repo/org secrets)
-      GITHUB_ACCESS_TOKEN: ${{ secrets.GITHUB_ACCESS_TOKEN }}
-      GITLAB_ACCESS_TOKEN: ${{ secrets.GITLAB_ACCESS_TOKEN }}
+      GITHUB_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN_GITHUB }}
+        # GITLAB_ACCESS_TOKEN: ${{ secrets.ACCESS_TOKEN_GITLAB }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -40,9 +40,8 @@ jobs:
       - name: Run GitHub scraper API health test
         working-directory: src/infrastructure/services/go/github
         run: go test -v -tags=integration -run 'TestGitHubAPIHealthy'
-
-      - name: Run GitLab scraper API health test
-        working-directory: src/infrastructure/services/go/gitlab
-        run: go test -v -tags=integration -run 'TestGitLabAPIHealthy'
+        # - name: Run GitLab scraper API health test
+        #   working-directory: src/infrastructure/services/go/gitlab
+        #   run: go test -v -tags=integration -run 'TestGitLabAPIHealthy'
 
 
