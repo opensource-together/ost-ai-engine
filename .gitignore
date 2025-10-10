@@ -164,3 +164,8 @@ models/mlruns/
 
 # Lock files
 uv.lock
+
+# Dagster
+.tmp*
+src/dagster/.telemetry*
+history/
