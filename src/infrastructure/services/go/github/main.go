@@ -13,6 +13,8 @@ import (
 	"github.com/joho/godotenv"
 )
 
+var envPath = "../../../../../.env.local"
+
 type githubRepo struct {
 	ID          int64   `json:"id"`
 	Name        string  `json:"name"`
