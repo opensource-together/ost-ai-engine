@@ -28,3 +28,7 @@ class PipelineConfig(Config):
         default_factory=lambda: os.getenv("GITLAB_ACCESS_TOKEN", ""),
         description="GitLab API access token"
     )
+    github_scraping_query: str = Field(
+        default="stars:>1000",
+        description="`Github scraper query (ex: 'stars:>1000')"
+    )
