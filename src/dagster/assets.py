@@ -132,9 +132,13 @@ def github_mapping_required_fields_check(context, github_mapping_asset):
 		if "published" in project and not isinstance(project["published"], bool):
 			context.log.warning(f"Project {i} has published field not boolean: {project['published']}")
 			type_errors.append((i, "published_not_bool"))
-		if "trending" in project and not isinstance(project["trending"], bool):
-			context.log.warning(f"Project {i} has trending field not boolean: {project['trending']}")
-			type_errors.append((i, "trending_not_bool"))
+		if "trending" in project:
+			if not isinstance(project["trending"], bool):
+				context.log.warning(f"Project {i} has trending field not boolean: {project['trending']}")
+				type_errors.append((i, "trending_not_bool"))
+			elif project["trending"] is not True:
+				context.log.warning(f"Project {i} has trending field not True: {project['trending']}")
+				type_errors.append((i, "trending_not_true"))
 	if missing_fields or type_errors:
 		msg = f"Missing or invalid required fields in {len(missing_fields)} project(s), type errors in {len(type_errors)} project(s): {missing_fields[:5]} {type_errors[:5]}"
 		context.log.error(msg)
