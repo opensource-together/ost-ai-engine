@@ -1,5 +1,6 @@
 import os
 from dagster import asset, MetadataValue, Output
+from src.dagster.config.github_mapping import GITHUB_TO_PROJECT_MAPPING
 import subprocess
 import json
 
@@ -43,11 +44,11 @@ def github_scraper_asset(context):
 			}
 		)
 	except subprocess.CalledProcessError as e:
-		err_msg = f"Erreur exécution scraper GitHub: {e}\nSTDERR: {e.stderr.strip()}"
+		err_msg = f"Github scraper error: {e}\nSTDERR: {e.stderr.strip()}"
 		context.log.error(err_msg)
 		return Output(value=[], metadata={"count": MetadataValue.int(0), "error": MetadataValue.text(err_msg)})
 	except Exception as e:
-		context.log.error(f"Erreur exécution scraper GitHub: {e}")
+		context.log.error(f"Github scraper error: {e}")
 		return Output(value=[], metadata={"count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 # ========================================
