@@ -1,7 +1,6 @@
-from dagster import Definitions
+from dagster import Definitions, ScheduleDefinition, define_asset_job
 from .assets import (
     github_scraper_asset,
-    gitlab_scraper_asset,
     github_mapping_asset,
     github_to_db_asset,
     github_mapping_type_check,
@@ -14,10 +13,23 @@ from .assets import (
     github_to_db_mapping_match_check,
 )
 
+github_scraper_job = define_asset_job(
+    name="github_scraper_job",
+    selection=[
+        "github_scraper_asset",
+        "github_mapping_asset",
+        "github_to_db_asset"
+    ]
+)
+
+github_scraper_schedule = ScheduleDefinition(
+    job=github_scraper_job,
+    cron_schedule="6 * * * *",  # every 6 hrs
+)
+
 defs = Definitions(
     assets=[
         github_scraper_asset,
-        gitlab_scraper_asset,
         github_mapping_asset,
         github_to_db_asset
     ],
@@ -30,5 +42,7 @@ defs = Definitions(
         github_to_db_consistency_check,
         github_to_db_uniqueness_check,
         github_to_db_mapping_match_check
-    ]
+    ],
+    jobs=[github_scraper_job],
+    schedules=[github_scraper_schedule]
 )
