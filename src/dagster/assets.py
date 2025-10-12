@@ -1,6 +1,15 @@
 import os
-from dagster import asset, AssetIn, MetadataValue, Output
-from src.dagster.config.github_mapping import GITHUB_TO_PROJECT_MAPPING
+from dagster import (
+    asset, 
+	asset_check, 
+	AssetCheckResult, 
+	AssetIn, 
+	MetadataValue, 
+	Output
+)
+from src.dagster.config.github_mapping import (
+    GITHUB_TO_PROJECT_MAPPING
+)
 import subprocess
 import json
 
@@ -9,6 +18,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 # ========================================
 # GITHUB SCRAPER
 # ========================================
+
 @asset(
 	kinds={"go", "github"},
 	owners=DEFAULT_OWNERS
@@ -84,9 +94,71 @@ def github_mapping_asset(context, github_scraper_asset):
 	return projects
 
 # ========================================
+# CHECKS
+# ========================================
+
+@asset_check(
+    asset=github_mapping_asset, 
+    name="github_mapping_type_check"
+)
+def github_mapping_type_check(context, github_mapping_asset):
+    """Check that the mapping output is a non-empty list."""
+    if not isinstance(github_mapping_asset, list):
+        context.log.error("Mapping output is not a list.")
+        return AssetCheckResult(passed=False, description="Mapping output is not a list.")
+    if len(github_mapping_asset) == 0:
+        context.log.error("Mapping output is empty.")
+        return AssetCheckResult(passed=False, description="Mapping output is empty.")
+    context.log.info("Mapping output is a non-empty list.")
+    return AssetCheckResult(passed=True, description="Mapping output is a non-empty list.")
+
+@asset_check(
+    asset=github_mapping_asset, 
+    name="github_mapping_required_fields_check"
+)
+def github_mapping_required_fields_check(context, github_mapping_asset):
+    """Check that each project has required fields (title, repoUrl)."""
+    required_fields = ["title", "repoUrl"]
+    missing_fields = []
+    for i, project in enumerate(github_mapping_asset):
+        for field in required_fields:
+            if field not in project or project[field] in (None, ""):
+                context.log.warning(f"Project {i} is missing required field: {field}")
+                missing_fields.append((i, field))
+    if missing_fields:
+        msg = f"Missing required fields in {len(missing_fields)} project(s): {missing_fields[:5]}"
+        context.log.error(msg)
+        return AssetCheckResult(passed=False, description=msg)
+    context.log.info("All projects have required fields.")
+    return AssetCheckResult(passed=True, description="All projects have required fields.")
+
+@asset_check(
+    asset=github_mapping_asset, 
+    name="github_mapping_duplicate_url_check"
+)
+def github_mapping_duplicate_url_check(context, github_mapping_asset):
+    """Check for duplicate repoUrl or githubUrl."""
+    repo_urls = [p.get("repoUrl") for p in github_mapping_asset if "repoUrl" in p and p.get("repoUrl")]
+    github_urls = [p.get("githubUrl") for p in github_mapping_asset if "githubUrl" in p and p.get("githubUrl")]
+    duplicate_repo_urls = len(repo_urls) != len(set(repo_urls))
+    duplicate_github_urls = len(github_urls) != len(set(github_urls))
+    if duplicate_repo_urls or duplicate_github_urls:
+        msg = "Duplicate repoUrl detected." if duplicate_repo_urls else ""
+        if duplicate_github_urls:
+            msg += " Duplicate githubUrl detected."
+        context.log.error(msg)
+        return AssetCheckResult(passed=False, description=msg.strip())
+    context.log.info("No duplicate repoUrl or githubUrl detected.")
+    return AssetCheckResult(passed=True, description="No duplicate repoUrl or githubUrl detected.")
+
+# ========================================
 # GITLAB SCRAPER
 # ========================================
-@asset(kinds={"go", "gitlab"}, owners=DEFAULT_OWNERS)
+
+@asset(
+		kinds={"go", "gitlab"}, 
+		owners=DEFAULT_OWNERS
+)
 def gitlab_scraper_asset(context):
 	"""Run the GitLab Go scraper and emit results as metadata."""
 	try:
