@@ -100,7 +100,7 @@ def github_mapping_asset(context, github_scraper_asset):
     owners=DEFAULT_OWNERS,
     ins={"github_mapping_asset": AssetIn()}
 )
-def github_project_db_asset(context, github_mapping_asset):
+def github_to_db_asset(context, github_mapping_asset):
 	"""Insert mapped projects into the Project table using Prisma Python client."""
 	from prisma import Prisma
 	prisma = Prisma()
