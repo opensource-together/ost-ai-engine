@@ -1,4 +1,3 @@
-
 ########################################
 # CONFIGURATION MODULE - OST AI ENGINE #
 ########################################
@@ -6,10 +5,14 @@
 import os
 from dotenv import load_dotenv
 
-# Load environment variables from .env.local file
-load_dotenv(dotenv_path=".env.local")
 from dagster import Config
 from pydantic import Field
+from datetime import date
+
+# Load environment variables from .env.local file
+load_dotenv(dotenv_path=".env.local")
+
+today = date.today().isoformat()
 
 class PipelineConfig(Config):
     """
@@ -29,6 +32,6 @@ class PipelineConfig(Config):
         description="GitLab API access token"
     )
     github_scraping_query: str = Field(
-        default="stars:>1000",
-        description="`Github scraper query (ex: 'stars:>1000')"
+        default=f"stars:>100 stars:<500 pushed:>{today} is:public archived:false",
+        description="`GitHub scraper parameter query"
     )
