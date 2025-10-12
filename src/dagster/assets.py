@@ -79,15 +79,17 @@ def github_mapping_asset(context, github_scraper_asset):
 		for prisma_field, source in GITHUB_TO_PROJECT_MAPPING.items():
 			if callable(source):
 				mapped[prisma_field] = source(repo)
-			elif "." in source:
+			elif isinstance(source, str) and "." in source:
 				# For nested keys like "owner.avatar_url"
 				keys = source.split(".")
 				value = repo
 				for k in keys:
 					value = value.get(k, None) if isinstance(value, dict) else None
 				mapped[prisma_field] = value
-			else:
+			elif isinstance(source, str):
 				mapped[prisma_field] = repo.get(source)
+			else:
+				mapped[prisma_field] = source  # None ou valeur par défaut
 		return mapped
 
 	projects = [map_repo(repo) for repo in scraped_repos]
@@ -117,20 +119,28 @@ def github_mapping_type_check(context, github_mapping_asset):
     name="github_mapping_required_fields_check"
 )
 def github_mapping_required_fields_check(context, github_mapping_asset):
-    """Check that each project has required fields (title, repoUrl)."""
-    required_fields = ["title", "repoUrl"]
-    missing_fields = []
-    for i, project in enumerate(github_mapping_asset):
-        for field in required_fields:
-            if field not in project or project[field] in (None, ""):
-                context.log.warning(f"Project {i} is missing required field: {field}")
-                missing_fields.append((i, field))
-    if missing_fields:
-        msg = f"Missing required fields in {len(missing_fields)} project(s): {missing_fields[:5]}"
-        context.log.error(msg)
-        return AssetCheckResult(passed=False, description=msg)
-    context.log.info("All projects have required fields.")
-    return AssetCheckResult(passed=True, description="All projects have required fields.")
+	"""Check that each project has required fields and correct types (title, repoUrl, provider, published, trending)."""
+	required_fields = ["title", "repoUrl", "provider", "published", "trending"]
+	missing_fields = []
+	type_errors = []
+	for i, project in enumerate(github_mapping_asset):
+		for field in required_fields:
+			if field not in project or project[field] in (None, ""):
+				context.log.warning(f"Project {i} is missing required field: {field}")
+				missing_fields.append((i, field))
+		# Vérifie le type des champs published et trending
+		if "published" in project and not isinstance(project["published"], bool):
+			context.log.warning(f"Project {i} has published field not boolean: {project['published']}")
+			type_errors.append((i, "published_not_bool"))
+		if "trending" in project and not isinstance(project["trending"], bool):
+			context.log.warning(f"Project {i} has trending field not boolean: {project['trending']}")
+			type_errors.append((i, "trending_not_bool"))
+	if missing_fields or type_errors:
+		msg = f"Missing or invalid required fields in {len(missing_fields)} project(s), type errors in {len(type_errors)} project(s): {missing_fields[:5]} {type_errors[:5]}"
+		context.log.error(msg)
+		return AssetCheckResult(passed=False, description=msg)
+	context.log.info("All projects have required fields and correct types.")
+	return AssetCheckResult(passed=True, description="All projects have required fields and correct types.")
 
 @asset_check(
     asset=github_mapping_asset, 
