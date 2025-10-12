@@ -63,7 +63,7 @@ def github_scraper_asset(context):
 
 @asset(
 		kinds={"go", "python"},
-        owners=["team:OST/spideyai-X"], 
+        owners=DEFAULT_OWNERS, 
 		ins={"github_scraper_asset": AssetIn()})
 def github_mapping_asset(context, github_scraper_asset):
 	"""Transform GitHub scraper output to match Prisma Project model using mapping config."""
@@ -93,7 +93,33 @@ def github_mapping_asset(context, github_scraper_asset):
 		return mapped
 
 	projects = [map_repo(repo) for repo in scraped_repos]
+
 	return projects
+
+@asset(
+    owners=DEFAULT_OWNERS,
+    ins={"github_mapping_asset": AssetIn()}
+)
+def github_project_db_asset(context, github_mapping_asset):
+	"""Insert mapped projects into the Project table using Prisma Python client."""
+	from prisma import Prisma
+	prisma = Prisma()
+	prisma.connect()
+	inserted = 0
+	errors = []
+	for i, project in enumerate(github_mapping_asset):
+		try:
+			project_data = {k: v for k, v in project.items() if v is not None}
+			prisma.project.create(data=project_data)
+			inserted += 1
+		except Exception as e:
+			context.log.error(f"Error inserting project {i}: {e}")
+			errors.append((i, str(e)))
+	prisma.disconnect()
+	context.log.info(f"{inserted} projects inserted into the Project table.")
+	if errors:
+		context.log.warning(f"{len(errors)} insertion errors: {errors[:3]}")
+	return inserted
 
 # ========================================
 # CHECKS
