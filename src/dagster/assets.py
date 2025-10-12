@@ -1,5 +1,5 @@
 import os
-from dagster import asset, MetadataValue, Output
+from dagster import asset, AssetIn, MetadataValue, Output
 from src.dagster.config.github_mapping import GITHUB_TO_PROJECT_MAPPING
 import subprocess
 import json
@@ -50,6 +50,38 @@ def github_scraper_asset(context):
 	except Exception as e:
 		context.log.error(f"Github scraper error: {e}")
 		return Output(value=[], metadata={"count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
+
+@asset(
+		kinds={"go", "python"},
+        owners=["team:OST/spideyai-X"], 
+		ins={"github_scraper_asset": AssetIn()})
+def github_mapping_asset(context, github_scraper_asset):
+	"""Transform GitHub scraper output to match Prisma Project model using mapping config."""
+	# Get the output from the GitHub scraper asset
+	# This assumes the asset is used in a job with github_scraper_asset as an input
+	scraped_repos = github_scraper_asset
+	if scraped_repos is None:
+		context.log.warning("No data found from github_scraper_asset. Returning empty list.")
+		return []
+
+	def map_repo(repo):
+		mapped = {}
+		for prisma_field, source in GITHUB_TO_PROJECT_MAPPING.items():
+			if callable(source):
+				mapped[prisma_field] = source(repo)
+			elif "." in source:
+				# For nested keys like "owner.avatar_url"
+				keys = source.split(".")
+				value = repo
+				for k in keys:
+					value = value.get(k, None) if isinstance(value, dict) else None
+				mapped[prisma_field] = value
+			else:
+				mapped[prisma_field] = repo.get(source)
+		return mapped
+
+	projects = [map_repo(repo) for repo in scraped_repos]
+	return projects
 
 # ========================================
 # GITLAB SCRAPER
