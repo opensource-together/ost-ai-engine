@@ -32,6 +32,6 @@ class PipelineConfig(Config):
         description="GitLab API access token"
     )
     github_scraping_query: str = Field(
-        default=f"stars:>100 stars:<500 pushed:>{today} is:public archived:false",
+        default=f"stars:>100 stars:<500 pushed:>={today} is:public archived:false",
         description="`GitHub scraper parameter query"
     )
