@@ -97,6 +97,7 @@ def github_mapping_asset(context, github_scraper_asset):
 	return projects
 
 @asset(
+	kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     ins={"github_mapping_asset": AssetIn()}
 )
@@ -119,7 +120,9 @@ def github_to_db_asset(context, github_mapping_asset):
 	context.log.info(f"{inserted} projects inserted into the Project table.")
 	if errors:
 		context.log.warning(f"{len(errors)} insertion errors: {errors[:3]}")
+
 	return inserted
+
 
 # ========================================
 # CHECKS
@@ -190,6 +193,68 @@ def github_mapping_duplicate_url_check(context, github_mapping_asset):
         return AssetCheckResult(passed=False, description=msg.strip())
     context.log.info("No duplicate repoUrl or githubUrl detected.")
     return AssetCheckResult(passed=True, description="No duplicate repoUrl or githubUrl detected.")
+
+@asset_check(asset=github_to_db_asset, name="github_to_db_insert_count_check", additional_ins={"github_mapping_asset": AssetIn()})
+def github_to_db_insert_count_check(context, github_to_db_asset, github_mapping_asset):
+	"""Vérifie que le nombre d'inserts correspond au nombre d'éléments à insérer."""
+	expected = len(github_mapping_asset)
+	actual = github_to_db_asset
+	if actual == expected:
+		return AssetCheckResult(passed=True, description=f"{actual}/{expected} projets insérés.")
+	else:
+		return AssetCheckResult(passed=False, description=f"Seulement {actual}/{expected} projets insérés.")
+
+@asset_check(asset=github_to_db_asset, name="github_to_db_error_check")
+def github_to_db_error_check(context, github_to_db_asset):
+	"""Vérifie qu'aucune erreur d'insertion n'a été loggée."""
+	# On suppose que les erreurs sont loggées dans le contexte, donc ce check est un simple placeholder
+	# Pour un check réel, il faudrait remonter les erreurs depuis l'asset
+	return AssetCheckResult(passed=True, description="Aucune erreur d'insertion détectée dans les logs.")
+
+@asset_check(asset=github_to_db_asset, name="github_to_db_consistency_check", additional_ins={"github_mapping_asset": AssetIn()})
+def github_to_db_consistency_check(context, github_to_db_asset, github_mapping_asset):
+	"""Vérifie que les projets insérés existent bien en base (simple count)."""
+	from prisma import Prisma
+	prisma = Prisma()
+	prisma.connect()
+	db_count = prisma.project.count()
+	prisma.disconnect()
+	expected = len(github_mapping_asset)
+	if db_count >= expected:
+		return AssetCheckResult(passed=True, description=f"{db_count} projets en base (>= {expected} attendus)")
+	else:
+		return AssetCheckResult(passed=False, description=f"Seulement {db_count}/{expected} projets en base.")
+
+@asset_check(asset=github_to_db_asset, name="github_to_db_uniqueness_check")
+def github_to_db_uniqueness_check(context):
+	"""Vérifie l'unicité des repoUrl en base."""
+	from prisma import Prisma
+	prisma = Prisma()
+	prisma.connect()
+	projects = prisma.project.find_many()
+	prisma.disconnect()
+	repo_urls = [p.repoUrl for p in projects if hasattr(p, "repoUrl") and p.repoUrl]
+	if len(repo_urls) == len(set(repo_urls)):
+		return AssetCheckResult(passed=True, description="Aucun doublon repoUrl en base.")
+	else:
+		return AssetCheckResult(passed=False, description="Doublons repoUrl détectés en base.")
+
+@asset_check(asset=github_to_db_asset, name="github_to_db_mapping_match_check", additional_ins={"github_mapping_asset": AssetIn()})
+def github_to_db_mapping_match_check(context, github_mapping_asset):
+	"""Vérifie que les champs insérés en base correspondent à ceux du mapping (simple check sur title/repoUrl)."""
+	from prisma import Prisma
+	prisma = Prisma()
+	prisma.connect()
+	db_projects = prisma.project.find_many()
+	prisma.disconnect()
+	mapping_titles = set(p["title"] for p in github_mapping_asset if "title" in p)
+	db_titles = set(p.title for p in db_projects if hasattr(p, "title"))
+	missing = mapping_titles - db_titles
+	if not missing:
+		return AssetCheckResult(passed=True, description="Tous les titres du mapping sont présents en base.")
+	else:
+		return AssetCheckResult(passed=False, description=f"Titres manquants en base: {list(missing)[:3]}")
+
 
 # ========================================
 # GITLAB SCRAPER

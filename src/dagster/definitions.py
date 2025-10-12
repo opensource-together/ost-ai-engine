@@ -7,6 +7,11 @@ from .assets import (
     github_mapping_type_check,
     github_mapping_required_fields_check,
     github_mapping_duplicate_url_check,
+    github_to_db_insert_count_check,
+    github_to_db_error_check,
+    github_to_db_consistency_check,
+    github_to_db_uniqueness_check,
+    github_to_db_mapping_match_check,
 )
 
 defs = Definitions(
@@ -19,6 +24,11 @@ defs = Definitions(
     asset_checks=[
         github_mapping_type_check,
         github_mapping_required_fields_check,
-        github_mapping_duplicate_url_check
+        github_mapping_duplicate_url_check,
+        github_to_db_insert_count_check,
+        github_to_db_error_check,
+        github_to_db_consistency_check,
+        github_to_db_uniqueness_check,
+        github_to_db_mapping_match_check
     ]
 )
