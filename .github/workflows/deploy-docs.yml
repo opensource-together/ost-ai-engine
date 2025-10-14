@@ -1,47 +1,53 @@
-# name: PR - up AI docs on mintlify
-#
-# on: [push]
-#
-# jobs:
-#   pr-docs:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout source repo
-#         uses: actions/checkout@v3
-#
-#       - name: Clone target repo
-#         run: |
-#           git clone https://x-access-token:${{ secrets.OST_DOCS_TOKEN }}@github.com/opensource-together/ost-docs.git /tmp/ost-docs
-#
-#       - name: Create branch
-#         run: |
-#           cd /tmp/ost-docs
-#           git checkout -b update-ai-docs || git checkout update-ai-docs
-#
-#       - name: Copy docs/ai/ to target repo
-#         run: |
-#           rm -rf /tmp/ost-docs/ai
-#           cp -r docs/ai /tmp/ost-docs/ai
-#
-#       - name: Commit changes
-#         run: |
-#           cd /tmp/ost-docs
-#           git config user.name "CI Bot"
-#           git config user.email "ci-bot@mintlify.com"
-#           git add ai
-#           git commit -m "Update Mintlify docs from main repo" || echo "No changes to commit"
-#
-#       - name: Push branch
-#         run: |
-#           cd /tmp/ost-docs
-#           git push origin update-docs-from-main
-#
-#       - name: Create PR
-#         uses: peter-evans/create-pull-request@v5
-#         with:
-#           token: ${{ secrets.OST_DOCS_TOKEN }}
-#           repository: opensource-together/ost-docs
-#           head: update-docs-from-main
-#           base: main
-#           title: "Update Mintlify docs from main repo"
-#           body: "Automated PR: update docs/ai/ from ost-ai-engine"
+name: spideyai-X/up-ost-ai-docs
+
+on:
+  push:
+    paths:
+      - 'docs/ai/**'
+
+jobs:
+  pr-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v3
+
+      - name: Clone target repo
+        run: |
+          git clone https://x-access-token:${{ secrets.OST_DOCS_TOKEN }}@github.com/opensource-together/ost-docs.git /tmp/ost-docs
+
+      - name: Create branch
+        run: |
+          cd /tmp/ost-docs
+          git checkout -b auto-up-ai-docs || git checkout auto-up-ai-docs
+
+      - name: Copy docs/ai/ to target repo
+        run: |
+          rm -rf /tmp/ost-docs/ai
+          cp -r docs/ai /tmp/ost-docs/ai
+
+      - name: Commit changes
+        run: |
+          cd /tmp/ost-docs
+          git config user.name "spideyai-X"
+          git config user.email "${{ secrets.GIT_AUTHOR_EMAIL }}"
+          git add ai
+          git commit -m "docs: up Mintlify AI docs from ost-ai-engine" || echo "No changes to commit"
+
+      - name: Push branch
+        run: |
+          cd /tmp/ost-docs
+          git push origin auto-up-ai-docs
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.OST_DOCS_TOKEN }}
+          repository: opensource-together/ost-docs
+          head: auto-up-ai-docs
+          base: main
+          title: "Up Mintlify docs from AI-Engine"
+          body: |
+            **Automated AI docs sync from your friend spidey**
+
+            This PR brings the latest updates for the `docs/ai/` directory from the [ost-ai-engine](https://github.com/opensource-together/ost-ai-engine) repository.
