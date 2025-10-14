@@ -1,8 +1,5 @@
 # Ignore everything in docs/ost-docs except ai and docs.json
 docs/ost-docs/*
-!docs/ost-docs/ai/
-!docs/ost-docs/docs.json
-!docs/ost-docs/images/
 
 # Byte-compiled / optimized / DLL files / Temp files
 __pycache__/
