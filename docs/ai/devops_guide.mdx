@@ -1,0 +1,57 @@
+# Guide DevOps
+
+OST AI Engine est une plateforme technique d'orchestration et d'analyse de données. Ce guide couvre toutes les étapes pour le setup, le déploiement et le monitoring.
+
+## Variables d'environnement
+| Variable              | Description                  | Exemple |
+|-----------------------|-----------------------------|---------|
+| DATABASE_URL          | URL de connexion PostgreSQL  | postgresql://ai-engine:ai-engine@localhost:7777/ai-engine |
+| POSTGRES_DB           | Nom de la base               | ai-engine |
+| POSTGRES_USER         | Utilisateur DB               | ai-engine |
+| POSTGRES_PASSWORD     | Mot de passe DB              | ai-engine |
+| GITHUB_ACCESS_TOKEN   | Token API GitHub             | your_github_access_token_here |
+| GITLAB_ACCESS_TOKEN   | Token API GitLab             | your_gitlab_access_token_here |
+
+## Structure du projet
+```text
+src/
+  dagster/
+    assets.py
+    dagster.yaml
+    definitions.py
+    config/
+      config.py
+      github_mapping.py
+      local.yaml
+      prod.yaml
+  infrastructure/
+    services/
+      go/
+        github/
+          go.mod
+          main.go
+          main_test.go
+        gitlab/
+          go.mod
+          main.go
+          main_test.go
+prisma/
+  schema.prisma
+  migrations/
+  seed/
+docs/
+  *.mdx
+  _static/custom.css
+```
+
+## Dockerfile Python (exemple)
+```dockerfile
+FROM python:3.13-slim
+WORKDIR /app
+COPY pyproject.toml poetry.lock ./
+RUN pip install poetry && poetry install --no-root
+COPY src/ src/
+COPY .env.local .env.local
+ENV DAGSTER_HOME=/app/src/dagster
+CMD ["poetry", "run", "dagster", "dev", "-m", "src.dagster.definitions", "--host", "0.0.0.0", "--port", "3000"]
+```

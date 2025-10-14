@@ -1,0 +1,21 @@
+# Déploiement
+
+## Base de données
+```bash
+docker compose up -d
+```
+
+## Prisma (migrations)
+```bash
+cd prisma
+npx prisma migrate deploy
+```
+
+## Dagster & Pipelines
+```bash
+export DAGSTER_HOME="$PWD/src/dagster"
+poetry run dotenv -f .env.local run -- dagster dev -m src.dagster.definitions --host 127.0.0.1 --port 3000
+```
+Accès Dagster UI : [http://localhost:3000](http://localhost:3000)
+
+Le job `github_scraper_job` est planifié toutes les 6h (cron : `6 * * * *`). Les scrapers Go sont intégrés comme assets Dagster et lancés automatiquement. Rien à faire côté DevOps.
