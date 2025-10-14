@@ -34,6 +34,11 @@ jobs:
           git add ai
           git commit -m "docs: up Mintlify AI docs from ost-ai-engine" || echo "No changes to commit"
 
+      - name: Pull latest branch changes
+        run: |
+          cd /tmp/ost-docs
+          git pull --rebase origin auto-up-ai-docs || true
+
       - name: Push branch
         run: |
           cd /tmp/ost-docs
@@ -49,4 +54,5 @@ jobs:
           title: "Up Mintlify docs from AI-Engine"
           body: |
             **Automated AI docs sync from your friend spidey**
+
             This PR brings the latest updates from the [ost-ai-engine](https://github.com/opensource-together/ost-ai-engine) repository.
