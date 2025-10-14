@@ -23,7 +23,12 @@ github_scraper_job = define_asset_job(
         "github_top_projects_asset",
         "github_mapping_asset",
         "github_to_db_asset"
-    ]
+    ],
+    description=(
+        "Pipeline to scrape trending GitHub projects, rank them, "
+        "normalize their data structure, and insert the results into the database. "
+        "Includes data quality checks at each step."
+    )
 )
 
 github_scraper_schedule = ScheduleDefinition(
