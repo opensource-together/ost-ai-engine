@@ -8,6 +8,7 @@ OST AI Engine Documentation
    installation
    deployment
    structure
+   devops_guide
 
 
 Overview
