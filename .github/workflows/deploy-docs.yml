@@ -49,5 +49,4 @@ jobs:
           title: "Up Mintlify docs from AI-Engine"
           body: |
             **Automated AI docs sync from your friend spidey**
-
             This PR brings the latest updates from the [ost-ai-engine](https://github.com/opensource-together/ost-ai-engine) repository.
