@@ -39,10 +39,10 @@ jobs:
           cd /tmp/ost-docs
           git pull --rebase origin auto-up-ai-docs || true
 
-      - name: Push branch (with rebase retry)
+      - name: Push branch (force)
         run: |
           cd /tmp/ost-docs
-          git push origin auto-up-ai-docs || (git pull --rebase origin auto-up-ai-docs && git push origin auto-up-ai-docs)
+          git push --force origin auto-up-ai-docs
 
       - name: Create PR
         uses: peter-evans/create-pull-request@v6
