@@ -7,12 +7,13 @@ from dotenv import load_dotenv
 
 from dagster import Config
 from pydantic import Field
-from datetime import date
+from datetime import date, timedelta
 
 # Load environment variables from .env.local file
 load_dotenv(dotenv_path=".env.local")
 
 today = date.today().isoformat()
+seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
 
 class PipelineConfig(Config):
     """
@@ -32,6 +33,10 @@ class PipelineConfig(Config):
         description="GitLab API access token"
     )
     github_scraping_query: str = Field(
-        default=f"stars:>100 stars:<500 pushed:>={today} is:public archived:false",
-        description="`GitHub scraper parameter query"
+        default=f"stars:>100 stars:<500 created:>={seven_days_ago} is:public archived:false",
+        description="GitHub scraper parameter query"
+    )
+    github_top_n: int = Field(
+        default=30,
+        description="Number of top GitHub repos to fetch per run"
     )
