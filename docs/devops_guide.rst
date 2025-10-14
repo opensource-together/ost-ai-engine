@@ -78,6 +78,7 @@ Deployment
 
       docker ps
 
+
 3. Launch Dagster locally via Poetry:
 
    .. code-block:: bash
@@ -87,8 +88,9 @@ Deployment
    Access Dagster UI: http://localhost:3000
 
    Le job `github_scraper_job` est automatiquement planifié pour s'exécuter toutes les 6 heures (cron: `6 * * * *`).
-   Vous n'avez rien à faire, Dagster lancera ce job selon la planification définie dans `src/dagster/definitions.py`.
-   Vous pouvez consulter l'état, les logs et les assets dans l'interface Dagster.
+   Les scrapers Go sont intégrés comme assets Dagster et sont lancés automatiquement en subprocess Python lors de l'exécution du job.
+   Aucune action ou déploiement séparé n'est requis pour les scrapers Go.
+   On peut consulter l'état, les logs et les assets dans l'interface Dagster (localhost:3000).
 
 
 Sphinx Documentation
