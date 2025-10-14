@@ -28,6 +28,7 @@ dagster-dbt = "^0.27.5"
 sphinx = "^8.2.3"
 sphinx-autobuild = "^2025.8.25"
 sphinx-rtd-theme = "^3.0.2"
+furo = "^2025.9.25"
 
 [tool.dagster]
 module_name = "src.dagster.definitions"
