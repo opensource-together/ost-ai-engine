@@ -7,6 +7,9 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.napoleon']
 templates_path = ['_templates']
 exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
+def setup(app):
+    app.add_css_file('custom.css')
+
 # Furo theme
 html_theme = 'furo'
 html_theme_options = {
