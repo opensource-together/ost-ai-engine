@@ -1,18 +1,19 @@
-# Guide DevOps
 
-OST AI Engine est une plateforme technique d'orchestration et d'analyse de données. Ce guide couvre toutes les étapes pour le setup, le déploiement et le monitoring.
+# DevOps Guide
 
-## Variables d'environnement
-| Variable              | Description                  | Exemple |
+OST AI Engine is a technical platform for data orchestration and analysis. This guide explains how to set up, deploy, and monitor the platform.
+
+## Environment Variables
+| Variable              | Description                  | Example |
 |-----------------------|-----------------------------|---------|
-| DATABASE_URL          | URL de connexion PostgreSQL  | postgresql://ai-engine:ai-engine@localhost:7777/ai-engine |
-| POSTGRES_DB           | Nom de la base               | ai-engine |
-| POSTGRES_USER         | Utilisateur DB               | ai-engine |
-| POSTGRES_PASSWORD     | Mot de passe DB              | ai-engine |
-| GITHUB_ACCESS_TOKEN   | Token API GitHub             | your_github_access_token_here |
-| GITLAB_ACCESS_TOKEN   | Token API GitLab             | your_gitlab_access_token_here |
+| DATABASE_URL          | PostgreSQL connection URL    | postgresql://db_user:db_password@localhost:ports/db_name |
+| POSTGRES_DB           | Database name                | db_name |
+| POSTGRES_USER         | Database user                | db_user |
+| POSTGRES_PASSWORD     | Database password            | db_password |
+| GITHUB_ACCESS_TOKEN   | GitHub API token             | your_github_access_token_here |
+| GITLAB_ACCESS_TOKEN   | GitLab API token             | your_gitlab_access_token_here |
 
-## Structure du projet
+## Project Structure
 ```text
 src/
   dagster/
@@ -40,11 +41,10 @@ prisma/
   migrations/
   seed/
 docs/
-  *.mdx
-  _static/custom.css
+  ai/*.mdx
 ```
 
-## Dockerfile Python (exemple)
+## Example Python Dockerfile
 ```dockerfile
 FROM python:3.13-slim
 WORKDIR /app

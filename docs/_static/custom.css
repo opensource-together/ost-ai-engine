@@ -1,6 +1,0 @@
-@import url('https://fonts.googleapis.com/css2?family=Geist:wght@400;700&display=swap');
-
-body, .sidebar, .content {
-  font-family: 'Geist', 'Segoe UI', Arial, sans-serif;
-  letter-spacing: -0.7px; /* Ajuste la valeur selon le rendu souhaité */
-}
