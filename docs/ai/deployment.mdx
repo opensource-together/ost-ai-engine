@@ -18,4 +18,5 @@ poetry run dotenv -f .env.local run -- dagster dev -m src.dagster.definitions --
 ```
 Accès Dagster UI : [http://localhost:3000](http://localhost:3000)
 
-Le job `github_scraper_job` est planifié toutes les 6h (cron : `6 * * * *`). Les scrapers Go sont intégrés comme assets Dagster et lancés automatiquement. Rien à faire côté DevOps.
+Le job `github_scraper_job` est planifié toutes les 6h (cron : `6 * * * *`).  
+Les scrapers Go sont intégrés comme assets Dagster et lancés automatiquement. Rien à faire côté DevOps.
