@@ -7,7 +7,7 @@ local_artifact_storage:
   module: dagster._core.storage.root
   class: LocalArtifactStorage
   config:
-    base_dir: "."
+    base_dir: "./.dagster_tmp"
 compute_logs:
   module: dagster._core.storage.local_compute_log_manager
   class: LocalComputeLogManager

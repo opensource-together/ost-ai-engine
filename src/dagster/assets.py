@@ -62,16 +62,44 @@ def github_scraper_asset(context):
 		return Output(value=[], metadata={"count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 @asset(
-		kinds={"go", "python"},
-        owners=DEFAULT_OWNERS, 
-		ins={"github_scraper_asset": AssetIn()})
-def github_mapping_asset(context, github_scraper_asset):
-	"""Transform GitHub scraper output to match Prisma Project model using mapping config."""
-	# Get the output from the GitHub scraper asset
-	# This assumes the asset is used in a job with github_scraper_asset as an input
-	scraped_repos = github_scraper_asset
-	if scraped_repos is None:
-		context.log.warning("No data found from github_scraper_asset. Returning empty list.")
+	kinds={"python"},
+	owners=DEFAULT_OWNERS,
+	ins={"github_scraper_asset": AssetIn()}
+)
+def github_top_projects_asset(context, github_scraper_asset):
+	"""Rank projects by stars and keep only the top N (configurable)."""
+	from src.dagster.config.config import PipelineConfig
+	config = PipelineConfig()
+	top_n = config.github_top_n
+	if not github_scraper_asset or not isinstance(github_scraper_asset, list):
+		context.log.warning("No projects to rank.")
+		return []
+	# Filter out projects without a description
+	filtered = [p for p in github_scraper_asset if p.get("description") not in (None, "")]
+	if not filtered:
+		context.log.warning("No project with description found.")
+		return []
+	ranked = sorted(
+		filtered,
+		key=lambda p: p.get("stargazers_count", 0),
+		reverse=True
+	)
+	top_projects = ranked[:top_n]
+	if top_projects:
+		context.log.info(f"Top {top_n} projects selected (stars range: {top_projects[0].get('stargazers_count', 0)} - {top_projects[-1].get('stargazers_count', 0)})")
+	else:
+		context.log.info("No projects selected.")
+	return top_projects
+
+@asset(
+	kinds={"go", "python"},
+	owners=DEFAULT_OWNERS,
+	ins={"github_top_projects_asset": AssetIn()}
+)
+def github_mapping_asset(context, github_top_projects_asset):
+	"""Transform top ranked GitHub projects to match Prisma Project model using mapping config."""
+	if github_top_projects_asset is None:
+		context.log.warning("No data found from github_top_projects_asset. Returning empty list.")
 		return []
 
 	def map_repo(repo):
@@ -80,7 +108,6 @@ def github_mapping_asset(context, github_scraper_asset):
 			if callable(source):
 				mapped[prisma_field] = source(repo)
 			elif isinstance(source, str) and "." in source:
-				# For nested keys like "owner.avatar_url"
 				keys = source.split(".")
 				value = repo
 				for k in keys:
@@ -89,10 +116,10 @@ def github_mapping_asset(context, github_scraper_asset):
 			elif isinstance(source, str):
 				mapped[prisma_field] = repo.get(source)
 			else:
-				mapped[prisma_field] = source  # None ou valeur par défaut
+				mapped[prisma_field] = source
 		return mapped
 
-	projects = [map_repo(repo) for repo in scraped_repos]
+	projects = [map_repo(repo) for repo in github_top_projects_asset]
 
 	return projects
 
@@ -123,10 +150,56 @@ def github_to_db_asset(context, github_mapping_asset):
 
 	return inserted
 
-
 # ========================================
 # CHECKS
 # ========================================
+
+# Check that all projects have a description
+@asset_check(
+	asset=github_top_projects_asset,
+	name="github_top_projects_description_check"
+)
+def github_top_projects_description_check(context, github_top_projects_asset):
+	"""Check that all projects have a non-empty description."""
+	failed = []
+	for i, project in enumerate(github_top_projects_asset):
+		if project.get("description") in (None, ""):
+			failed.append(i)
+	if failed:
+		msg = f"{len(failed)} project(s) missing description: {failed[:5]}"
+		context.log.error(msg)
+		return AssetCheckResult(passed=False, description=msg)
+	context.log.info("All projects have a non-empty description.")
+	return AssetCheckResult(passed=True, description="All projects have a non-empty description.")
+
+# Check that all projects respect the minimum creation date
+@asset_check(
+	asset=github_top_projects_asset,
+	name="github_top_projects_date_check"
+)
+def github_top_projects_date_check(context, github_top_projects_asset):
+	"""Check that all projects were created after the minimum date."""
+	from src.dagster.config.config import seven_days_ago
+	import datetime
+	failed = []
+	for i, project in enumerate(github_top_projects_asset):
+		created_at = project.get("created_at")
+		if not created_at:
+			failed.append((i, "missing_created_at"))
+			continue
+		try:
+			created_date = datetime.date.fromisoformat(created_at[:10])
+			min_date = datetime.date.fromisoformat(seven_days_ago)
+			if created_date < min_date:
+				failed.append((i, f"created_at_too_old: {created_at}"))
+		except Exception as e:
+			failed.append((i, f"invalid_created_at: {created_at}"))
+	if failed:
+		msg = f"{len(failed)} project(s) with invalid date: {failed[:5]}"
+		context.log.error(msg)
+		return AssetCheckResult(passed=False, description=msg)
+	context.log.info("All projects were created after the minimum date.")
+	return AssetCheckResult(passed=True, description="All projects were created after the minimum date.")
 
 @asset_check(
     asset=github_mapping_asset, 

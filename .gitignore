@@ -1,3 +1,6 @@
+# Ignore everything in docs/ost-docs except ai and docs.json
+docs/ost-docs/*
+
 # Byte-compiled / optimized / DLL files / Temp files
 __pycache__/
 *.py[cod]
@@ -169,4 +172,3 @@ uv.lock
 .tmp*
 src/dagster/.telemetry*
 history/
-/src/generated/prisma
