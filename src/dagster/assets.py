@@ -1,10 +1,10 @@
 import os
 from dagster import (
-    asset, 
-	asset_check, 
-	AssetCheckResult, 
-	AssetIn, 
-	MetadataValue, 
+	asset,
+	asset_check,
+	AssetCheckResult,
+	AssetIn,
+	MetadataValue,
 	Output
 )
 from src.dagster.config.github_mapping import (
@@ -45,7 +45,7 @@ def github_scraper_asset(context):
 		else:
 			projects = []
 		count = len(projects)
-		context.log.info(f"GitHub scraper: {count} projets scrapés.")
+		context.log.info(f"[DEBUG] github_scraper_asset: {count} projets scrapés. Exemple: {projects[:1]}")
 		return Output(
 			value=projects,
 			metadata={
@@ -67,7 +67,7 @@ def github_scraper_asset(context):
 	ins={"github_scraper_asset": AssetIn()}
 )
 def github_top_projects_asset(context, github_scraper_asset):
-	"""Rank projects by stars and keep only the top N (configurable)."""
+	"""Ranks projects by stars and keeps only the top N (configurable)."""
 	from src.dagster.config.config import PipelineConfig
 	config = PipelineConfig()
 	top_n = config.github_top_n
@@ -76,8 +76,9 @@ def github_top_projects_asset(context, github_scraper_asset):
 		return []
 	# Filter out projects without a description
 	filtered = [p for p in github_scraper_asset if p.get("description") not in (None, "")]
+	context.log.info(f"[DEBUG] github_top_projects_asset: {len(filtered)} projets avec description sur {len(github_scraper_asset)}")
 	if not filtered:
-		context.log.warning("No project with description found.")
+		context.log.warning("[DEBUG] github_top_projects_asset: No project with description found.")
 		return []
 	ranked = sorted(
 		filtered,
@@ -86,9 +87,9 @@ def github_top_projects_asset(context, github_scraper_asset):
 	)
 	top_projects = ranked[:top_n]
 	if top_projects:
-		context.log.info(f"Top {top_n} projects selected (stars range: {top_projects[0].get('stargazers_count', 0)} - {top_projects[-1].get('stargazers_count', 0)})")
+		context.log.info(f"[DEBUG] github_top_projects_asset: Top {top_n} projects selected (stars range: {top_projects[0].get('stargazers_count', 0)} - {top_projects[-1].get('stargazers_count', 0)})")
 	else:
-		context.log.info("No projects selected.")
+		context.log.info("[DEBUG] github_top_projects_asset: No projects selected.")
 	return top_projects
 
 @asset(
@@ -97,7 +98,7 @@ def github_top_projects_asset(context, github_scraper_asset):
 	ins={"github_top_projects_asset": AssetIn()}
 )
 def github_mapping_asset(context, github_top_projects_asset):
-	"""Transform top ranked GitHub projects to match Prisma Project model using mapping config."""
+	"""Transforms top ranked GitHub projects to match the Prisma Project model using the mapping config."""
 	if github_top_projects_asset is None:
 		context.log.warning("No data found from github_top_projects_asset. Returning empty list.")
 		return []
@@ -120,7 +121,7 @@ def github_mapping_asset(context, github_top_projects_asset):
 		return mapped
 
 	projects = [map_repo(repo) for repo in github_top_projects_asset]
-
+	context.log.info(f"[DEBUG] github_mapping_asset: {len(projects)} projets mappés.")
 	return projects
 
 @asset(
@@ -129,7 +130,7 @@ def github_mapping_asset(context, github_top_projects_asset):
     ins={"github_mapping_asset": AssetIn()}
 )
 def github_to_db_asset(context, github_mapping_asset):
-	"""Insert mapped projects into the Project table using Prisma Python client."""
+	"""Inserts mapped projects into the Project table using the Prisma Python client."""
 	from prisma import Prisma
 	prisma = Prisma()
 	prisma.connect()
@@ -160,17 +161,22 @@ def github_to_db_asset(context, github_mapping_asset):
 	name="github_top_projects_description_check"
 )
 def github_top_projects_description_check(context, github_top_projects_asset):
-	"""Check that all projects have a non-empty description."""
+	"""Checks that all projects have a non-empty description."""
 	failed = []
 	for i, project in enumerate(github_top_projects_asset):
 		if project.get("description") in (None, ""):
 			failed.append(i)
+	metadata = {
+		"failed_count": len(failed),
+		"failed_indices": failed[:5],
+		"total_projects": len(github_top_projects_asset)
+	}
 	if failed:
 		msg = f"{len(failed)} project(s) missing description: {failed[:5]}"
 		context.log.error(msg)
-		return AssetCheckResult(passed=False, description=msg)
+		return AssetCheckResult(passed=False, description=msg, metadata=metadata)
 	context.log.info("All projects have a non-empty description.")
-	return AssetCheckResult(passed=True, description="All projects have a non-empty description.")
+	return AssetCheckResult(passed=True, description="All projects have a non-empty description.", metadata=metadata)
 
 # Check that all projects respect the minimum creation date
 @asset_check(
@@ -178,7 +184,7 @@ def github_top_projects_description_check(context, github_top_projects_asset):
 	name="github_top_projects_date_check"
 )
 def github_top_projects_date_check(context, github_top_projects_asset):
-	"""Check that all projects were created after the minimum date."""
+	"""Checks that all projects were created after the minimum date."""
 	from src.dagster.config.config import seven_days_ago
 	import datetime
 	failed = []
@@ -194,34 +200,48 @@ def github_top_projects_date_check(context, github_top_projects_asset):
 				failed.append((i, f"created_at_too_old: {created_at}"))
 		except Exception as e:
 			failed.append((i, f"invalid_created_at: {created_at}"))
+	metadata = {
+		"failed_count": len(failed),
+		"failed_examples": failed[:5],
+		"total_projects": len(github_top_projects_asset),
+		"min_date": seven_days_ago
+	}
 	if failed:
 		msg = f"{len(failed)} project(s) with invalid date: {failed[:5]}"
 		context.log.error(msg)
-		return AssetCheckResult(passed=False, description=msg)
+		return AssetCheckResult(passed=False, description=msg, metadata=metadata)
 	context.log.info("All projects were created after the minimum date.")
-	return AssetCheckResult(passed=True, description="All projects were created after the minimum date.")
+	return AssetCheckResult(passed=True, description="All projects were created after the minimum date.", metadata=metadata)
 
 @asset_check(
-    asset=github_mapping_asset, 
-    name="github_mapping_type_check"
+	asset=github_mapping_asset, 
+	name="github_mapping_type_check"
 )
 def github_mapping_type_check(context, github_mapping_asset):
-    """Check that the mapping output is a non-empty list."""
-    if not isinstance(github_mapping_asset, list):
-        context.log.error("Mapping output is not a list.")
-        return AssetCheckResult(passed=False, description="Mapping output is not a list.")
-    if len(github_mapping_asset) == 0:
-        context.log.error("Mapping output is empty.")
-        return AssetCheckResult(passed=False, description="Mapping output is empty.")
-    context.log.info("Mapping output is a non-empty list.")
-    return AssetCheckResult(passed=True, description="Mapping output is a non-empty list.")
+	"""Checks that the mapping output is a non-empty list."""
+	metadata = {
+		"type": str(type(github_mapping_asset)),
+		"length": len(github_mapping_asset) if isinstance(github_mapping_asset, list) else None,
+		"example": github_mapping_asset[:1] if isinstance(github_mapping_asset, list) and len(github_mapping_asset) > 0 else [],
+		"is_list": isinstance(github_mapping_asset, list)
+	}
+	if not isinstance(github_mapping_asset, list):
+		context.log.error("Mapping output is not a list.")
+		metadata["error"] = "Not a list"
+		return AssetCheckResult(passed=False, description="Mapping output is not a list.", metadata=metadata)
+	if len(github_mapping_asset) == 0:
+		context.log.error("Mapping output is empty.")
+		metadata["error"] = "Empty list"
+		return AssetCheckResult(passed=False, description="Mapping output is empty.", metadata=metadata)
+	context.log.info("Mapping output is a non-empty list.")
+	return AssetCheckResult(passed=True, description="Mapping output is a non-empty list.", metadata=metadata)
 
 @asset_check(
     asset=github_mapping_asset, 
     name="github_mapping_required_fields_check"
 )
 def github_mapping_required_fields_check(context, github_mapping_asset):
-	"""Check that each project has required fields and correct types (title, repoUrl, provider, published, trending)."""
+	"""Checks that each project has required fields and correct types (title, repoUrl, provider, published, trending)."""
 	required_fields = ["title", "repoUrl", "provider", "published", "trending"]
 	missing_fields = []
 	type_errors = []
@@ -241,80 +261,108 @@ def github_mapping_required_fields_check(context, github_mapping_asset):
 			elif project["trending"] is not True:
 				context.log.warning(f"Project {i} has trending field not True: {project['trending']}")
 				type_errors.append((i, "trending_not_true"))
+	metadata = {
+		"missing_fields_count": len(missing_fields),
+		"type_errors_count": len(type_errors),
+		"missing_fields_examples": missing_fields[:5],
+		"type_errors_examples": type_errors[:5],
+		"total_projects": len(github_mapping_asset),
+		"required_fields": required_fields
+	}
 	if missing_fields or type_errors:
 		msg = f"Missing or invalid required fields in {len(missing_fields)} project(s), type errors in {len(type_errors)} project(s): {missing_fields[:5]} {type_errors[:5]}"
 		context.log.error(msg)
-		return AssetCheckResult(passed=False, description=msg)
+		return AssetCheckResult(passed=False, description=msg, metadata=metadata)
 	context.log.info("All projects have required fields and correct types.")
-	return AssetCheckResult(passed=True, description="All projects have required fields and correct types.")
+	return AssetCheckResult(passed=True, description="All projects have required fields and correct types.", metadata=metadata)
 
 @asset_check(
     asset=github_mapping_asset, 
     name="github_mapping_duplicate_url_check"
 )
 def github_mapping_duplicate_url_check(context, github_mapping_asset):
-    """Check for duplicate repoUrl or githubUrl."""
-    repo_urls = [p.get("repoUrl") for p in github_mapping_asset if "repoUrl" in p and p.get("repoUrl")]
-    github_urls = [p.get("githubUrl") for p in github_mapping_asset if "githubUrl" in p and p.get("githubUrl")]
-    duplicate_repo_urls = len(repo_urls) != len(set(repo_urls))
-    duplicate_github_urls = len(github_urls) != len(set(github_urls))
-    if duplicate_repo_urls or duplicate_github_urls:
-        msg = "Duplicate repoUrl detected." if duplicate_repo_urls else ""
-        if duplicate_github_urls:
-            msg += " Duplicate githubUrl detected."
-        context.log.error(msg)
-        return AssetCheckResult(passed=False, description=msg.strip())
-    context.log.info("No duplicate repoUrl or githubUrl detected.")
-    return AssetCheckResult(passed=True, description="No duplicate repoUrl or githubUrl detected.")
+	"""Checks for duplicate repoUrl or githubUrl."""
+	repo_urls = [p.get("repoUrl") for p in github_mapping_asset if "repoUrl" in p and p.get("repoUrl")]
+	github_urls = [p.get("githubUrl") for p in github_mapping_asset if "githubUrl" in p and p.get("githubUrl")]
+	duplicate_repo_urls = len(repo_urls) != len(set(repo_urls))
+	duplicate_github_urls = len(github_urls) != len(set(github_urls))
+	metadata = {
+		"duplicate_repo_urls": duplicate_repo_urls,
+		"duplicate_github_urls": duplicate_github_urls,
+		"repo_urls_count": len(repo_urls),
+		"github_urls_count": len(github_urls),
+		"total_projects": len(github_mapping_asset)
+	}
+	if duplicate_repo_urls or duplicate_github_urls:
+		msg = "Duplicate repoUrl detected." if duplicate_repo_urls else ""
+		if duplicate_github_urls:
+			msg += " Duplicate githubUrl detected."
+		context.log.error(msg)
+		return AssetCheckResult(passed=False, description=msg.strip(), metadata=metadata)
+	context.log.info("No duplicate repoUrl or githubUrl detected.")
+	return AssetCheckResult(passed=True, description="No duplicate repoUrl or githubUrl detected.", metadata=metadata)
 
 @asset_check(asset=github_to_db_asset, name="github_to_db_insert_count_check", additional_ins={"github_mapping_asset": AssetIn()})
 def github_to_db_insert_count_check(context, github_to_db_asset, github_mapping_asset):
-	"""Vérifie que le nombre d'inserts correspond au nombre d'éléments à insérer."""
+	"""Checks that the number of inserts matches the number of items to insert."""
 	expected = len(github_mapping_asset)
 	actual = github_to_db_asset
+	metadata = {
+		"expected": expected,
+		"actual": actual
+	}
 	if actual == expected:
-		return AssetCheckResult(passed=True, description=f"{actual}/{expected} projets insérés.")
+		return AssetCheckResult(passed=True, description=f"{actual}/{expected} projets insérés.", metadata=metadata)
 	else:
-		return AssetCheckResult(passed=False, description=f"Seulement {actual}/{expected} projets insérés.")
+		return AssetCheckResult(passed=False, description=f"Seulement {actual}/{expected} projets insérés.", metadata=metadata)
 
 @asset_check(asset=github_to_db_asset, name="github_to_db_error_check")
 def github_to_db_error_check(context, github_to_db_asset):
-	"""Vérifie qu'aucune erreur d'insertion n'a été loggée."""
-	# On suppose que les erreurs sont loggées dans le contexte, donc ce check est un simple placeholder
-	# Pour un check réel, il faudrait remonter les erreurs depuis l'asset
-	return AssetCheckResult(passed=True, description="Aucune erreur d'insertion détectée dans les logs.")
+	"""Checks that no insertion errors were logged. (Assumes errors are logged in context; for a real check, errors should be returned from the asset.)"""
+	metadata = {
+		"insert_count": github_to_db_asset
+	}
+	return AssetCheckResult(passed=True, description="Aucune erreur d'insertion détectée dans les logs.", metadata=metadata)
 
 @asset_check(asset=github_to_db_asset, name="github_to_db_consistency_check", additional_ins={"github_mapping_asset": AssetIn()})
 def github_to_db_consistency_check(context, github_to_db_asset, github_mapping_asset):
-	"""Vérifie que les projets insérés existent bien en base (simple count)."""
+	"""Checks that the inserted projects actually exist in the database (simple count)."""
 	from prisma import Prisma
 	prisma = Prisma()
 	prisma.connect()
 	db_count = prisma.project.count()
 	prisma.disconnect()
 	expected = len(github_mapping_asset)
+	metadata = {
+		"db_count": db_count,
+		"expected": expected
+	}
 	if db_count >= expected:
-		return AssetCheckResult(passed=True, description=f"{db_count} projets en base (>= {expected} attendus)")
+		return AssetCheckResult(passed=True, description=f"{db_count} projets en base (>= {expected} attendus)", metadata=metadata)
 	else:
-		return AssetCheckResult(passed=False, description=f"Seulement {db_count}/{expected} projets en base.")
+		return AssetCheckResult(passed=False, description=f"Seulement {db_count}/{expected} projets en base.", metadata=metadata)
 
 @asset_check(asset=github_to_db_asset, name="github_to_db_uniqueness_check")
 def github_to_db_uniqueness_check(context):
-	"""Vérifie l'unicité des repoUrl en base."""
+	"""Checks the uniqueness of repoUrl in the database."""
 	from prisma import Prisma
 	prisma = Prisma()
 	prisma.connect()
 	projects = prisma.project.find_many()
 	prisma.disconnect()
 	repo_urls = [p.repoUrl for p in projects if hasattr(p, "repoUrl") and p.repoUrl]
+	metadata = {
+		"repo_urls_count": len(repo_urls),
+		"unique_repo_urls_count": len(set(repo_urls))
+	}
 	if len(repo_urls) == len(set(repo_urls)):
-		return AssetCheckResult(passed=True, description="Aucun doublon repoUrl en base.")
+		return AssetCheckResult(passed=True, description="Aucun doublon repoUrl en base.", metadata=metadata)
 	else:
-		return AssetCheckResult(passed=False, description="Doublons repoUrl détectés en base.")
+		return AssetCheckResult(passed=False, description="Doublons repoUrl détectés en base.", metadata=metadata)
 
 @asset_check(asset=github_to_db_asset, name="github_to_db_mapping_match_check", additional_ins={"github_mapping_asset": AssetIn()})
 def github_to_db_mapping_match_check(context, github_mapping_asset):
-	"""Vérifie que les champs insérés en base correspondent à ceux du mapping (simple check sur title/repoUrl)."""
+	"""Checks that the fields inserted in the database match those from the mapping (simple check on title/repoUrl)."""
 	from prisma import Prisma
 	prisma = Prisma()
 	prisma.connect()
@@ -323,7 +371,13 @@ def github_to_db_mapping_match_check(context, github_mapping_asset):
 	mapping_titles = set(p["title"] for p in github_mapping_asset if "title" in p)
 	db_titles = set(p.title for p in db_projects if hasattr(p, "title"))
 	missing = mapping_titles - db_titles
+	metadata = {
+		"missing_titles_count": len(missing),
+		"missing_titles_examples": list(missing)[:3],
+		"total_titles": len(mapping_titles),
+		"db_titles_count": len(db_titles)
+	}
 	if not missing:
-		return AssetCheckResult(passed=True, description="Tous les titres du mapping sont présents en base.")
+		return AssetCheckResult(passed=True, description="Tous les titres du mapping sont présents en base.", metadata=metadata)
 	else:
-		return AssetCheckResult(passed=False, description=f"Titres manquants en base: {list(missing)[:3]}")# GITLAB SCRAPER
+		return AssetCheckResult(passed=False, description=f"Titres manquants en base: {list(missing)[:3]}", metadata=metadata)
