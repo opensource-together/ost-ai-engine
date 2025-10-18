@@ -33,7 +33,7 @@ github_scraper_job = define_asset_job(
 
 github_scraper_schedule = ScheduleDefinition(
     job=github_scraper_job,
-    cron_schedule="0 */6 * * *",  # every 6 hrs
+    cron_schedule="* * * * *",  # every minute
 )
 
 defs = Definitions(

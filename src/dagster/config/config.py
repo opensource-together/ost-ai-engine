@@ -1,18 +1,17 @@
 ########################################
 # CONFIGURATION MODULE - OST AI ENGINE #
 ########################################
-
-
+import os
 import yaml
+from dotenv import load_dotenv
 from dagster import Config
 from pydantic import Field
-import os
 
-# Charger la configuration centralisée depuis config/config.yaml
-CONFIG_YAML_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config", "config.yaml")
+load_dotenv()
+
+CONFIG_YAML_PATH = os.getenv("OST_CONFIG_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config", "config.yaml"))
 with open(CONFIG_YAML_PATH, "r") as f:
-    config_yaml = yaml.safe_load(f)
-
+    config_yaml = yaml.safe_load(f)    
 class PipelineConfig(Config):
     """
     Central configuration for the Dagster pipeline.

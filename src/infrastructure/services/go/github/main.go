@@ -9,11 +9,10 @@ import (
 	"os"
 	"strconv"
 	"time"
-
+	"gopkg.in/yaml.v3"
+	"io/ioutil"
 	"github.com/joho/godotenv"
 )
-
-var envPath = "../../../../../.env"
 
 type githubRepo struct {
 	ID          int64   `json:"id"`
@@ -78,22 +77,39 @@ func fetchGitHubRepos(client *http.Client, token string, query string, perPage, 
 }
 
 func main() {
-	_ = godotenv.Load(envPath)
-	log.Println("[INFO] Loaded environment variables.")
-	log.Printf("[INFO] Query: %s", os.Getenv("GITHUB_SCRAPING_QUERY"))
-	token := os.Getenv("GITHUB_ACCESS_TOKEN")
+	_ = godotenv.Load(".env")
+
+	configPath := os.Getenv("OST_CONFIG_PATH")
+
+	// Load configuration from YAML file
+	configBytes, err := ioutil.ReadFile(configPath)
+	if err != nil {
+		log.Fatalf("[ERROR] Config file could not be read: %v", err)
+	}
+	var config struct {
+		DatabaseURL         string `yaml:"DATABASE_URL"`
+		GitHubAccessToken   string `yaml:"GITHUB_ACCESS_TOKEN"`
+		GitLabAccessToken   string `yaml:"GITLAB_ACCESS_TOKEN"`
+		GitHubScrapingQuery string `yaml:"GITHUB_SCRAPING_QUERY"`
+		GitHubTopN          int    `yaml:"GITHUB_TOP_N"`
+	}
+	if err := yaml.Unmarshal(configBytes, &config); err != nil {
+		log.Fatalf("[ERROR] Config file could not be parsed: %v", err)
+	}
+
+	log.Println("[INFO] Loaded config from config/config.yaml.")
+	log.Printf("[INFO] Query: %s", config.GitHubScrapingQuery)
+	token := config.GitHubAccessToken
 	if token == "" {
 		log.Println("warning: GITHUB_ACCESS_TOKEN not set; may hit rate limits")
 	}
-	query := os.Getenv("GITHUB_SCRAPING_QUERY")
+	query := config.GitHubScrapingQuery
 	if query == "" {
 		log.Fatal("GITHUB_SCRAPING_QUERY is required")
 	}
-	maxRepos := 1000
-	if v := os.Getenv("GITHUB_MAX_REPOSITORIES"); v != "" {
-		if n, err := strconv.Atoi(v); err == nil && n > 0 {
-			maxRepos = n
-		}
+	maxRepos := config.GitHubTopN
+	if maxRepos <= 0 {
+		maxRepos = 1000
 	}
 
 	client := newHTTPClient()
@@ -112,7 +128,7 @@ func main() {
 		collected += len(res.Items)
 	}
 
-	// Affiche la liste des projets scrapés en JSON sur stdout
+	// Display results as JSON
 	if err := json.NewEncoder(os.Stdout).Encode(allRepos); err != nil {
 		log.Fatalf("json encode: %v", err)
 	}
