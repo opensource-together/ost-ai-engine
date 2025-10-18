@@ -29,6 +29,7 @@ RUN pip install poetry
 # Set workdir
 WORKDIR /app
 
+
 # Copy Python dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root --only main
@@ -37,6 +38,10 @@ RUN poetry install --no-root --only main
 COPY src/ src/
 COPY prisma/ prisma/
 COPY .env .env
+
+# Copy centralized config (YAML + scripts)
+COPY config/ config/
+
 # Génère le client Prisma Python
 RUN poetry run prisma generate
 
@@ -50,5 +55,5 @@ ENV DAGSTER_HOME=/app/src/dagster
 # Expose Dagster UI port
 EXPOSE 3000
 
-# Entrypoint: launch Dagster webserver
-CMD ["poetry", "run", "dagster", "dev", "-m", "src.dagster.definitions", "--host", "0.0.0.0", "--port", "3000"]
+# Entrypoint: launch Dagster daemon
+CMD ["poetry", "run", "dagster-daemon", "run"]
