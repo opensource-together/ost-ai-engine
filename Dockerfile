@@ -37,6 +37,12 @@ RUN poetry install --no-root --only main
 COPY src/ src/
 COPY prisma/ prisma/
 COPY .env .env
+# Génère le client Prisma Python
+RUN poetry run prisma generate
+
+# Compile Go scrapers (ARM64)
+ENV GOARCH=arm64
+RUN cd src/infrastructure/services/go/github && go build -o /app/github-scraper main.go
 
 # Set Dagster home
 ENV DAGSTER_HOME=/app/src/dagster
