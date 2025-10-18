@@ -2,41 +2,39 @@
 # CONFIGURATION MODULE - OST AI ENGINE #
 ########################################
 
-import os
-from dotenv import load_dotenv
 
+import yaml
 from dagster import Config
 from pydantic import Field
-from datetime import date, timedelta
+import os
 
-# Load environment variables from .env file
-load_dotenv(dotenv_path=".env")
-
-today = date.today().isoformat()
-seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+# Charger la configuration centralisée depuis config/config.yaml
+CONFIG_YAML_PATH = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config", "config.yaml")
+with open(CONFIG_YAML_PATH, "r") as f:
+    config_yaml = yaml.safe_load(f)
 
 class PipelineConfig(Config):
     """
     Central configuration for the Dagster pipeline.
-    All secrets and connection info are loaded from environment variables.
+    All secrets and connection info are loaded from config/config.yaml.
     """
     db_url: str = Field(
-        default_factory=lambda: os.getenv("DATABASE_URL", ""),
+        default=config_yaml.get("DATABASE_URL", ""),
         description="Database connection string (e.g. postgresql://user:pass@host:port/dbname)"
     )
     github_token: str = Field(
-        default_factory=lambda: os.getenv("GITHUB_ACCESS_TOKEN", ""),
+        default=config_yaml.get("GITHUB_ACCESS_TOKEN", ""),
         description="GitHub API access token"
     )
     gitlab_token: str = Field(
-        default_factory=lambda: os.getenv("GITLAB_ACCESS_TOKEN", ""),
+        default=config_yaml.get("GITLAB_ACCESS_TOKEN", ""),
         description="GitLab API access token"
     )
     github_scraping_query: str = Field(
-        default=f"stars:>100 stars:<500 created:>={seven_days_ago} is:public archived:false",
+        default=config_yaml.get("GITHUB_SCRAPING_QUERY", ""),
         description="GitHub scraper parameter query"
     )
     github_top_n: int = Field(
-        default=30,
+        default=config_yaml.get("GITHUB_TOP_N", 30),
         description="Number of top GitHub repos to fetch per run"
     )

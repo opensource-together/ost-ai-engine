@@ -1,3 +1,6 @@
+# Centralized config (généré dynamiquement)
+config/config.py
+config/config.yaml
 # Ignore everything in docs/ost-docs except ai and docs.json
 docs/ost-docs/*
 
