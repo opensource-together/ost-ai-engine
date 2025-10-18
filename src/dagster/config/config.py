@@ -9,8 +9,8 @@ from dagster import Config
 from pydantic import Field
 from datetime import date, timedelta
 
-# Load environment variables from .env.local file
-load_dotenv(dotenv_path=".env.local")
+# Load environment variables from .env file
+load_dotenv(dotenv_path=".env")
 
 today = date.today().isoformat()
 seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
