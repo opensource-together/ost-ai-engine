@@ -13,3 +13,16 @@ services:
       - "7777:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+  dagster:
+    build:
+      context: .
+    container_name: dagster
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    ports:
+      - "7778:3000"
+
+volumes:
+  pgdata:
