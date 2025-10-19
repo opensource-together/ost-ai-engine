@@ -62,7 +62,7 @@ def github_scraper_asset(context):
 		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 @asset(
-	kinds={"go", "python"},
+	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	ins={"github_scraper_asset": AssetIn()}
 )
@@ -97,7 +97,7 @@ def github_top_projects_asset(context, github_scraper_asset):
 	return Output(value=top_projects, metadata=meta)
 
 @asset(
-	kinds={"go", "python"},
+	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	ins={"github_top_projects_asset": AssetIn()}
 )
