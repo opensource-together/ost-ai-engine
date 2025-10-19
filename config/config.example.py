@@ -23,7 +23,7 @@ config_example = {
     "GITLAB_ACCESS_TOKEN": os.getenv("GITLAB_ACCESS_TOKEN", "your_gitlab_token_here"),
     "GITHUB_SCRAPING_QUERY": os.getenv(
         "GITHUB_SCRAPING_QUERY",
-        f"stars:>100 stars:<500 created:>=YYYY-MM-DD is:public archived:false"
+        f"stars:>100 stars:<10000 created:>=YYYY-MM-DD is:public archived:false"
     ),
     "GITHUB_SCRAPER_CRON": os.getenv("GITHUB_SCRAPER_CRON", "0 * * * *"),
 }
