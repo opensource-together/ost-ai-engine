@@ -38,19 +38,19 @@ with open(dest_path, "w") as f:
 
 # ───────────────────────────────────────────────────────── #
 # PostgreSQL database connection URL
-DATABASE_URL: {database_url}
+DATABASE_URL: "{database_url}"
 
 # GitHub access token
-GITHUB_ACCESS_TOKEN: {github_access_token}
+GITHUB_ACCESS_TOKEN: "{github_access_token}"
 
 # GitLab access token
-GITLAB_ACCESS_TOKEN: {gitlab_access_token}
+GITLAB_ACCESS_TOKEN: "{gitlab_access_token}"
 
 # GitHub scraping query
-GITHUB_SCRAPING_QUERY: {github_scraping_query}
+GITHUB_SCRAPING_QUERY: "{github_scraping_query}"
 
 # Cron schedule for GitHub scraper Dagster job
-GITHUB_SCRAPER_CRON: {github_scraper_cron}
+GITHUB_SCRAPER_CRON: "{github_scraper_cron}"
 
 # Number of top GitHub projects to fetch
 GITHUB_TOP_N: {github_top_n}
