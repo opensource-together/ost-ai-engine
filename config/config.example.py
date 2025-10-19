@@ -20,6 +20,7 @@ config_dict = {
     "GITHUB_ACCESS_TOKEN": "your_github_token_here",  # GitHub token
     "GITLAB_ACCESS_TOKEN": "your_gitlab_token_here",  # GitLab token
     "GITHUB_SCRAPING_QUERY": f"stars:>0 stars:<10000 created:>=YYYY-MM-DD is:public archived:false",  # Example query
+    "GITHUB_SCRAPER_CRON": "0 * * * *",  # Example cron schedule for Dagster job
 }
 
 config_path = os.path.join(os.path.dirname(__file__), "config_example.yaml")
@@ -44,6 +45,9 @@ GITLAB_ACCESS_TOKEN: {}
 # GitHub scraping query (see GitHub Search API docs)
 GITHUB_SCRAPING_QUERY: {}
 
+# Cron schedule for GitHub scraper Dagster job
+GITHUB_SCRAPER_CRON: {}
+
 # Number of top GitHub projects to fetch (integer)
 GITHUB_TOP_N: {}
 # ───────────────────────────────────────────────────────── #
@@ -52,5 +56,6 @@ GITHUB_TOP_N: {}
         config_dict["GITHUB_ACCESS_TOKEN"],
         config_dict["GITLAB_ACCESS_TOKEN"],
         config_dict["GITHUB_SCRAPING_QUERY"],
+        config_dict["GITHUB_SCRAPER_CRON"],
         config_dict["GITHUB_TOP_N"]
     ))
