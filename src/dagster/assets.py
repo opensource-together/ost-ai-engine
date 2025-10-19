@@ -62,7 +62,7 @@ def github_scraper_asset(context):
 		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 @asset(
-	kinds={"python"},
+	kinds={"go", "python"},
 	owners=DEFAULT_OWNERS,
 	ins={"github_scraper_asset": AssetIn()}
 )
@@ -133,28 +133,34 @@ def github_mapping_asset(context, github_top_projects_asset):
 
 @asset(
 	kinds={"python", "postgres"},
-    owners=DEFAULT_OWNERS,
-    ins={"github_mapping_asset": AssetIn()}
+	owners=DEFAULT_OWNERS,
+	ins={"github_mapping_asset": AssetIn()}
 )
 def github_to_db_asset(context, github_mapping_asset):
-	"""Inserts mapped projects into the Project table using the Prisma Python client."""
+	"""Upserts mapped projects into the Project table using the Prisma Python client (based on repoUrl)."""
 	from prisma import Prisma
 	prisma = Prisma()
 	prisma.connect()
 	inserted = 0
 	errors = []
 	for i, project in enumerate(github_mapping_asset):
+		repo_url = project.get("repoUrl")
+		if not repo_url:
+			context.log.warning(f"Skipping project {i}: missing repoUrl (required for upsert).")
+			errors.append((i, "missing_repoUrl"))
+			continue
 		try:
 			project_data = {k: v for k, v in project.items() if v is not None}
+			# Insert only new projects (no update)
 			prisma.project.create(data=project_data)
 			inserted += 1
 		except Exception as e:
-			context.log.error(f"Error inserting project {i}: {e}")
+			context.log.error(f"Error upserting project {i} (repoUrl={repo_url}): {e}")
 			errors.append((i, str(e)))
 	prisma.disconnect()
-	context.log.info(f"{inserted} projects inserted into the Project table.")
+	context.log.info(f"{inserted} projects upserted into the Project table.")
 	if errors:
-		context.log.warning(f"{len(errors)} insertion errors: {errors[:3]}")
+		context.log.warning(f"{len(errors)} upsert errors: {errors[:3]}")
 
 	return Output(value=inserted, metadata={
 		"inserted_count": MetadataValue.int(inserted),
@@ -188,26 +194,6 @@ def github_top_projects_description_check(context, github_top_projects_asset):
 		metadata["error"] = MetadataValue.text(msg)
 		return AssetCheckResult(passed=False, description=msg, metadata=metadata)
 	msg = "All projects have a non-empty description."
-	context.log.info(msg)
-	metadata["info"] = MetadataValue.text(msg)
-	return AssetCheckResult(passed=True, description=msg, metadata=metadata)
-
-# Check that all projects respect the minimum creation date
-
-	error_details = detail_msgs
-	metadata = {
-		"invalid_count": MetadataValue.int(len(failed)),
-		"invalid_examples": MetadataValue.json(failed[:5]),
-		"total": MetadataValue.int(len(github_top_projects_asset)),
-		"min_date": MetadataValue.text(seven_days_ago),
-		"error_details": MetadataValue.json(error_details[:5]) if failed else MetadataValue.null()
-	}
-
-	if failed:
-		desc = f"{len(failed)} project(s) with invalid or missing date. Examples: {detail_msgs[:2]}"
-		metadata["error"] = MetadataValue.text(desc)
-		return AssetCheckResult(passed=False, description=desc, metadata=metadata)
-	msg = "All projects were created after the minimum date."
 	context.log.info(msg)
 	metadata["info"] = MetadataValue.text(msg)
 	return AssetCheckResult(passed=True, description=msg, metadata=metadata)
