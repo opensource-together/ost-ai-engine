@@ -1,4 +1,8 @@
 import os
+import json
+import subprocess
+from contextlib import contextmanager
+
 from dagster import (
 	asset,
 	asset_check,
@@ -7,13 +11,26 @@ from dagster import (
 	MetadataValue,
 	Output
 )
-from src.dagster.config.github_mapping import (
-    GITHUB_TO_PROJECT_MAPPING
-)
-import subprocess
-import json
+
+from prisma import Prisma
+from src.dagster.config.config import PipelineConfig
+from src.dagster.config.github_mapping import GITHUB_TO_PROJECT_MAPPING
+
+env = os.environ.copy()
+config = PipelineConfig()
+env["GITHUB_SCRAPING_QUERY"] = config.github_scraping_query
+env["GITHUB_ACCESS_TOKEN"] = config.github_token
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
+
+@contextmanager
+def prisma_client():
+	prisma = Prisma()
+	prisma.connect()
+	try:
+		yield prisma
+	finally:
+		prisma.disconnect()
 
 # ========================================
 # GITHUB SCRAPER
@@ -25,11 +42,6 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 )
 def github_scraper_asset(context):
 	"""Run the GitHub Go scraper and emit results as metadata."""
-	from src.dagster.config.config import PipelineConfig
-	config = PipelineConfig()
-	env = os.environ.copy()
-	env["GITHUB_SCRAPING_QUERY"] = config.github_scraping_query
-	env["GITHUB_ACCESS_TOKEN"] = config.github_token
 	context.log.info(f"GITHUB_SCRAPING_QUERY transmis au process Go: '{env['GITHUB_SCRAPING_QUERY']}'")
 	try:
 		result = subprocess.run([
@@ -68,8 +80,6 @@ def github_scraper_asset(context):
 )
 def github_top_projects_asset(context, github_scraper_asset):
 	"""Ranks projects by stars and keeps only the top N (configurable)."""
-	from src.dagster.config.config import PipelineConfig
-	config = PipelineConfig()
 	top_n = config.github_top_n
 	if not github_scraper_asset or not isinstance(github_scraper_asset, list):
 		context.log.warning("No projects to rank.")
@@ -137,30 +147,27 @@ def github_mapping_asset(context, github_top_projects_asset):
 	ins={"github_mapping_asset": AssetIn()}
 )
 def github_to_db_asset(context, github_mapping_asset):
-	"""Upserts mapped projects into the Project table using the Prisma Python client (based on repoUrl)."""
-	from prisma import Prisma
-	prisma = Prisma()
-	prisma.connect()
+	"""Inserts mapped projects into the Project table using the Prisma Python client (based on repoUrl)."""
 	inserted = 0
 	errors = []
-	for i, project in enumerate(github_mapping_asset):
-		repo_url = project.get("repoUrl")
-		if not repo_url:
-			context.log.warning(f"Skipping project {i}: missing repoUrl (required for upsert).")
-			errors.append((i, "missing_repoUrl"))
-			continue
-		try:
-			project_data = {k: v for k, v in project.items() if v is not None}
-			# Insert only new projects (no update)
-			prisma.project.create(data=project_data)
-			inserted += 1
-		except Exception as e:
-			context.log.error(f"Error upserting project {i} (repoUrl={repo_url}): {e}")
-			errors.append((i, str(e)))
-	prisma.disconnect()
-	context.log.info(f"{inserted} projects upserted into the Project table.")
+	with prisma_client() as prisma:
+		for i, project in enumerate(github_mapping_asset):
+			repo_url = project.get("repoUrl")
+			if not repo_url:
+				context.log.warning(f"Skipping project {i}: missing repoUrl (required for insert).")
+				errors.append((i, "missing_repoUrl"))
+				continue
+			try:
+				project_data = {k: v for k, v in project.items() if v is not None}
+				# Insert only new projects (no update)
+				prisma.project.create(data=project_data)
+				inserted += 1
+			except Exception as e:
+				context.log.error(f"Error inserting project {i} (repoUrl={repo_url}): {e}")
+				errors.append((i, str(e)))
+	context.log.info(f"{inserted} projects inserted into the Project table.")
 	if errors:
-		context.log.warning(f"{len(errors)} upsert errors: {errors[:3]}")
+		context.log.warning(f"{len(errors)} insert errors: {errors[:3]}")
 
 	return Output(value=inserted, metadata={
 		"inserted_count": MetadataValue.int(inserted),
@@ -327,11 +334,8 @@ def github_to_db_error_check(context, github_to_db_asset):
 @asset_check(asset=github_to_db_asset, name="github_to_db_consistency_check", additional_ins={"github_mapping_asset": AssetIn()})
 def github_to_db_consistency_check(context, github_to_db_asset, github_mapping_asset):
 	"""Checks that the inserted projects actually exist in the database (simple count)."""
-	from prisma import Prisma
-	prisma = Prisma()
-	prisma.connect()
-	db_count = prisma.project.count()
-	prisma.disconnect()
+	with prisma_client() as prisma:
+		db_count = prisma.project.count()
 	expected = len(github_mapping_asset)
 	metadata = {
 		"db_count": MetadataValue.int(db_count),
@@ -349,11 +353,8 @@ def github_to_db_consistency_check(context, github_to_db_asset, github_mapping_a
 @asset_check(asset=github_to_db_asset, name="github_to_db_uniqueness_check")
 def github_to_db_uniqueness_check(context):
 	"""Checks the uniqueness of repoUrl in the database."""
-	from prisma import Prisma
-	prisma = Prisma()
-	prisma.connect()
-	projects = prisma.project.find_many()
-	prisma.disconnect()
+	with prisma_client() as prisma:
+		projects = prisma.project.find_many()
 	repo_urls = [p.repoUrl for p in projects if hasattr(p, "repoUrl") and p.repoUrl]
 	metadata = {
 		"repoUrl_count": MetadataValue.int(len(repo_urls)),
@@ -371,11 +372,8 @@ def github_to_db_uniqueness_check(context):
 @asset_check(asset=github_to_db_asset, name="github_to_db_mapping_match_check", additional_ins={"github_mapping_asset": AssetIn()})
 def github_to_db_mapping_match_check(context, github_mapping_asset):
 	"""Checks that the fields inserted in the database match those from the mapping (simple check on title/repoUrl)."""
-	from prisma import Prisma
-	prisma = Prisma()
-	prisma.connect()
-	db_projects = prisma.project.find_many()
-	prisma.disconnect()
+	with prisma_client() as prisma:
+		db_projects = prisma.project.find_many()
 	mapping_titles = set(p["title"] for p in github_mapping_asset if "title" in p)
 	db_titles = set(p.title for p in db_projects if hasattr(p, "title"))
 	missing = mapping_titles - db_titles
