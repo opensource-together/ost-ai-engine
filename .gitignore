@@ -154,8 +154,8 @@ turbo.json
 # Go binaries
 src/infrastructure/services/go/github/scraper
 src/infrastructure/services/go/gitlab/scraper
-./github-scraper
-./gitlab-scraper
+github-scraper
+gitlab-scraper
 
 # Local git backups
 **/.git_backups/**
