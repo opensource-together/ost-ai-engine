@@ -21,10 +21,10 @@ GITLAB_ACCESS_TOKEN: your_gitlab_token_here
 
 # GitHub scraping query (see GitHub Search API docs)
 # Example: stars:>100 stars:<500 created:>=YYYY-MM-DD is:public archived:false
-GITHUB_SCRAPING_QUERY: stars:>100 stars:<500 created:>=YYYY-MM-DD is:public archived:false
+GITHUB_SCRAPING_QUERY: stars:>0 stars:<10000 created:>=YYYY-MM-DD is:public archived:false
 
 # Cron schedule for GitHub scraper Dagster job
-GITHUB_SCRAPER_CRON: 0 */6 * * *
+GITHUB_SCRAPER_CRON: 0 * * * *
 
 # Number of top GitHub projects to fetch (integer)
 GITHUB_TOP_N: 30
