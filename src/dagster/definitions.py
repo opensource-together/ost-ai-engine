@@ -1,4 +1,5 @@
 from dagster import Definitions, ScheduleDefinition, define_asset_job
+from .config.config import PipelineConfig
 from .assets import (
     github_scraper_asset,
     github_mapping_asset,
@@ -32,7 +33,7 @@ github_scraper_job = define_asset_job(
 
 github_scraper_schedule = ScheduleDefinition(
     job=github_scraper_job,
-    cron_schedule="* * * * *",  # every minute
+    cron_schedule=PipelineConfig.github_scraper_cron,
 )
 
 defs = Definitions(
