@@ -29,7 +29,6 @@ RUN pip install poetry
 # Set workdir
 WORKDIR /app
 
-
 # Copy Python dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root --only main
