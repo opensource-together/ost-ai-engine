@@ -5,7 +5,6 @@ from .assets import (
     github_top_projects_asset,
     github_to_db_asset,
     github_top_projects_description_check,
-    github_top_projects_date_check,
     github_mapping_type_check,
     github_mapping_required_fields_check,
     github_mapping_duplicate_url_check,
@@ -45,7 +44,6 @@ defs = Definitions(
     ],
     asset_checks=[
         github_top_projects_description_check,
-        github_top_projects_date_check,
         github_mapping_type_check,
         github_mapping_required_fields_check,
         github_mapping_duplicate_url_check,

@@ -1,5 +1,4 @@
 import os
-<<<<<<< HEAD
 from dagster import (
 	asset,
 	asset_check,
@@ -11,9 +10,6 @@ from dagster import (
 from src.dagster.config.github_mapping import (
     GITHUB_TO_PROJECT_MAPPING
 )
-=======
-from dagster import asset, MetadataValue, Output
->>>>>>> a1482bf (dagster: refactor asset config access (context.op_config), robust error handling, and Go env passing)
 import subprocess
 import json
 
@@ -22,7 +18,6 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 # ========================================
 # GITHUB SCRAPER
 # ========================================
-<<<<<<< HEAD
 
 @asset(
 	kinds={"go", "github"},
@@ -40,22 +35,6 @@ def github_scraper_asset(context):
 		result = subprocess.run([
 			"/app/github-scraper"
 		], capture_output=True, text=True, check=True, env=env, cwd="/app")
-=======
-@asset(
-    kinds={"go", "github"},
-    owners=DEFAULT_OWNERS,
-    config_schema={"env_file": str}
-)
-def github_scraper_asset(context):
-	"""Run the GitHub Go scraper and emit results as metadata."""
-	env_file = context.op_config["env_file"]
-	env = os.environ.copy()
-	env["ENV_PATH"] = env_file
-	try:
-		result = subprocess.run([
-			"go", "run", "src/infrastructure/services/go/github/main.go"
-		], capture_output=True, text=True, check=True, env=env)
->>>>>>> a1482bf (dagster: refactor asset config access (context.op_config), robust error handling, and Go env passing)
 		stdout = result.stdout.strip()
 		context.log.info(f"GitHub scraper raw output: {stdout[:500]}")
 		parsed = json.loads(stdout)
@@ -79,7 +58,6 @@ def github_scraper_asset(context):
 		context.log.error(err_msg)
 		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(err_msg)})
 	except Exception as e:
-<<<<<<< HEAD
 		context.log.error(f"GitHub scraper error: {e}")
 		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
@@ -183,10 +161,6 @@ def github_to_db_asset(context, github_mapping_asset):
 		"error_count": MetadataValue.int(len(errors)),
 		"first_error": MetadataValue.text(errors[0][1]) if errors else MetadataValue.null()
 	})
-=======
-		context.log.error(f"Erreur exécution scraper GitHub: {e}")
-		return Output(value=[], metadata={"count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
->>>>>>> a1482bf (dagster: refactor asset config access (context.op_config), robust error handling, and Go env passing)
 
 # ========================================
 # CHECKS
