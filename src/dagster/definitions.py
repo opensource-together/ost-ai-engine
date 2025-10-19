@@ -1,4 +1,4 @@
-from dagster import Definitions, ScheduleDefinition, define_asset_job
+from dagster import Definitions, ScheduleDefinition, DefaultScheduleStatus, define_asset_job
 from .config.config import PipelineConfig
 from .assets import (
     github_scraper_asset,
@@ -32,8 +32,10 @@ github_scraper_job = define_asset_job(
 )
 
 github_scraper_schedule = ScheduleDefinition(
+    name="github_scraper_schedule",
     job=github_scraper_job,
-    cron_schedule=PipelineConfig.github_scraper_cron,
+    cron_schedule=PipelineConfig().github_scraper_cron,
+    default_status=DefaultScheduleStatus.RUNNING,  # auto-start on first load
 )
 
 defs = Definitions(
