@@ -27,7 +27,8 @@ type githubRepo struct {
 	DefaultBr   *string `json:"default_branch"`
 	Private     *bool   `json:"private"`
 	Owner       *struct {
-		Login string `json:"login"`
+		Login     string  `json:"login"`
+		AvatarURL *string `json:"avatar_url"`
 	} `json:"owner"`
 	CreatedAt string `json:"created_at"`
 	UpdatedAt string `json:"updated_at"`
