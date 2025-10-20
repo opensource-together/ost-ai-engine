@@ -17,6 +17,7 @@ seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
 database_url = os.getenv("DATABASE_URL", "postgresql://dbuser:dbpwd@host:5432/dbname")
 
 # GitHub
+github_api_url = os.getenv("GITHUB_API_URL", "https://api.github.com/search/repositories")
 github_access_token = os.getenv("GITHUB_ACCESS_TOKEN", "your_github_token_here")
 github_scraping_query = os.getenv(
     "GITHUB_SCRAPING_QUERY",
@@ -49,12 +50,14 @@ with open(dest_path, "w") as f:
 DATABASE_URL: "{database_url}"
 
 # # GitHub configuration
+GITHUB_API_URL: {github_api_url}
 GITHUB_ACCESS_TOKEN: "{github_access_token}"
 GITHUB_SCRAPING_QUERY: {github_scraping_query}
 GITHUB_SCRAPER_CRON: "{github_scraper_cron}"
 GITHUB_TOP_N: {github_top_n}
 
 # GitLab configuration
+GITLAB_API_URL: {gitlab_api_url}
 GITLAB_ACCESS_TOKEN: "{gitlab_access_token}"
 GITLAB_PROJECTS_VISIBILITY: {gitlab_projects_visibility}
 GITLAB_PROJECTS_ARCHIVED: {gitlab_projects_archived}
@@ -62,7 +65,6 @@ GITLAB_PROJECTS_ORDER_BY: {gitlab_projects_order_by}
 GITLAB_PROJECTS_SORT: {gitlab_projects_sort}
 GITLAB_SCRAPING_QUERY: {gitlab_scraping_query}
 GITLAB_TOP_N: {gitlab_top_n}
-GITLAB_API_URL: {gitlab_api_url}
 
 # ───────────────────────────────────────────────────────── #
 """)
