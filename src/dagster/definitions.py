@@ -14,6 +14,7 @@ from .assets import (
     github_to_db_consistency_check,
     github_to_db_uniqueness_check,
     github_to_db_mapping_match_check,
+    gitlab_scraper_asset,
 )
 
 github_scraper_job = define_asset_job(
@@ -43,7 +44,8 @@ defs = Definitions(
         github_scraper_asset,
         github_top_projects_asset,
         github_mapping_asset,
-        github_to_db_asset
+        github_to_db_asset,
+        gitlab_scraper_asset
     ],
     asset_checks=[
         github_top_projects_description_check,

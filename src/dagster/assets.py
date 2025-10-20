@@ -15,11 +15,22 @@ from dagster import (
 from prisma import Prisma
 from src.dagster.config.config import PipelineConfig
 from src.dagster.config.github_mapping import GITHUB_TO_PROJECT_MAPPING
+from src.dagster.config.gitlab_mapping import GITLAB_TO_PROJECT_MAPPING
 
 env = os.environ.copy()
 config = PipelineConfig()
+
+1# GitHub
 env["GITHUB_SCRAPING_QUERY"] = config.github_scraping_query
 env["GITHUB_ACCESS_TOKEN"] = config.github_token
+
+# GitLab
+env["GITLAB_SCRAPING_QUERY"] = config.gitlab_scraping_query
+env["GITLAB_ACCESS_TOKEN"] = config.gitlab_token
+env["GITLAB_PROJECTS_VISIBILITY"] = getattr(config, "gitlab_projects_visibility", "public")
+env["GITLAB_PROJECTS_ARCHIVED"] = str(getattr(config, "gitlab_projects_archived", "false"))
+env["GITLAB_PROJECTS_ORDER_BY"] = getattr(config, "gitlab_projects_order_by", "created_at")
+env["GITLAB_PROJECTS_SORT"] = getattr(config, "gitlab_projects_sort", "desc")
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -174,6 +185,48 @@ def github_to_db_asset(context, github_mapping_asset):
 		"error_count": MetadataValue.int(len(errors)),
 		"first_error": MetadataValue.text(errors[0][1]) if errors else MetadataValue.null()
 	})
+
+# ========================================
+# GITLAB SCRAPER
+# ========================================
+
+@asset(
+	kinds={"go", "gitlab"},
+	owners=DEFAULT_OWNERS
+)
+def gitlab_scraper_asset(context):
+	"""Run the GitLab Go scraper and emit results as metadata."""
+	context.log.info(f"GITLAB_SCRAPING_QUERY transmis au process Go: '{env['GITLAB_SCRAPING_QUERY']}'")
+	context.log.info(f"GITLAB_PROJECTS_VISIBILITY: {env['GITLAB_PROJECTS_VISIBILITY']}, ARCHIVED: {env['GITLAB_PROJECTS_ARCHIVED']}, ORDER_BY: {env['GITLAB_PROJECTS_ORDER_BY']}, SORT: {env['GITLAB_PROJECTS_SORT']}")
+	try:
+		result = subprocess.run([
+			"/app/gitlab-scraper"
+		], capture_output=True, text=True, check=True, env=env, cwd="/app")
+		stdout = result.stdout.strip()
+		context.log.info(f"GitLab scraper raw output: {stdout[:500]}")
+		parsed = json.loads(stdout)
+		if isinstance(parsed, dict) and "items" in parsed:
+			projects = parsed["items"]
+		elif isinstance(parsed, list):
+			projects = parsed
+		else:
+			projects = []
+		count = len(projects)
+		context.log.info(f"[DEBUG] gitlab_scraper_asset: {count} projects scraped. Example: {projects[:1]}")
+		return Output(
+			value=projects,
+			metadata={
+				"project_count": MetadataValue.int(count),
+				"first_project": MetadataValue.json(projects[:1]) if projects else MetadataValue.null()
+			}
+		)
+	except subprocess.CalledProcessError as e:
+		err_msg = f"GitLab scraper error: {e}\nSTDERR: {e.stderr.strip()}"
+		context.log.error(err_msg)
+		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(err_msg)})
+	except Exception as e:
+		context.log.error(f"GitLab scraper error: {e}")
+		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 # ========================================
 # CHECKS
