@@ -1,4 +1,3 @@
-
 # Mapping between GitHub scraper fields and the Project model from Prisma schema
 # Adapt the keys/values according to your needs and the structure of the scraper data.
 
