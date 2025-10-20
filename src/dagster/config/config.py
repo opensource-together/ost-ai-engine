@@ -44,6 +44,11 @@ class PipelineConfig(Config):
         description="Number of top GitHub repos to fetch per run"
     )
 
+    github_api_url: str = Field(
+        default=config_yaml.get("GITHUB_API_URL", ""),
+        description="GitHub API URL (required, e.g. https://api.github.com/search/repositories)"
+    )
+
     # GITLAB
     gitlab_token: str = Field(
         default=config_yaml.get("GITLAB_ACCESS_TOKEN", ""),
