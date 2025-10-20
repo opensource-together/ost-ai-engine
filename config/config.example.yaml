@@ -9,23 +9,26 @@
 ############################################################
 
 # ───────────────────────────────────────────────────────── #
+
 # PostgreSQL database connection URL
-# Format: postgresql://user:pass@host:port/dbname
-DATABASE_URL: "postgresql://user:pass@host:port/dbname"
 
-# GitHub access token (create a token at https://github.com/settings/tokens)
+DATABASE_URL: "postgresql://user:pass@host:5432/dbname"
+
+# # GitHub configuration
+
 GITHUB_ACCESS_TOKEN: "your_github_token_here"
-
-# GitLab access token (create a token at https://gitlab.com/-/profile/personal_access_tokens)
-GITLAB_ACCESS_TOKEN: "your_gitlab_token_here"
-
-# GitHub scraping query (see GitHub Search API docs)
-# Example: stars:>100 stars:<500 created:>=YYYY-MM-DD is:public archived:false
-GITHUB_SCRAPING_QUERY: "stars:>0 stars:<10000 created:>=YYYY-MM-DD is:public archived:false"
-
-# Cron schedule for GitHub scraper Dagster job
+GITHUB_SCRAPING_QUERY: stars:>100 stars:<500 created:>=YYYY-MM-DD is:public archived:false
 GITHUB_SCRAPER_CRON: "0 * * * *"
-
-# Number of top GitHub projects to fetch (integer)
 GITHUB_TOP_N: 30
+
+# GitLab configuration
+
+GITLAB_ACCESS_TOKEN: "your_gitlab_token_here"
+GITLAB_PROJECTS_VISIBILITY: public
+GITLAB_PROJECTS_ARCHIVED: false
+GITLAB_PROJECTS_ORDER_BY: created_at
+GITLAB_PROJECTS_SORT: desc
+GITLAB_SCRAPING_QUERY: opensource
+GITLAB_TOP_N: 30
+
 # ───────────────────────────────────────────────────────── #
