@@ -46,8 +46,8 @@ RUN poetry run prisma generate
 
 # Compile Go scrapers (ARM64)
 ENV GOARCH=arm64
-RUN cd src/infrastructure/services/go/github && go build -o /app/github-scraper main.go
-RUN cd src/infrastructure/services/go/gitlab && go build -o /app/gitlab-scraper main.go
+RUN cd src/services/go/github && go build -o /app/github-scraper main.go
+RUN cd src/services/go/gitlab && go build -o /app/gitlab-scraper main.go
 
 # Set Dagster home
 ENV DAGSTER_HOME=/app/src/dagster
