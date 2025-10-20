@@ -171,6 +171,7 @@ model ProjectCategory {
 model Project {
   id          String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   title       String
+  githubLogin String?
   description String?
   repoUrl     String?
   provider    Provider
@@ -185,7 +186,7 @@ model Project {
   techStacks  ProjectTechStack[]
   categories  ProjectCategory[]
   ownerId     String?            @db.Uuid
-  owner       User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  ownerOst    User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   logoUrl     String?
   imagesUrls  String[]
   createdAt   DateTime           @default(now())
