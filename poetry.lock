@@ -705,10 +705,7 @@ tomli = "<3"
 toposort = ">=1.0"
 tqdm = "<5"
 tzdata = "*"
-universal_pathlib = [
-    {version = "*", markers = "python_version < \"3.12\""},
-    {version = ">=0.2.0", markers = "python_version >= \"3.12\""},
-]
+universal_pathlib = {version = "*", markers = "python_version < \"3.12\""}
 watchdog = ">=0.8.3,<7"
 
 [package.extras]
@@ -1069,6 +1066,20 @@ files = [
     {file = "docutils-0.21.2-py3-none-any.whl", hash = "sha256:dafca5b9e384f0e419294eb4d2ff9fa826435bf15f15b7bd45723e8ad76811b2"},
     {file = "docutils-0.21.2.tar.gz", hash = "sha256:3a6b18732edf182daa3cd12775bbb338cf5691468f91eeeb109deff6ebfa986f"},
 ]
+
+[[package]]
+name = "dotenv"
+version = "0.9.9"
+description = "Deprecated package"
+optional = false
+python-versions = "*"
+groups = ["main"]
+files = [
+    {file = "dotenv-0.9.9-py2.py3-none-any.whl", hash = "sha256:29cf74a087b31dafdb5a446b6d7e11cbce8ed2741540e2339c69fbef92c94ce9"},
+]
+
+[package.dependencies]
+python-dotenv = "*"
 
 [[package]]
 name = "dparse"
@@ -2403,10 +2414,7 @@ files = [
 ]
 
 [package.dependencies]
-numpy = [
-    {version = ">=1.23.2", markers = "python_version == \"3.11\""},
-    {version = ">=1.26.0", markers = "python_version >= \"3.12\""},
-]
+numpy = {version = ">=1.23.2", markers = "python_version == \"3.11\""}
 python-dateutil = ">=2.8.2"
 pytz = ">=2020.1"
 tzdata = ">=2022.7"
@@ -4865,5 +4873,5 @@ type = ["pytest-mypy"]
 
 [metadata]
 lock-version = "2.1"
-python-versions = ">=3.11,<3.14"
-content-hash = "79697b720fbd42c709f512ff49f79acf6b2342a39f9fd70453f05026f722aa75"
+python-versions = ">=3.11,<3.12"
+content-hash = "d6e97520998dc208785890ec12adcbf1fb96d8634fc9fd306205547688532245"
