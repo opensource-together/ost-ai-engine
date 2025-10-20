@@ -7,7 +7,7 @@ import (
     "gopkg.in/yaml.v3"
     "io/ioutil"
     "github.com/joho/godotenv"
-    "github.com/xanzy/go-gitlab"
+    gitlab "gitlab.com/gitlab-org/api/client-go"
 )
 
 func main() {
@@ -48,41 +48,39 @@ func main() {
     }
 
     // Initialize GitLab client
-    var git *gitlab.Client
+
+
+    client := gitlab.NewClient(nil, token)
     if config.GitLabApiUrl != "" {
-        git, err = gitlab.NewClient(token, gitlab.WithBaseURL(config.GitLabApiUrl))
-    } else {
-        git, err = gitlab.NewClient(token)
-    }
-    if err != nil {
-        log.Fatalf("Failed to create GitLab client: %v", err)
+        if err := client.SetBaseURL(config.GitLabApiUrl); err != nil {
+            log.Fatalf("Failed to set GitLab API URL: %v", err)
+        }
     }
 
     // Prepare search options from config
-    opt := &gitlab.ListProjectsOptions{
-        Visibility: gitlab.Visibility(config.GitLabProjectsVisibility),
-        OrderBy:    gitlab.String(config.GitLabProjectsOrderBy),
-        Sort:       gitlab.String(config.GitLabProjectsSort),
-        ListOptions: gitlab.ListOptions{
-            Page:    1,
-            PerPage: 100,
-        },
-    }
-    // Handle archived (string to bool)
+
+    // Prépare les options de recherche
+
+    archived := false
     if config.GitLabProjectsArchived == "true" {
-        opt.Archived = gitlab.Bool(true)
-    } else {
-        opt.Archived = gitlab.Bool(false)
+        archived = true
     }
-    // If a search query is provided
-    if config.GitLabScrapingQuery != "" && config.GitLabScrapingQuery != "default" {
-        opt.Search = gitlab.String(config.GitLabScrapingQuery)
+
+    opt := &gitlab.ListProjectsOptions{
+        OrderBy:    config.GitLabProjectsOrderBy,
+        Sort:       config.GitLabProjectsSort,
+        Search:     config.GitLabScrapingQuery,
+        Archived:   archived,
+        // Ajoute Visibility si le champ existe dans la doc du nouveau client
+        // Visibility: config.GitLabProjectsVisibility,
     }
 
     var allProjects []*gitlab.Project
     collected := 0
+    page := 1
     for collected < maxProjects {
-        projects, resp, err := git.Projects.ListProjects(opt)
+        opt.Page = page
+        projects, resp, err := client.Projects.ListProjects(opt)
         if err != nil {
             log.Fatalf("GitLab API error: %v", err)
         }
@@ -91,13 +89,13 @@ func main() {
         }
         allProjects = append(allProjects, projects...)
         collected += len(projects)
-        if resp.NextPage == 0 {
+        if resp == nil || resp.NextPage == 0 {
             break
         }
-        opt.Page = resp.NextPage
+        page = resp.NextPage
     }
 
-    // Truncate if too many projects
+    // Troncature si trop de projets
     if len(allProjects) > maxProjects {
         allProjects = allProjects[:maxProjects]
     }
