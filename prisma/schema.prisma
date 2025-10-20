@@ -171,7 +171,6 @@ model ProjectCategory {
 model Project {
   id             String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   title          String
-  githubUsername String?
   description    String?
   repoUrl        String?
   provider       Provider
