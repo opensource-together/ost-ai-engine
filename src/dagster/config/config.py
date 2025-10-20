@@ -6,10 +6,12 @@ import yaml
 from dotenv import load_dotenv
 from dagster import Config
 from pydantic import Field
+from pathlib import Path
 
 load_dotenv()
 
-CONFIG_YAML_PATH = os.getenv("OST_CONFIG_PATH", os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(__file__))), "config", "config.yaml"))
+CONFIG_YAML_PATH = Path(os.getenv("OST_CONFIG_PATH") or Path(__file__).resolve().parents[2] / "config" / "config.yaml")
+
 with open(CONFIG_YAML_PATH, "r") as f:
     config_yaml = yaml.safe_load(f)    
 class PipelineConfig(Config):
@@ -17,17 +19,17 @@ class PipelineConfig(Config):
     Central configuration for the Dagster pipeline.
     All secrets and connection info are loaded from config/config.yaml.
     """
+
+    # ENV
     db_url: str = Field(
         default=config_yaml.get("DATABASE_URL", ""),
         description="Database connection string (e.g. postgresql://user:pass@host:port/dbname)"
     )
+
+    # GITHUB
     github_token: str = Field(
         default=config_yaml.get("GITHUB_ACCESS_TOKEN", ""),
         description="GitHub API access token"
-    )
-    gitlab_token: str = Field(
-        default=config_yaml.get("GITLAB_ACCESS_TOKEN", ""),
-        description="GitLab API access token"
     )
     github_scraping_query: str = Field(
         default=config_yaml.get("GITHUB_SCRAPING_QUERY", ""),
@@ -40,4 +42,34 @@ class PipelineConfig(Config):
     github_top_n: int = Field(
         default=config_yaml.get("GITHUB_TOP_N", 30),
         description="Number of top GitHub repos to fetch per run"
+    )
+
+    # GITLAB
+    gitlab_token: str = Field(
+        default=config_yaml.get("GITLAB_ACCESS_TOKEN", ""),
+        description="GitLab API access token"
+    )
+    gitlab_scraping_query: str = Field(
+        default=config_yaml.get("GITLAB_SCRAPING_QUERY", ""),
+        description="GitLab scraper parameter query (keyword)"
+    )
+    gitlab_projects_visibility: str = Field(
+        default=config_yaml.get("GITLAB_PROJECTS_VISIBILITY", "public"),
+        description="GitLab projects visibility (public/private/internal)"
+    )
+    gitlab_projects_archived: str = Field(
+        default=config_yaml.get("GITLAB_PROJECTS_ARCHIVED", "false"),
+        description="GitLab projects archived (true/false)"
+    )
+    gitlab_projects_order_by: str = Field(
+        default=config_yaml.get("GITLAB_PROJECTS_ORDER_BY", "created_at"),
+        description="GitLab projects order_by (created_at, updated_at, etc.)"
+    )
+    gitlab_projects_sort: str = Field(
+        default=config_yaml.get("GITLAB_PROJECTS_SORT", "desc"),
+        description="GitLab projects sort (asc/desc)"
+    )
+    gitlab_top_n: int = Field(
+        default=config_yaml.get("GITLAB_TOP_N", 30),
+        description="Number of top GitLab repos to fetch per run"
     )
