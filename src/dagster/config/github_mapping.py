@@ -3,6 +3,7 @@
 # Adapt the keys/values according to your needs and the structure of the scraper data.
 
 GITHUB_TO_PROJECT_MAPPING = {
+	"ownerLogin": "owner.login",        # Owner login
 	"title": "name",                    # GitHub repo name
 	"description": "description",       # Repo description
 	"repoUrl": "html_url",  			# GitHub URL (repoUrl = html_url)
