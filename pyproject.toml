@@ -1,14 +1,14 @@
 
 [tool.poetry]
-name = "data-engine"
+name = "ost-ai-engine"
 version = "1.0.0"
-description = "Data Engine for GitHub repository analysis and recommendations"
+description = "Recommender-system of OST, AI powered."
 readme = "README.md"
-authors = ["spideystreet <dhicham.pro@gmail.com>"]
+authors = ["spideyai_X <dhicham.pro@gmail.com>"]
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.13,<3.14"
+python = ">=3.11,<3.12"
 sqlalchemy = "^2.0.41"
 psycopg2-binary = "^2.9.10"
 pandas = "^2.3.0"

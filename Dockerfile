@@ -1,7 +1,7 @@
 # ========================================
 # OST AI ENGINE - DAGSTER + GO DOCKERFILE
 # ========================================
-FROM python:3.13-slim AS base
+FROM python:3.11-slim AS base
 
 # Install system dependencies
 RUN apt-get update && \
