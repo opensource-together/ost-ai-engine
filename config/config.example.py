@@ -12,7 +12,6 @@ in the GitHub query. Do not use in production.
 import os
 from datetime import date, timedelta
 
-today = date.today().isoformat()
 seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
 
 # General
