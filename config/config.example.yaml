@@ -23,6 +23,7 @@ GITHUB_TOP_N: 30
 
 # GitLab configuration
 
+GITLAB_API_URL: https://gitlab.com/api/v4
 GITLAB_ACCESS_TOKEN: "your_gitlab_token_here"
 GITLAB_PROJECTS_VISIBILITY: public
 GITLAB_PROJECTS_ARCHIVED: false

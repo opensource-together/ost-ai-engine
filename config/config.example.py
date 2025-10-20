@@ -8,7 +8,6 @@ Uses placeholders (no secrets) and a dynamic seven_days_ago
 in the GitHub query. Do not use in production.
 """
 
-
 import os
 from datetime import date, timedelta
 
@@ -27,6 +26,7 @@ github_scraper_cron = os.getenv("GITHUB_SCRAPER_CRON", "0 * * * *")
 github_top_n = int(os.getenv("GITHUB_TOP_N", "30"))
 
 # GitLab
+gitlab_api_url = os.getenv("GITLAB_API_URL", "https://gitlab.com/api/v4")
 gitlab_access_token = os.getenv("GITLAB_ACCESS_TOKEN", "your_gitlab_token_here")
 gitlab_scraping_query = os.getenv("GITLAB_SCRAPING_QUERY", "opensource")
 gitlab_projects_visibility = os.getenv("GITLAB_PROJECTS_VISIBILITY", "public")
@@ -62,6 +62,7 @@ GITLAB_PROJECTS_ORDER_BY: {gitlab_projects_order_by}
 GITLAB_PROJECTS_SORT: {gitlab_projects_sort}
 GITLAB_SCRAPING_QUERY: {gitlab_scraping_query}
 GITLAB_TOP_N: {gitlab_top_n}
+GITLAB_API_URL: {gitlab_api_url}
 
 # ───────────────────────────────────────────────────────── #
 """)
