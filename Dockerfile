@@ -1,56 +1,76 @@
 # ========================================
 # OST AI ENGINE - DAGSTER + GO DOCKERFILE
 # ========================================
-FROM python:3.11-slim AS base
+FROM python:3.11-slim AS builder
 
-# Install system dependencies
+# Install build-time system dependencies
+# libpq-dev is needed to build psycopg2, git/curl might be needed by poetry
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
-        git \
-        curl \
-        ca-certificates \
         gcc \
         libpq-dev \
-        wget \
-        unzip \
-    && rm -rf /var/lib/apt/lists/*
+        git \
+        curl
 
-# Install Go (for Go scrapers)
-ENV GO_VERSION=1.22.3
-RUN wget https://go.dev/dl/go${GO_VERSION}.linux-amd64.tar.gz && \
-    tar -C /usr/local -xzf go${GO_VERSION}.linux-amd64.tar.gz && \
-    rm go${GO_VERSION}.linux-amd64.tar.gz
-ENV PATH="/usr/local/go/bin:$PATH"
+RUN pip install poetry==2.2.1
 
-# Install Poetry
-RUN pip install poetry
-
-# Set workdir
 WORKDIR /app
 
-# Copy environment variables
-COPY .env .env
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
-# Copy Python dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root --only main
 
-# Copy all source code (Python + Go)
 COPY src/ src/
 COPY prisma/ prisma/
+
+# Génère le client Prisma Python
 RUN poetry run prisma generate
 
-# Copy centralized config (YAML + scripts)
-COPY config/ config/
 
-# Compile Go scrapers (ARM64)
-ENV GOARCH=arm64
-RUN cd src/services/go/github && go build -o /app/github-scraper main.go
-RUN cd src/services/go/gitlab && go build -o /app/gitlab-scraper main.go
+FROM golang:1.25.3-alpine AS go-builder
 
-# Set Dagster home
+WORKDIR /go
+
+# Copy only the Go source code needed for the scraper
+COPY src/services/go/github/ ./github/
+COPY src/services/go/gitlab/ ./gitlab/
+
+RUN cd ./github && go build -o /go/github-scraper main.go
+RUN cd ./gitlab && go build -o /go/gitlab-scraper main.go
+
+
+FROM python:3.11-slim AS production
+
+# libpq5 is the runtime library for PostgreSQL
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        libpq5 \
+    && rm -rf /var/lib/apt/lists/*
+    
+WORKDIR /app
+
+ENV PROJECT_ROOT=.
+ENV CFG_PATH=config/cfg.py
 ENV DAGSTER_HOME=/app/src/dagster
 
-# Expose Dagster UI port
+RUN addgroup --system app && adduser --system --group app
+
+COPY --chown=app:app docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+RUN mkdir config/ && chown app:app config
+COPY --chown=app:app src/dagster/config/ src/dagster/config
+COPY --from=builder --chown=app:app /app/.venv .venv
+COPY --from=builder --chown=app:app /app/src src
+COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
+COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
+
+ENV PATH="/app/.venv/bin:$PATH"
+
+USER app
+
 EXPOSE 3000
+
+ENTRYPOINT [ "/app/docker-entrypoint.sh" ]
+CMD ["dagster", "dev", "-m", "src.dagster.definitions", "--host", "0.0.0.0", "--port", "3000" ]

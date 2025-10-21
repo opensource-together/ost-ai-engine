@@ -139,6 +139,7 @@ src/models
 # Scripts (local-only for now)
 scripts/
 *.sh
+!docker-entrypoint.sh
 
 # DB test
 *.db
