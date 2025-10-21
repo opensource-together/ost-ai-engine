@@ -20,7 +20,7 @@ from src.dagster.config.gitlab_mapping import GITLAB_TO_PROJECT_MAPPING
 env = os.environ.copy()
 config = PipelineConfig()
 
-1# GitHub
+# GitHub
 env["GITHUB_SCRAPING_QUERY"] = config.github_scraping_query
 env["GITHUB_ACCESS_TOKEN"] = config.github_token
 
@@ -57,7 +57,7 @@ def github_scraper_asset(context):
 	try:
 		result = subprocess.run([
 			"/app/github-scraper"
-		], capture_output=True, text=True, check=True, env=env, cwd="/app")
+		], capture_output=True, text=True, check=True, env=env, cwd="/app", timeout=120)
 		stdout = result.stdout.strip()
 		context.log.info(f"GitHub scraper raw output: {stdout[:500]}")
 		parsed = json.loads(stdout)
@@ -201,7 +201,7 @@ def gitlab_scraper_asset(context):
 	try:
 		result = subprocess.run([
 			"/app/gitlab-scraper"
-		], capture_output=True, text=True, check=True, env=env, cwd="/app")
+		], capture_output=True, text=True, check=True, env=env, cwd="/app", timeout=120)
 		stdout = result.stdout.strip()
 		context.log.info(f"GitLab scraper raw output: {stdout[:500]}")
 		parsed = json.loads(stdout)
