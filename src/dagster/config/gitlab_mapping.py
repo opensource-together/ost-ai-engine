@@ -2,7 +2,6 @@
 # Adapt the keys/values according to your needs and the structure of the scraper data.
 
 GITLAB_TO_PROJECT_MAPPING = {
-    "githubUsername": "namespace.path",       # Namespace (group/user) identifier (GitLab equivalent)
     "title": "name",                          # Project name
     "description": "description",             # Project description
     "repoUrl": "web_url",                     # GitLab project URL
