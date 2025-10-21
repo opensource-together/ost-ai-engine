@@ -10,7 +10,7 @@ from pathlib import Path
 
 load_dotenv()
 
-CONFIG_YAML_PATH = Path(os.getenv("OST_CONFIG_PATH") or Path(__file__).resolve().parents[2] / "config" / "config.yaml")
+CONFIG_YAML_PATH = Path(os.getenv("OST_CONFIG_PATH") or Path(__file__).resolve().parents[3] / "config" / "config.yaml")
 
 with open(CONFIG_YAML_PATH, "r") as f:
     config_yaml = yaml.safe_load(f)    
