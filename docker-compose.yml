@@ -21,8 +21,18 @@ services:
       - .env
     depends_on:
       - postgres
+    command: poetry run dagster-daemon run
+  dagster-webserver:
+    build:
+      context: .
+    container_name: dagster-webserver
+    env_file:
+      - .env
+    depends_on:
+      - postgres
     ports:
       - "7778:3000"
+    command: poetry run dagster-webserver -h 0.0.0.0 -p 3000
 
 volumes:
   pgdata:

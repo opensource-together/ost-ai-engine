@@ -29,6 +29,9 @@ RUN pip install poetry
 # Set workdir
 WORKDIR /app
 
+# Copy environment variables
+COPY .env .env
+
 # Copy Python dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root --only main
@@ -36,13 +39,14 @@ RUN poetry install --no-root --only main
 # Copy all source code (Python + Go)
 COPY src/ src/
 COPY prisma/ prisma/
-COPY .env .env
+RUN poetry run prisma generate
 
 # Copy centralized config (YAML + scripts)
 COPY config/ config/
 
 # Génère le client Prisma Python
-RUN poetry run prisma generate
+COPY entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
 
 # Compile Go scrapers (ARM64)
 ENV GOARCH=arm64
@@ -55,5 +59,5 @@ ENV DAGSTER_HOME=/app/src/dagster
 # Expose Dagster UI port
 EXPOSE 3000
 
-# Entrypoint: launch Dagster daemon
-CMD ["poetry", "run", "dagster-daemon", "run"]
+# Entrypoint: launch Dagster daemon (and migrations)
+ENTRYPOINT ["/app/entrypoint.sh"]
