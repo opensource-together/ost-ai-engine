@@ -44,10 +44,6 @@ RUN poetry run prisma generate
 # Copy centralized config (YAML + scripts)
 COPY config/ config/
 
-# Génère le client Prisma Python
-COPY entrypoint.sh /app/entrypoint.sh
-RUN chmod +x /app/entrypoint.sh
-
 # Compile Go scrapers (ARM64)
 ENV GOARCH=arm64
 RUN cd src/services/go/github && go build -o /app/github-scraper main.go
@@ -58,6 +54,3 @@ ENV DAGSTER_HOME=/app/src/dagster
 
 # Expose Dagster UI port
 EXPOSE 3000
-
-# Entrypoint: launch Dagster daemon (and migrations)
-ENTRYPOINT ["/app/entrypoint.sh"]

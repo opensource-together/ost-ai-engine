@@ -13,15 +13,20 @@ services:
       - "7777:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
-  dagster:
+
+  dagster-daemon:
     build:
       context: .
-    container_name: dagster
+    container_name: dagster-daemon
     env_file:
       - .env
     depends_on:
       - postgres
+    volumes:
+      - dagster_history:/app/src/dagster/history
+      - dagster_compute_logs:/app/src/dagster/compute_logs
     command: poetry run dagster-daemon run
+
   dagster-webserver:
     build:
       context: .
@@ -32,7 +37,12 @@ services:
       - postgres
     ports:
       - "7778:3000"
+    volumes:
+      - dagster_history:/app/src/dagster/history
+      - dagster_compute_logs:/app/src/dagster/compute_logs
     command: poetry run dagster-webserver -h 0.0.0.0 -p 3000
 
 volumes:
   pgdata:
+  dagster_history:
+  dagster_compute_logs:
