@@ -13,9 +13,9 @@ from dagster import (
 )
 
 from prisma import Prisma
-from src.dagster.config.map_github import GITHUB_TO_PROJECT_MAPPING
-from src.dagster.config.map_gitlab import GITLAB_TO_PROJECT_MAPPING
+
 from src.dagster.config.cfg_resource import build_scraper_env
+from src.dagster.config.map.mapping_map import GITHUB_TO_PROJECT_MAPPING, GITLAB_TO_PROJECT_MAPPING
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
