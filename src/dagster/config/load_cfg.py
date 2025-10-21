@@ -1,6 +1,3 @@
-########################################
-# CONFIGURATION MODULE - OST AI ENGINE #
-########################################
 import os
 import yaml
 from dotenv import load_dotenv
@@ -10,14 +7,15 @@ from pathlib import Path
 
 load_dotenv()
 
-CONFIG_YAML_PATH = Path(os.getenv("OST_CONFIG_PATH") or Path(__file__).resolve().parents[3] / "config" / "config.yaml")
+CONFIG_YAML_PATH = Path(os.getenv("OST_CONFIG_PATH") or Path(__file__).resolve().parents[3] / "config" / "cfg.yaml")
 
 with open(CONFIG_YAML_PATH, "r") as f:
-    config_yaml = yaml.safe_load(f)    
+    config_yaml = yaml.safe_load(f)
+
 class PipelineConfig(Config):
     """
     Central configuration for the Dagster pipeline.
-    All secrets and connection info are loaded from config/config.yaml.
+    All secrets and connection info are loaded from config/cfg.yaml.
     """
 
     # ENV

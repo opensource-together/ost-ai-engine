@@ -13,24 +13,9 @@ from dagster import (
 )
 
 from prisma import Prisma
-from src.dagster.config.config import PipelineConfig
-from src.dagster.config.github_mapping import GITHUB_TO_PROJECT_MAPPING
-from src.dagster.config.gitlab_mapping import GITLAB_TO_PROJECT_MAPPING
-
-env = os.environ.copy()
-config = PipelineConfig()
-
-# GitHub
-env["GITHUB_SCRAPING_QUERY"] = config.github_scraping_query
-env["GITHUB_ACCESS_TOKEN"] = config.github_token
-
-# GitLab
-env["GITLAB_SCRAPING_QUERY"] = config.gitlab_scraping_query
-env["GITLAB_ACCESS_TOKEN"] = config.gitlab_token
-env["GITLAB_PROJECTS_VISIBILITY"] = getattr(config, "gitlab_projects_visibility", "public")
-env["GITLAB_PROJECTS_ARCHIVED"] = str(getattr(config, "gitlab_projects_archived", "false"))
-env["GITLAB_PROJECTS_ORDER_BY"] = getattr(config, "gitlab_projects_order_by", "created_at")
-env["GITLAB_PROJECTS_SORT"] = getattr(config, "gitlab_projects_sort", "desc")
+from src.dagster.config.map_github import GITHUB_TO_PROJECT_MAPPING
+from src.dagster.config.map_gitlab import GITLAB_TO_PROJECT_MAPPING
+from src.dagster.config.cfg_resource import build_scraper_env
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -49,11 +34,14 @@ def prisma_client():
 
 @asset(
 	kinds={"go", "github"},
-	owners=DEFAULT_OWNERS
+	owners=DEFAULT_OWNERS,
+	required_resource_keys={"config"}
 )
 def github_scraper_asset(context):
 	"""Run the GitHub Go scraper and emit results as metadata."""
-	context.log.info(f"GITHUB_SCRAPING_QUERY transmis au process Go: '{env['GITHUB_SCRAPING_QUERY']}'")
+	cfg = context.resources.config
+	env = build_scraper_env(cfg)
+	context.log.info(f"GITHUB_SCRAPING_QUERY to Go: '{env['GITHUB_SCRAPING_QUERY']}'")
 	try:
 		result = subprocess.run([
 			"/app/github-scraper"
@@ -87,11 +75,12 @@ def github_scraper_asset(context):
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"github_scraper_asset": AssetIn()}
+	ins={"github_scraper_asset": AssetIn()},
+	required_resource_keys={"config"}
 )
 def github_top_projects_asset(context, github_scraper_asset):
 	"""Ranks projects by stars and keeps only the top N (configurable)."""
-	top_n = config.github_top_n
+	top_n = context.resources.config.github_top_n
 	if not github_scraper_asset or not isinstance(github_scraper_asset, list):
 		context.log.warning("No projects to rank.")
 		return []
@@ -192,10 +181,13 @@ def github_to_db_asset(context, github_mapping_asset):
 
 @asset(
 	kinds={"go", "gitlab"},
-	owners=DEFAULT_OWNERS
+	owners=DEFAULT_OWNERS,
+	required_resource_keys={"config"}
 )
 def gitlab_scraper_asset(context):
 	"""Run the GitLab Go scraper and emit results as metadata."""
+	cfg = context.resources.config
+	env = build_scraper_env(cfg)
 	context.log.info(f"GITLAB_SCRAPING_QUERY transmis au process Go: '{env['GITLAB_SCRAPING_QUERY']}'")
 	context.log.info(f"GITLAB_PROJECTS_VISIBILITY: {env['GITLAB_PROJECTS_VISIBILITY']}, ARCHIVED: {env['GITLAB_PROJECTS_ARCHIVED']}, ORDER_BY: {env['GITLAB_PROJECTS_ORDER_BY']}, SORT: {env['GITLAB_PROJECTS_SORT']}")
 	try:

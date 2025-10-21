@@ -1,5 +1,6 @@
 from dagster import Definitions, ScheduleDefinition, DefaultScheduleStatus, define_asset_job
-from .config.config import PipelineConfig
+from .config.load_cfg import PipelineConfig
+from .config.cfg_resource import config_resource
 from .assets import (
     github_scraper_asset,
     github_mapping_asset,
@@ -47,6 +48,9 @@ defs = Definitions(
         github_to_db_asset,
         gitlab_scraper_asset
     ],
+    resources={
+        "config": config_resource
+    },
     asset_checks=[
         github_top_projects_description_check,
         github_mapping_type_check,

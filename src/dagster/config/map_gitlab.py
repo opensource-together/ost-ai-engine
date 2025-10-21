@@ -6,16 +6,16 @@ GITLAB_TO_PROJECT_MAPPING = {
     "description": "description",             # Project description
     "repoUrl": "web_url",                     # GitLab project URL
     "provider": lambda repo: "GITLAB",        # Provider type
-    "githubUrl": None,                        # Not available from GitLab scraper
+    "githubUrl": None,                        
     "gitlabUrl": "web_url",                   # GitLab URL
-    "twitterUrl": None,                       # Not available from GitLab scraper
-    "linkedinUrl": None,                      # Not available from GitLab scraper
-    "discordUrl": None,                       # Not available from GitLab scraper
+    "twitterUrl": None,                        
+    "linkedinUrl": None,                       
+    "discordUrl": None,                        
     "websiteUrl": "homepage",                 # Project homepage (if set)
     "published": lambda repo: repo.get("visibility") == "public",  # Published if public
-    "trending": None,                         # Not available from GitLab scraper
+    "trending": None,                         
     "logoUrl": "avatar_url",                  # Project avatar (if available)
-    "imagesUrls": lambda repo: [],            # Fill as needed
+    "imagesUrls": lambda repo: [],            
     "createdAt": "created_at",                # Creation date
     "updatedAt": "last_activity_at",          # Last activity date
 }

@@ -106,7 +106,7 @@ func main() {
 		log.Fatalf("[ERROR] Config file could not be parsed: %v", err)
 	}
 
-	log.Println("[INFO] Loaded config from config/config.yaml.")
+	log.Println("[INFO] Loaded config from config/cfg.yaml.")
 	log.Printf("[INFO] Query: %s", config.GitHubScrapingQuery)
 
 	token := config.GitHubAccessToken
