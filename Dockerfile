@@ -68,7 +68,9 @@ COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
 ENV PATH="/app/.venv/bin:$PATH"
 
-USER app
+# A CHANGER
+# USER app
+USER root
 
 EXPOSE 3000
 
