@@ -1,3 +1,4 @@
+import os
 from dagster import resource
 from .load_cfg import PipelineConfig
 
@@ -23,6 +24,7 @@ def build_scraper_env(cfg: PipelineConfig) -> dict:
     env["GITLAB_PROJECTS_ARCHIVED"] = str(getattr(cfg, "gitlab_projects_archived", "false")).lower()
     env["GITLAB_PROJECTS_ORDER_BY"] = str(getattr(cfg, "gitlab_projects_order_by", "created_at"))
     env["GITLAB_PROJECTS_SORT"] = str(getattr(cfg, "gitlab_projects_sort", "desc"))
+    env["OST_CONFIG_PATH"] = os.getenv("OST_CONFIG_PATH", "")
     return env
 
 

@@ -12,8 +12,6 @@ from dagster import (
 	Output
 )
 
-from prisma import Prisma
-
 from src.dagster.config.cfg_resource import build_scraper_env
 from src.dagster.config.map.mapping_map import GITHUB_TO_PROJECT_MAPPING, GITLAB_TO_PROJECT_MAPPING
 
@@ -21,6 +19,9 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 @contextmanager
 def prisma_client():
+	os.environ["PRISMA_BINARY_CACHE_DIR"] = "/app/.cache/prisma"
+	os.environ["XDG_CACHE_HOME"] = "/app/.cache"
+	from prisma import Prisma
 	prisma = Prisma()
 	prisma.connect()
 	try:

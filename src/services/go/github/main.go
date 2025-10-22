@@ -11,7 +11,6 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/joho/godotenv"
 	"gopkg.in/yaml.v3"
 )
 
@@ -85,8 +84,6 @@ func fetchGitHubRepos(client *http.Client, token string, apiURL string, query st
 }
 
 func main() {
-	_ = godotenv.Load(".env")
-
 	configPath := os.Getenv("OST_CONFIG_PATH")
 
 	// Load configuration from YAML file
