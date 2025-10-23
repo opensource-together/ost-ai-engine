@@ -140,6 +140,7 @@ src/models
 scripts/
 *.sh
 !docker-entrypoint.sh
+*.old
 
 # DB test
 *.db
