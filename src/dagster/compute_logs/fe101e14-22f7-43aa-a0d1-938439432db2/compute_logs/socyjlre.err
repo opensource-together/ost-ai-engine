@@ -1,0 +1,35 @@
+2025-10-23 12:16:37 +0000 - dagster - DEBUG - github_scraper_job - fe101e14-22f7-43aa-a0d1-938439432db2 - 956 - LOGS_CAPTURED - Started capturing logs in process (pid: 956).
+2025-10-23 12:16:37 +0000 - dagster - DEBUG - github_scraper_job - fe101e14-22f7-43aa-a0d1-938439432db2 - 956 - github_to_db_asset - STEP_START - Started execution of step "github_to_db_asset".
+2025-10-23 12:16:38 +0000 - dagster - DEBUG - github_scraper_job - fe101e14-22f7-43aa-a0d1-938439432db2 - github_to_db_asset - Loading file from: /app/src/dagster/storage/github_mapping_asset using PickledObjectFilesystemIOManager...
+2025-10-23 12:16:38 +0000 - dagster - DEBUG - github_scraper_job - fe101e14-22f7-43aa-a0d1-938439432db2 - 956 - github_to_db_asset - LOADED_INPUT - Loaded input "github_mapping_asset" using input manager "io_manager", from output "result" of step "github_mapping_asset"
+2025-10-23 12:16:38 +0000 - dagster - DEBUG - github_scraper_job - fe101e14-22f7-43aa-a0d1-938439432db2 - 956 - github_to_db_asset - STEP_INPUT - Got input "github_mapping_asset" of type "Any". (Type check passed).
+2025-10-23 12:16:38 +0000 - dagster - ERROR - github_scraper_job - fe101e14-22f7-43aa-a0d1-938439432db2 - 956 - github_to_db_asset - STEP_FAILURE - Execution of step "github_to_db_asset" failed.
+
+dagster._core.errors.DagsterExecutionStepExecutionError: Error occurred while executing op "github_to_db_asset"::
+
+RuntimeError: The Client hasn't been generated yet, you must run `prisma generate` before you can use the client.
+See https://prisma-client-py.readthedocs.io/en/stable/reference/troubleshooting/#client-has-not-been-generated-yet
+
+Stack Trace:
+  File "/usr/local/lib/python3.11/site-packages/dagster/_core/execution/plan/utils.py", line 57, in op_execution_error_boundary
+    yield
+  File "/usr/local/lib/python3.11/site-packages/dagster/_utils/__init__.py", line 392, in iterate_with_context
+    next_output = next(iterator)
+                  ^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/dagster/_core/execution/plan/compute_generator.py", line 137, in _coerce_op_compute_fn_to_iterator
+    result = invoke_compute_fn(
+             ^^^^^^^^^^^^^^^^^^
+  File "/usr/local/lib/python3.11/site-packages/dagster/_core/execution/plan/compute_generator.py", line 117, in invoke_compute_fn
+    return fn(context, **args_to_pass) if context_arg_provided else fn(**args_to_pass)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/app/src/dagster/assets.py", line 162, in github_to_db_asset
+    with prisma_client() as prisma:
+  File "/usr/local/lib/python3.11/contextlib.py", line 137, in __enter__
+    return next(self.gen)
+           ^^^^^^^^^^^^^^
+  File "/app/src/dagster/assets.py", line 24, in prisma_client
+    from prisma import Prisma
+  File "<frozen importlib._bootstrap>", line 1229, in _handle_fromlist
+  File "/usr/local/lib/python3.11/site-packages/prisma/__init__.py", line 53, in __getattr__
+    raise RuntimeError(
+

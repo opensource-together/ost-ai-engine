@@ -1,0 +1,8 @@
+2025-10-23 12:11:25 +0000 - dagster - DEBUG - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - 858 - LOGS_CAPTURED - Started capturing logs in process (pid: 858).
+2025-10-23 12:11:25 +0000 - dagster - DEBUG - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - 858 - github_mapping_asset - STEP_START - Started execution of step "github_mapping_asset".
+2025-10-23 12:11:25 +0000 - dagster - DEBUG - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - github_mapping_asset - Loading file from: /app/src/dagster/storage/github_top_projects_asset using PickledObjectFilesystemIOManager...
+2025-10-23 12:11:25 +0000 - dagster - DEBUG - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - 858 - github_mapping_asset - LOADED_INPUT - Loaded input "github_top_projects_asset" using input manager "io_manager", from output "result" of step "github_top_projects_asset"
+2025-10-23 12:11:25 +0000 - dagster - DEBUG - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - 858 - github_mapping_asset - STEP_INPUT - Got input "github_top_projects_asset" of type "Any". (Type check passed).
+2025-10-23 12:11:25 +0000 - dagster - INFO - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - github_mapping_asset - [DEBUG] github_mapping_asset: 30 mapped projects.
+2025-10-23 12:11:25 +0000 - dagster - DEBUG - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - 858 - github_mapping_asset - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
+2025-10-23 12:11:25 +0000 - dagster - DEBUG - github_scraper_job - 9505b788-fde6-4eb1-b813-95f543f57aaf - github_mapping_asset - Writing file at: /app/src/dagster/storage/github_mapping_asset using PickledObjectFilesystemIOManager...

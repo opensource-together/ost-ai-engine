@@ -44,10 +44,18 @@ def github_scraper_asset(context):
 	env = build_scraper_env(cfg)
 	context.log.info(f"GITHUB_SCRAPING_QUERY to Go: '{env['GITHUB_SCRAPING_QUERY']}'")
 	try:
+		# run scraper without check=True so we can handle low-level crashes (OSError, exec format, segfault)
 		result = subprocess.run([
 			"/app/github-scraper"
-		], capture_output=True, text=True, check=True, env=env, cwd="/app", timeout=120)
-		stdout = result.stdout.strip()
+		], capture_output=True, text=True, env=env, cwd="/app", timeout=120)
+		stdout = (result.stdout or "").strip()
+		stderr = (result.stderr or "").strip()
+		if result.returncode != 0:
+			# Log full stdout/stderr for diagnosis and raise to surface the child crash
+			context.log.error(f"GitHub scraper exited with code {result.returncode}")
+			context.log.error(f"GitHub scraper stdout: {stdout}")
+			context.log.error(f"GitHub scraper stderr: {stderr}")
+			raise RuntimeError(f"GitHub scraper failed (exit {result.returncode}). See logs for stdout/stderr")
 		context.log.info(f"GitHub scraper raw output: {stdout[:500]}")
 		parsed = json.loads(stdout)
 		if isinstance(parsed, dict) and "items" in parsed:
@@ -65,12 +73,12 @@ def github_scraper_asset(context):
 				"first_project": MetadataValue.json(projects[:1]) if projects else MetadataValue.null()
 			}
 		)
-	except subprocess.CalledProcessError as e:
-		err_msg = f"GitHub scraper error: {e}\nSTDERR: {e.stderr.strip()}"
-		context.log.error(err_msg)
-		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(err_msg)})
+	except OSError as e:
+		# Exec format error or similar low-level failure
+		context.log.error(f"GitHub scraper OSError: {e}")
+		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 	except Exception as e:
-		context.log.error(f"GitHub scraper error: {e}")
+		context.log.exception("GitHub scraper error")
 		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 @asset(
@@ -194,8 +202,14 @@ def gitlab_scraper_asset(context):
 	try:
 		result = subprocess.run([
 			"/app/gitlab-scraper"
-		], capture_output=True, text=True, check=True, env=env, cwd="/app", timeout=120)
-		stdout = result.stdout.strip()
+		], capture_output=True, text=True, env=env, cwd="/app", timeout=120)
+		stdout = (result.stdout or "").strip()
+		stderr = (result.stderr or "").strip()
+		if result.returncode != 0:
+			context.log.error(f"GitLab scraper exited with code {result.returncode}")
+			context.log.error(f"GitLab scraper stdout: {stdout}")
+			context.log.error(f"GitLab scraper stderr: {stderr}")
+			raise RuntimeError(f"GitLab scraper failed (exit {result.returncode}). See logs for stdout/stderr")
 		context.log.info(f"GitLab scraper raw output: {stdout[:500]}")
 		parsed = json.loads(stdout)
 		if isinstance(parsed, dict) and "items" in parsed:
@@ -213,12 +227,11 @@ def gitlab_scraper_asset(context):
 				"first_project": MetadataValue.json(projects[:1]) if projects else MetadataValue.null()
 			}
 		)
-	except subprocess.CalledProcessError as e:
-		err_msg = f"GitLab scraper error: {e}\nSTDERR: {e.stderr.strip()}"
-		context.log.error(err_msg)
-		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(err_msg)})
+	except OSError as e:
+		context.log.error(f"GitLab scraper OSError: {e}")
+		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 	except Exception as e:
-		context.log.error(f"GitLab scraper error: {e}")
+		context.log.exception("GitLab scraper error")
 		return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 # ========================================
