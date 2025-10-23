@@ -1,9 +1,0 @@
-2025-10-23 11:50:57 +0000 - dagster - DEBUG - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - 288 - LOGS_CAPTURED - Started capturing logs in process (pid: 288).
-2025-10-23 11:50:57 +0000 - dagster - DEBUG - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - 288 - github_scraper_asset - STEP_START - Started execution of step "github_scraper_asset".
-2025-10-23 11:50:57 +0000 - dagster - INFO - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - github_scraper_asset - GITHUB_SCRAPING_QUERY to Go: 'stars:>100 stars:<500 created:>=2025-10-15 is:public archived:false'
-2025-10-23 11:50:58 +0000 - dagster - ERROR - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - github_scraper_asset - GitHub scraper error: [Errno 8] Exec format error: '/app/github-scraper'
-2025-10-23 11:50:58 +0000 - dagster - DEBUG - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - 288 - github_scraper_asset - STEP_OUTPUT - Yielded output "result" of type "Any". (Type check passed).
-2025-10-23 11:50:58 +0000 - dagster - DEBUG - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - github_scraper_asset - Writing file at: /app/src/dagster/storage/github_scraper_asset using PickledObjectFilesystemIOManager...
-2025-10-23 11:50:58 +0000 - dagster - DEBUG - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - 288 - github_scraper_asset - ASSET_MATERIALIZATION - Materialized value github_scraper_asset.
-2025-10-23 11:50:58 +0000 - dagster - DEBUG - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - 288 - github_scraper_asset - HANDLED_OUTPUT - Handled output "result" using IO manager "io_manager"
-2025-10-23 11:50:58 +0000 - dagster - DEBUG - github_scraper_job - 4992dda8-68c8-4ed4-82c8-b1b2f777a7df - 288 - github_scraper_asset - STEP_SUCCESS - Finished execution of step "github_scraper_asset" in 109ms.
