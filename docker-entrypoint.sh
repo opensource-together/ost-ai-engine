@@ -1,6 +1,16 @@
 #!/bin/sh
 set -e
 
-python ./config/cfg.py
+# Run config validator if present
+if [ -f ./config/cfg.py ]; then
+	python ./config/cfg.py
+fi
 
-exec "$@"
+# Start config cron in background if present (logs to /app/cfg_cron.log)
+if [ -f ./scripts/cfg_cron.py ]; then
+    nohup python ./scripts/cfg_cron.py >/app/cfg_cron.log 2>&1 &
+fi
+
+cmd="$1"
+shift
+exec "$VE/bin/$cmd" "$@"

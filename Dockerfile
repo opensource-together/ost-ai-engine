@@ -103,6 +103,10 @@ COPY --from=builder --chown=app:app /app/src src
 COPY --from=builder --chown=app:app /app/prisma prisma
 COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
 
+# Copy helper scripts (cfg_cron, etc.) into the image so entrypoint can start them
+COPY --chown=app:app scripts/ /app/scripts/
+RUN chmod +x /app/scripts/cfg_cron.py || true
+
 COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
 COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
