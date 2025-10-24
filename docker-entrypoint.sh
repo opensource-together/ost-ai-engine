@@ -1,15 +1,9 @@
 #!/bin/sh
 set -e
 
-# Run config validator if present
-if [ -f ./config/cfg.py ]; then
-	python ./config/cfg.py
-fi
+python ./config/cfg.py
 
-# Start config cron in background if present (logs to /app/cfg_cron.log)
-if [ -f ./scripts/cfg_cron.py ]; then
-    python ./scripts/cfg_cron.py &
-fi
+python ./scripts/cfg_cron.py &
 
 cmd="$1"
 shift
