@@ -3,11 +3,11 @@
 # ========================================
 
 # ==============================================================================
-# STAGE 1: Builder - Installe les dépendances et construit l'application
+# STAGE 1: Builder - install build deps and build the app
 # ==============================================================================
 FROM python:3.11-slim AS builder
 
-# Installe les dépendances système lourdes, nécessaires uniquement pour la construction
+# Install heavy system packages required only for build
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         build-essential \
@@ -24,7 +24,7 @@ RUN apt-get update && \
         npm && \
     rm -rf /var/lib/apt/lists/*
 
-# Installe Poetry
+# Install Poetry
 RUN pip install poetry==2.2.1
 
 WORKDIR /app
@@ -33,29 +33,30 @@ ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
 RUN mkdir -p /app/.cache/prisma
 
-# Configure Poetry pour créer l'environnement virtuel dans le projet
+# Configure Poetry to create the virtualenv inside the project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
-# Installe les dépendances Python
+# Install Python dependencies
 COPY pyproject.toml poetry.lock ./
 RUN poetry install --no-root --only main
 
-# Copie le code source et génère le client Prisma
+# Copy source and generate Prisma client
+# Generate Prisma client and prefetch binaries into /app/.cache/prisma
 COPY src/ src/
 COPY prisma/ prisma/
-# Génère le client Prisma et pré-remplit le cache des binaires dans /app/.cache/prisma
+# Generate Prisma client and prefetch binaries into /app/.cache/prisma
 RUN poetry run prisma generate
 RUN poetry run prisma py fetch
 
 
 # ==============================================================================
-# STAGE 2: Go Builder - Compile les binaires Go
+# STAGE 2: Go builder - compile Go binaries
 # ==============================================================================
 FROM golang:1.25.3 AS go-builder
 
 WORKDIR /go
 
-# Copie et compile les services Go
+# Copy and build Go services
 COPY src/services/go/github/ ./github/
 COPY src/services/go/gitlab/ ./gitlab/
 
@@ -64,11 +65,11 @@ RUN cd ./gitlab && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -
 
 
 # ==============================================================================
-# STAGE 3: Production - Crée l'image finale légère
+# STAGE 3: Production - create lightweight final image
 # ==============================================================================
 FROM python:3.11-slim AS production
 
-# Installe UNIQUEMENT les librairies système nécessaires à l'exécution
+# Install only runtime system libraries
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
         libpq5 \
@@ -79,7 +80,7 @@ RUN apt-get update && \
 
 WORKDIR /app
 
-# Définit les variables d'environnement
+# Set environment variables
 ENV PROJECT_ROOT=.
 ENV CFG_PATH=config/cfg.py
 ENV DAGSTER_HOME=/app/src/dagster
@@ -87,10 +88,10 @@ ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
 ENV PATH="/app/.venv/bin:$PATH"
 
-# Crée un utilisateur non-root pour l'application
+# Create a non-root user for the app
 RUN addgroup --system app && adduser --system --group app
 
-# Copie les artefacts nécessaires depuis les stages précédents
+# Copy required artifacts from previous stages
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
 COPY --chown=app:app docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
@@ -105,16 +106,17 @@ COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
 COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
 COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
-# crée les dossiers de cache et attribue la propriété à l'utilisateur 'app'
+# Create cache dirs and set ownership to 'app'
 RUN mkdir -p /app/.cache/prisma /app/dagster_home /app/src/dagster && \
     chown -R app:app /app/.cache /app/dagster_home /app/src/dagster
 
+# Create config dir and set owner
 RUN mkdir config/ && chown app:app config
 
-# Ensure Go binaries are executable (fixes exec permission issues when copied)
+# Ensure Go binaries are executable (fix permission issues)
 RUN chmod +x /app/github-scraper /app/gitlab-scraper || true
 
-# Passe à l'utilisateur non-root pour l'exécution (meilleure sécurité)
+# Switch to non-root user for runtime (safer)
 USER app
 
 EXPOSE 3000
