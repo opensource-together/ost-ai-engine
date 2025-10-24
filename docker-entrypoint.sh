@@ -8,9 +8,14 @@ fi
 
 # Start config cron in background if present (logs to /app/cfg_cron.log)
 if [ -f ./scripts/cfg_cron.py ]; then
-    nohup python ./scripts/cfg_cron.py >/app/cfg_cron.log 2>&1 &
+    python ./scripts/cfg_cron.py &
 fi
 
 cmd="$1"
 shift
-exec "$VE/bin/$cmd" "$@"
+# Prefer virtualenv if set
+if [ -n "$VE" ] && [ -x "$VE/bin/$cmd" ]; then
+  exec "$VE/bin/$cmd" "$@"
+else
+  exec "$cmd" "$@"
+fi
