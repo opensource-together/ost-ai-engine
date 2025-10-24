@@ -137,7 +137,7 @@ models/*
 src/models
 
 # Scripts (local-only for now)
-scripts/
+scripts/!cfg_cron.py
 *.sh
 !docker-entrypoint.sh
 *.old
