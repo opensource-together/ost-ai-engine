@@ -6,14 +6,11 @@ import (
 	"log"
 	"os"
 
-	"github.com/joho/godotenv"
 	gitlab "gitlab.com/gitlab-org/api/client-go"
 	"gopkg.in/yaml.v3"
 )
 
 func main() {
-	_ = godotenv.Load(".env")
-
 	configPath := os.Getenv("OST_CONFIG_PATH")
 
 	// Load configuration from YAML file

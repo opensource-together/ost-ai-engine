@@ -29,8 +29,9 @@ sphinx = "^8.2.3"
 sphinx-autobuild = "^2025.8.25"
 sphinx-rtd-theme = "^3.0.2"
 furo = "^2025.9.25"
-prisma = "^0.10.0"
+prisma = "^0.15.0"
 dotenv = "^0.9.9"
+schedule = "^1.1.0"
 
 [tool.dagster]
 module_name = "src.dagster.definitions"

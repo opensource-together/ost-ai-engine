@@ -3,7 +3,7 @@
 # ========================================
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:16
     container_name: ost-db
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -19,28 +19,32 @@ services:
       context: .
     container_name: dagster-daemon
     env_file:
-      - .env
+      - .docker.env
     depends_on:
       - postgres
     volumes:
-      - dagster_history:/app/src/dagster/history
-      - dagster_compute_logs:/app/src/dagster/compute_logs
-    command: poetry run dagster-daemon run
+      - ./config/cfg.py:/app/config/cfg.py
+      - ./config/cfg.yaml:/app/config/cfg.yaml
+      - ./src/dagster/history:/app/src/dagster/history
+      - ./src/dagster/compute_logs:/app/src/dagster/compute_logs
+    command: ["dagster-daemon", "run"]
 
   dagster-webserver:
     build:
       context: .
     container_name: dagster-webserver
     env_file:
-      - .env
+      - .docker.env
     depends_on:
       - postgres
     ports:
       - "7778:3000"
     volumes:
-      - dagster_history:/app/src/dagster/history
-      - dagster_compute_logs:/app/src/dagster/compute_logs
-    command: poetry run dagster-webserver -h 0.0.0.0 -p 3000
+      - ./config/cfg.py:/app/config/cfg.py
+      - ./config/cfg.yaml:/app/config/cfg.yaml
+      - ./src/dagster/history:/app/src/dagster/history
+      - ./src/dagster/compute_logs:/app/src/dagster/compute_logs
+    command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
 
 volumes:
   pgdata:

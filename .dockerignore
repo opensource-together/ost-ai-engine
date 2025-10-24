@@ -1,0 +1,8 @@
+.git/
+.github/
+docs/
+
+.env*
+
+github-scraper
+gitlab-scraper

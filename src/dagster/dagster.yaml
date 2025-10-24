@@ -5,7 +5,7 @@ compute_logs:
   module: dagster._core.storage.local_compute_log_manager
   class: LocalComputeLogManager
   config:
-    base_dir: /app/src/dagster/compute_logs
+    base_dir: /app/src/dagster/logs
 run_storage:
   module: dagster._core.storage.runs
   class: SqliteRunStorage
