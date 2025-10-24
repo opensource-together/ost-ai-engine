@@ -11,8 +11,6 @@ in the GitHub query. Do not use in production.
 import os
 from datetime import date, timedelta
 
-seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
-
 # General
 database_url = os.getenv("DATABASE_URL", "postgresql://dbuser:dbpwd@host:5432/dbname")
 
@@ -21,7 +19,7 @@ github_api_url = os.getenv("GITHUB_API_URL", "https://api.github.com/search/repo
 github_access_token = os.getenv("GITHUB_ACCESS_TOKEN", "your_github_token_here")
 github_scraping_query = os.getenv(
     "GITHUB_SCRAPING_QUERY",
-    f"stars:>100 stars:<500 created:>={seven_days_ago} is:public archived:false"
+    f"stars:>XXX stars:<XXX created:>=YYYY-MM-DD is:public archived:false"
 )
 github_scraper_cron = os.getenv("GITHUB_SCRAPER_CRON", "0 * * * *")
 github_top_n = int(os.getenv("GITHUB_TOP_N", "30"))
