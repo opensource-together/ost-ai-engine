@@ -19,7 +19,7 @@ services:
       context: .
     container_name: dagster-daemon
     env_file:
-      - .docker.env
+      - .env
     depends_on:
       - postgres
     volumes:
@@ -34,7 +34,7 @@ services:
       context: .
     container_name: dagster-webserver
     env_file:
-      - .docker.env
+      - .env
     depends_on:
       - postgres
     ports:
