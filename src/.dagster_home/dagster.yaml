@@ -4,14 +4,14 @@
 # unified storage for runs, event logs, and schedules
 storage:
   sqlite:
-    base_dir: /app/src/.dagster_instances/history
+    base_dir: /app/src/.dagster_home/history
 
 # logs stored on local filesystem
 compute_logs:
   module: dagster.core.storage.local_compute_log_manager
   class: LocalComputeLogManager
   config:
-    base_dir: /app/src/.dagster_instances/logs
+    base_dir: /app/src/.dagster_home/logs
 
 # no parallelism for now
 run_coordinator:

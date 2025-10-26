@@ -10,8 +10,14 @@ from dagster import (
     Output,
 )
 
-from src.dagster.config.cfg_resource import build_scraper_env
-from src.dagster.config.map.mapping_map import GITHUB_TO_PROJECT_MAPPING, GITLAB_TO_PROJECT_MAPPING
+# Dagster resources
+from src.pipeline.resources.cfg_resource import build_scraper_env
+from src.pipeline.resources.map.mapping_map import (
+    GITHUB_TO_PROJECT_MAPPING,
+    GITLAB_TO_PROJECT_MAPPING,
+)
+
+# Services
 from src.services.python.prisma_client import prisma_client
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
@@ -134,28 +140,66 @@ def github_mapping_asset(context, github_top_projects_asset):
     ins={"github_mapping_asset": AssetIn()},
 )
 def github_to_db_asset(context, github_mapping_asset):
-    """Inserts mapped projects into the Project table using the Prisma Python client (based on repoUrl)."""
+    """Insert or update mapped projects into the Project table using the Prisma Python client.
+
+    Behavior:
+    - skip items without `repoUrl`
+    - if a project with the same `repoUrl` exists -> update it
+    - otherwise -> create it
+
+    Returns a dict with inserted/updated counters.
+    """
     inserted = 0
-    errors = []
+    updated = 0
+    errors: list[tuple[int, str]] = []
     with prisma_client() as prisma:
-        for i, project in enumerate(github_mapping_asset):
+        for i, project in enumerate(github_mapping_asset or []):
             repo_url = project.get("repoUrl")
             if not repo_url:
                 context.log.warning(f"Skipping project {i}: missing repoUrl (required for insert).")
                 errors.append((i, "missing_repoUrl"))
                 continue
+
+            project_data = {k: v for k, v in project.items() if v is not None}
+
             try:
-                project_data = {k: v for k, v in project.items() if v is not None}
-                prisma.project.create(data=project_data)
-                inserted += 1
+                # Try to find an existing project by repoUrl
+                existing = None
+                try:
+                    existing = prisma.project.find_first(where={"repoUrl": repo_url})
+                except Exception:
+                    try:
+                        existing = prisma.project.find_unique(where={"repoUrl": repo_url})
+                    except Exception:
+                        existing = None
+
+                if existing:
+                    try:
+                        prisma.project.update(where={"repoUrl": repo_url}, data=project_data)
+                        updated += 1
+                    except Exception as e:
+                        context.log.error(f"Error updating project {i} (repoUrl={repo_url}): {e}")
+                        errors.append((i, f"update_error: {e}"))
+                else:
+                    try:
+                        prisma.project.create(data=project_data)
+                        inserted += 1
+                    except Exception as e:
+                        context.log.error(f"Error inserting project {i} (repoUrl={repo_url}): {e}")
+                        errors.append((i, f"create_error: {e}"))
+
             except Exception as e:
-                context.log.error(f"Error inserting project {i} (repoUrl={repo_url}): {e}")
+                context.log.exception(f"Unexpected error processing project {i} (repoUrl={repo_url})")
                 errors.append((i, str(e)))
-    context.log.info(f"{inserted} projects inserted into the Project table.")
+
+    context.log.info(f"{inserted} projects inserted, {updated} projects updated into the Project table.")
     if errors:
-        context.log.warning(f"{len(errors)} insert errors: {errors[:3]}")
-    return Output(value=inserted, metadata={
+        context.log.warning(f"{len(errors)} insert/update errors: {errors[:3]}")
+
+    result_value = {"inserted": inserted, "updated": updated}
+    return Output(value=result_value, metadata={
         "inserted_count": MetadataValue.int(inserted),
+        "updated_count": MetadataValue.int(updated),
         "error_count": MetadataValue.int(len(errors)),
         "first_error": MetadataValue.text(errors[0][1]) if errors else MetadataValue.null(),
     })

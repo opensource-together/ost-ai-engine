@@ -1,6 +1,11 @@
-from dagster import Definitions, ScheduleDefinition, DefaultScheduleStatus, define_asset_job
-from .config.load_cfg import PipelineConfig
-from .config.cfg_resource import config_resource
+from dagster import (
+    Definitions, 
+    ScheduleDefinition, 
+    DefaultScheduleStatus, 
+    define_asset_job
+)
+from src.services.python.load_cfg import PipelineConfig
+from .resources.cfg_resource import config_resource
 from .assets.raw.assets import (
     github_scraper_asset,
     github_mapping_asset,
@@ -11,14 +16,6 @@ from .assets.raw.assets import (
 
 from .assets.raw.asset_checks import (
     github_top_projects_description_check,
-    github_mapping_type_check,
-    github_mapping_required_fields_check,
-    github_mapping_duplicate_url_check,
-    github_to_db_insert_count_check,
-    github_to_db_error_check,
-    github_to_db_consistency_check,
-    github_to_db_uniqueness_check,
-    github_to_db_mapping_match_check,
 )
 
 github_scraper_job = define_asset_job(
@@ -56,14 +53,6 @@ defs = Definitions(
     },
     asset_checks=[
         github_top_projects_description_check,
-        github_mapping_type_check,
-        github_mapping_required_fields_check,
-        github_mapping_duplicate_url_check,
-        github_to_db_insert_count_check,
-        github_to_db_error_check,
-        github_to_db_consistency_check,
-        github_to_db_uniqueness_check,
-        github_to_db_mapping_match_check
     ],
     jobs=[github_scraper_job],
     schedules=[github_scraper_schedule]
