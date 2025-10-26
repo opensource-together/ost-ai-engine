@@ -26,9 +26,9 @@ services:
       - ./config/cfg.py:/app/config/cfg.py
       - ./config/cfg.yaml:/app/config/cfg.yaml
       # Mount the whole dagster package for code changes and local history/logs
-      - ./src/pipeline:/app/src/pipeline
+      - ./src/:/app/src/
       # Dagster instance storage (matches src/pipeline/dagster.yaml base_dir)
-      - ./src/.dagster_home:/app/src/.dagster_home
+      - ./.dagster_home:/app/.dagster_home
     command: ["dagster-daemon", "run"]
 
   dagster-webserver:
@@ -44,8 +44,8 @@ services:
     volumes:
       - ./config/cfg.py:/app/config/cfg.py
       - ./config/cfg.yaml:/app/config/cfg.yaml
-      - ./src/pipeline:/app/src/pipeline
-      - ./src/.dagster_home:/app/src/.dagster_home
+      - ./src/:/app/src
+      - ./.dagster_home:/app/.dagster_home
     command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
 
 volumes:

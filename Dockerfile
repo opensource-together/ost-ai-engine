@@ -83,7 +83,7 @@ WORKDIR /app
 # Set environment variables
 ENV PROJECT_ROOT=.
 ENV CFG_PATH=config/cfg.py
-ENV DAGSTER_HOME=/app/src/.dagster_home
+ENV DAGSTER_HOME=/app/.dagster_home
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
 ENV PATH="/app/.venv/bin:$PATH"
