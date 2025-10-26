@@ -1,11 +1,15 @@
 from dagster import Definitions, ScheduleDefinition, DefaultScheduleStatus, define_asset_job
 from .config.load_cfg import PipelineConfig
 from .config.cfg_resource import config_resource
-from .assets import (
+from .assets.raw.assets import (
     github_scraper_asset,
     github_mapping_asset,
     github_top_projects_asset,
     github_to_db_asset,
+    gitlab_scraper_asset,
+)
+
+from .assets.raw.asset_checks import (
     github_top_projects_description_check,
     github_mapping_type_check,
     github_mapping_required_fields_check,
@@ -15,7 +19,6 @@ from .assets import (
     github_to_db_consistency_check,
     github_to_db_uniqueness_check,
     github_to_db_mapping_match_check,
-    gitlab_scraper_asset,
 )
 
 github_scraper_job = define_asset_job(
