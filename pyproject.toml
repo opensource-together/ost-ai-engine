@@ -34,7 +34,7 @@ dotenv = "^0.9.9"
 schedule = "^1.1.0"
 
 [tool.dagster]
-module_name = "src.dagster.definitions"
+module_name = "src.pipeline.definitions"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.0"
