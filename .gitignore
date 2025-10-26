@@ -178,7 +178,7 @@ uv.lock
 
 # Dagster
 .tmp*
-src/.dagster_home/!dagster.yaml
+.dagster_home/!dagster.yaml
 
 # Docker entrypoint scripts
 entrypoint.sh
