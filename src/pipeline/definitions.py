@@ -1,10 +1,8 @@
 from dagster import (
-    Definitions, 
-    ScheduleDefinition, 
-    DefaultScheduleStatus, 
-    define_asset_job
+    Definitions,
+    define_asset_job,
 )
-from src.services.python.load_cfg import PipelineConfig
+from .schedules.github import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
 from .assets.raw.assets import (
     github_scraper_asset,
@@ -24,21 +22,17 @@ github_scraper_job = define_asset_job(
         "github_scraper_asset",
         "github_top_projects_asset",
         "github_mapping_asset",
-        "github_to_db_asset"
+        "github_to_db_asset",
     ],
     description=(
         "Pipeline to scrape trending GitHub projects, rank them, "
         "normalize their data structure, and insert the results into the database. "
         "Includes data quality checks at each step."
-    )
+    ),
 )
 
-github_scraper_schedule = ScheduleDefinition(
-    name="github_scraper_schedule",
-    job=github_scraper_job,
-    cron_schedule=PipelineConfig().github_scraper_cron,
-    default_status=DefaultScheduleStatus.RUNNING,  # auto-start on first load
-)
+# Build schedule using the schedules factory to avoid circular imports
+github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
 
 defs = Definitions(
     assets=[
@@ -49,11 +43,11 @@ defs = Definitions(
         gitlab_scraper_asset
     ],
     resources={
-        "config": config_resource
+        "config": config_resource,
     },
     asset_checks=[
         github_top_projects_description_check,
     ],
     jobs=[github_scraper_job],
-    schedules=[github_scraper_schedule]
+    schedules=[github_scraper_schedule],
 )
