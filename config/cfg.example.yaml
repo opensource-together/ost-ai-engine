@@ -19,8 +19,9 @@ DATABASE_URL: "postgresql://user:pass@host:5432/dbname"
 
 GITHUB_API_URL: https://api.github.com/search/repositories
 GITHUB_ACCESS_TOKEN: "your_github_token_here"
-GITHUB_SCRAPING_QUERY: stars:>XXX stars:<XXX created:>=YYYY-MM-DD is:public archived:false
-GITHUB_SCRAPER_CRON: "0 * * * *"
+# Example query matching the filters used in `config/cfg.py` (date should be updated as needed)
+GITHUB_SCRAPING_QUERY: stars:100..500 topics:>0 forks:>0 created:>=YYYY-MM-DD is:public archived:false NOT download
+GITHUB_SCRAPER_CRON: "0 */6 * * *"
 GITHUB_TOP_N: 30
 
 # GitLab configuration
