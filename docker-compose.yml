@@ -25,8 +25,10 @@ services:
     volumes:
       - ./config/cfg.py:/app/config/cfg.py
       - ./config/cfg.yaml:/app/config/cfg.yaml
-      - ./src/dagster/history:/app/src/dagster/history
-      - ./src/dagster/compute_logs:/app/src/dagster/compute_logs
+      # Mount the whole dagster package for code changes and local history/logs
+      - ./src/dagster:/app/src/dagster
+      # Dagster instance storage (matches src/dagster/dagster.yaml base_dir)
+      - ./src/.dagster_instances:/app/src/.dagster_instances
     command: ["dagster-daemon", "run"]
 
   dagster-webserver:
@@ -42,11 +44,9 @@ services:
     volumes:
       - ./config/cfg.py:/app/config/cfg.py
       - ./config/cfg.yaml:/app/config/cfg.yaml
-      - ./src/dagster/history:/app/src/dagster/history
-      - ./src/dagster/compute_logs:/app/src/dagster/compute_logs
+      - ./src/dagster:/app/src/dagster
+      - ./src/.dagster_instances:/app/src/.dagster_instances
     command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
 
 volumes:
   pgdata:
-  dagster_history:
-  dagster_compute_logs:

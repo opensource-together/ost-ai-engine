@@ -96,7 +96,7 @@ COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
 COPY --chown=app:app docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
-COPY --chown=app:app src/dagster/config/ src/dagster/config
+COPY --chown=app:app src/dagster/resources/ src/dagster/resources/
 COPY --from=builder --chown=app:app /app/.venv .venv
 COPY --from=builder --chown=app:app /app/src src
 
