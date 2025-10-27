@@ -134,7 +134,6 @@ postgres-data/
 # Ignore generated embeddings but keep Hugging Face models
 models/*.npy
 models/*.pkl
-models/*
 src/models
 
 # Scripts (local-only for now)
