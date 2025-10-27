@@ -48,6 +48,8 @@ COPY prisma/ prisma/
 RUN poetry run prisma generate
 RUN poetry run prisma py fetch
 
+RUN mkdir -p /app/models \
+ && curl -L -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
 
 # ==============================================================================
 # STAGE 2: Go builder - compile Go binaries
@@ -83,6 +85,7 @@ WORKDIR /app
 # Set environment variables
 ENV PROJECT_ROOT=.
 ENV CFG_PATH=config/cfg.py
+ENV OST_CONFIG_PATH=/app/config/cfg.yaml
 ENV DAGSTER_HOME=/app/.dagster_home
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
@@ -102,6 +105,8 @@ COPY --from=builder --chown=app:app /app/src src
 
 COPY --from=builder --chown=app:app /app/prisma prisma
 COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
+
+COPY --from=builder --chown=app:app /app/models /app/models
 
 # Copy helper scripts (cfg_cron, etc.) into the image so entrypoint can start them
 COPY --chown=app:app scripts/ /app/scripts/
