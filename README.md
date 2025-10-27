@@ -8,7 +8,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 [![Follow](https://img.shields.io/twitter/follow/OpenSTogether?style=social)](https://x.com/OpenSTogether) [![GitHub](https://img.shields.io/badge/GitHub-OpenSource%20Together-black.svg)](https://github.com/opensource-together)  
 
-[![Python](https://img.shields.io/badge/Python-3.13+-blue.svg)](https://python.org) [![Go](https://img.shields.io/badge/Go-1.24+-cyan.svg)](https://golang.org) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-15+-green.svg)](https://postgresql.org) [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com) [![MLflow](https://img.shields.io/badge/MLflow-Enabled-orange.svg)](https://mlflow.org)
+[![Python](https://img.shields.io/badge/Python-3.11+-blue.svg)](https://python.org) [![Go](https://img.shields.io/badge/Go-1.25+-cyan.svg)](https://golang.org) [![Docker](https://img.shields.io/badge/Docker-Ready-blue.svg)](https://docker.com) [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-16+-green.svg)](https://postgresql.org)
 
 </div>
 
