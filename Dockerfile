@@ -48,6 +48,8 @@ COPY prisma/ prisma/
 RUN poetry run prisma generate
 RUN poetry run prisma py fetch
 
+RUN mkdir -p /app/models \
+ && curl -L -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
 
 # ==============================================================================
 # STAGE 2: Go builder - compile Go binaries
@@ -83,7 +85,8 @@ WORKDIR /app
 # Set environment variables
 ENV PROJECT_ROOT=.
 ENV CFG_PATH=config/cfg.py
-ENV DAGSTER_HOME=/app/src/dagster
+ENV OST_CONFIG_PATH=/app/config/cfg.yaml
+ENV DAGSTER_HOME=/app/.dagster_home
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
 ENV PATH="/app/.venv/bin:$PATH"
@@ -96,12 +99,14 @@ COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
 COPY --chown=app:app docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
-COPY --chown=app:app src/dagster/config/ src/dagster/config
+COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
 COPY --from=builder --chown=app:app /app/.venv .venv
 COPY --from=builder --chown=app:app /app/src src
 
 COPY --from=builder --chown=app:app /app/prisma prisma
 COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
+
+COPY --from=builder --chown=app:app /app/models /app/models
 
 # Copy helper scripts (cfg_cron, etc.) into the image so entrypoint can start them
 COPY --chown=app:app scripts/ /app/scripts/
@@ -111,8 +116,8 @@ COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
 COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
 # Create cache dirs and set ownership to 'app'
-RUN mkdir -p /app/.cache/prisma /app/dagster_home /app/src/dagster && \
-    chown -R app:app /app/.cache /app/dagster_home /app/src/dagster
+RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline && \
+    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline
 
 # Create config dir and set owner
 RUN mkdir config/ && chown app:app config
@@ -126,4 +131,4 @@ USER app
 EXPOSE 3000
 
 ENTRYPOINT [ "/app/docker-entrypoint.sh" ]
-CMD ["dagster", "dev", "-m", "src.dagster.definitions", "--host", "0.0.0.0", "--port", "3000" ]
+CMD ["dagster", "dev", "-m", "src.pipeline.definitions", "--host", "0.0.0.0", "--port", "3000" ]

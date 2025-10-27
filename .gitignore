@@ -134,7 +134,6 @@ postgres-data/
 # Ignore generated embeddings but keep Hugging Face models
 models/*.npy
 models/*.pkl
-models/*
 src/models
 
 # Scripts (local-only for now)
@@ -178,8 +177,8 @@ uv.lock
 
 # Dagster
 .tmp*
-src/dagster/.telemetry*
-history/
+.dagster_home/*
+!.dagster_home/dagster.yaml
 
 # Docker entrypoint scripts
 entrypoint.sh

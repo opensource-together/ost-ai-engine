@@ -11,28 +11,42 @@ in the GitHub query. Do not use in production.
 import os
 from datetime import date, timedelta
 
-# General
-database_url = os.getenv("DATABASE_URL", "postgresql://dbuser:dbpwd@host:5432/dbname")
+# Compute a rolling "seven days ago" date used in example GitHub query
+seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
 
-# GitHub
-github_api_url = os.getenv("GITHUB_API_URL", "https://api.github.com/search/repositories")
-github_access_token = os.getenv("GITHUB_ACCESS_TOKEN", "your_github_token_here")
-github_scraping_query = os.getenv(
-    "GITHUB_SCRAPING_QUERY",
-    f"stars:>XXX stars:<XXX created:>=YYYY-MM-DD is:public archived:false"
-)
-github_scraper_cron = os.getenv("GITHUB_SCRAPER_CRON", "0 * * * *")
-github_top_n = int(os.getenv("GITHUB_TOP_N", "30"))
+github_base_filters = [
+    "stars:100..500",
+    "topics:>0",
+    "forks:>0",
+    f"created:>={seven_days_ago}",
+    "is:public",
+    "archived:false",
+    "NOT download"
+]
 
-# GitLab
-gitlab_api_url = os.getenv("GITLAB_API_URL", "https://gitlab.com/api/v4")
-gitlab_access_token = os.getenv("GITLAB_ACCESS_TOKEN", "your_gitlab_token_here")
-gitlab_scraping_query = os.getenv("GITLAB_SCRAPING_QUERY", "opensource")
-gitlab_projects_visibility = os.getenv("GITLAB_PROJECTS_VISIBILITY", "public")
-gitlab_projects_archived = os.getenv("GITLAB_PROJECTS_ARCHIVED", "false")
-gitlab_projects_order_by = os.getenv("GITLAB_PROJECTS_ORDER_BY", "created_at")
-gitlab_projects_sort = os.getenv("GITLAB_PROJECTS_SORT", "desc")
-gitlab_top_n = int(os.getenv("GITLAB_TOP_N", "30"))
+# General (example default)
+database_url = os.getenv("DATABASE_URL", "postgresql://user:pass@host:5432/dbname")
+
+GITHUB = {
+    "GITHUB_API_URL": os.getenv("GITHUB_API_URL", "https://api.github.com/search/repositories"),
+    "GITHUB_ACCESS_TOKEN": os.getenv("GITHUB_ACCESS_TOKEN", "your_github_token_here"),
+    # Matches the real `cfg.py` filters but uses a dynamic date in the example generator
+    "GITHUB_SCRAPING_QUERY": os.getenv("GITHUB_SCRAPING_QUERY", " ".join(github_base_filters)),
+    # Default to the same 6-hour schedule used by `cfg.py`
+    "GITHUB_SCRAPER_CRON": os.getenv("GITHUB_SCRAPER_CRON", "0 */6 * * *"),
+    "GITHUB_TOP_N": int(os.getenv("GITHUB_TOP_N", "30")),
+}
+
+GITLAB = {
+    "GITLAB_API_URL": os.getenv("GITLAB_API_URL", "https://gitlab.com/api/v4"),
+    "GITLAB_ACCESS_TOKEN": os.getenv("GITLAB_ACCESS_TOKEN", "your_gitlab_token_here"),
+    "GITLAB_SCRAPING_QUERY": os.getenv("GITLAB_SCRAPING_QUERY", "opensource"),
+    "GITLAB_PROJECTS_VISIBILITY": os.getenv("GITLAB_PROJECTS_VISIBILITY", "public"),
+    "GITLAB_PROJECTS_ARCHIVED": os.getenv("GITLAB_PROJECTS_ARCHIVED", "false"),
+    "GITLAB_PROJECTS_ORDER_BY": os.getenv("GITLAB_PROJECTS_ORDER_BY", "created_at"),
+    "GITLAB_PROJECTS_SORT": os.getenv("GITLAB_PROJECTS_SORT", "desc"),
+    "GITLAB_TOP_N": int(os.getenv("GITLAB_TOP_N", "30")),
+}
 
 dest_path = os.path.join(os.path.dirname(__file__), "cfg.example.yaml")
 with open(dest_path, "w") as f:
@@ -48,21 +62,21 @@ with open(dest_path, "w") as f:
 DATABASE_URL: "{database_url}"
 
 # # GitHub configuration
-GITHUB_API_URL: {github_api_url}
-GITHUB_ACCESS_TOKEN: "{github_access_token}"
-GITHUB_SCRAPING_QUERY: {github_scraping_query}
-GITHUB_SCRAPER_CRON: "{github_scraper_cron}"
-GITHUB_TOP_N: {github_top_n}
+GITHUB_API_URL: {GITHUB['GITHUB_API_URL']}
+GITHUB_ACCESS_TOKEN: "{GITHUB['GITHUB_ACCESS_TOKEN']}"
+GITHUB_SCRAPING_QUERY: {GITHUB['GITHUB_SCRAPING_QUERY']}
+GITHUB_SCRAPER_CRON: "{GITHUB['GITHUB_SCRAPER_CRON']}"
+GITHUB_TOP_N: {GITHUB['GITHUB_TOP_N']}
 
 # GitLab configuration
-GITLAB_API_URL: {gitlab_api_url}
-GITLAB_ACCESS_TOKEN: "{gitlab_access_token}"
-GITLAB_PROJECTS_VISIBILITY: {gitlab_projects_visibility}
-GITLAB_PROJECTS_ARCHIVED: {gitlab_projects_archived}
-GITLAB_PROJECTS_ORDER_BY: {gitlab_projects_order_by}
-GITLAB_PROJECTS_SORT: {gitlab_projects_sort}
-GITLAB_SCRAPING_QUERY: {gitlab_scraping_query}
-GITLAB_TOP_N: {gitlab_top_n}
+GITLAB_API_URL: {GITLAB['GITLAB_API_URL']}
+GITLAB_ACCESS_TOKEN: "{GITLAB['GITLAB_ACCESS_TOKEN']}"
+GITLAB_PROJECTS_VISIBILITY: {GITLAB['GITLAB_PROJECTS_VISIBILITY']}
+GITLAB_PROJECTS_ARCHIVED: {GITLAB['GITLAB_PROJECTS_ARCHIVED']}
+GITLAB_PROJECTS_ORDER_BY: {GITLAB['GITLAB_PROJECTS_ORDER_BY']}
+GITLAB_PROJECTS_SORT: {GITLAB['GITLAB_PROJECTS_SORT']}
+GITLAB_SCRAPING_QUERY: {GITLAB['GITLAB_SCRAPING_QUERY']}
+GITLAB_TOP_N: {GITLAB['GITLAB_TOP_N']}
 
 # ───────────────────────────────────────────────────────── #
 """)

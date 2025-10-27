@@ -19,14 +19,16 @@ services:
       context: .
     container_name: dagster-daemon
     env_file:
-      - .docker.env
+      - .env
     depends_on:
       - postgres
     volumes:
       - ./config/cfg.py:/app/config/cfg.py
       - ./config/cfg.yaml:/app/config/cfg.yaml
-      - ./src/dagster/history:/app/src/dagster/history
-      - ./src/dagster/compute_logs:/app/src/dagster/compute_logs
+      # Mount the whole dagster package for code changes and local history/logs
+      - ./src/:/app/src/
+      # Dagster instance storage (matches src/pipeline/dagster.yaml base_dir)
+      - ./.dagster_home:/app/.dagster_home
     command: ["dagster-daemon", "run"]
 
   dagster-webserver:
@@ -34,7 +36,7 @@ services:
       context: .
     container_name: dagster-webserver
     env_file:
-      - .docker.env
+      - .env
     depends_on:
       - postgres
     ports:
@@ -42,11 +44,9 @@ services:
     volumes:
       - ./config/cfg.py:/app/config/cfg.py
       - ./config/cfg.yaml:/app/config/cfg.yaml
-      - ./src/dagster/history:/app/src/dagster/history
-      - ./src/dagster/compute_logs:/app/src/dagster/compute_logs
+      - ./src/:/app/src
+      - ./.dagster_home:/app/.dagster_home
     command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
 
 volumes:
   pgdata:
-  dagster_history:
-  dagster_compute_logs:
