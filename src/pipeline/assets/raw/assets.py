@@ -13,12 +13,8 @@ from dagster import (
 # Dagster resources
 from src.pipeline.resources.cfg_resource import build_scraper_env
 from src.pipeline.resources.map.mapping_map import (
-    GITHUB_TO_PROJECT_MAPPING,
     GITLAB_TO_PROJECT_MAPPING,
 )
-
-# Services
-from src.services.python.prisma_client import prisma_client
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -28,8 +24,14 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     owners=DEFAULT_OWNERS,
     required_resource_keys={"config"},
 )
-def github_scraper_asset(context):
-    """Run the GitHub Go scraper and emit results as metadata."""
+def raw_github__extract_projects(context):
+    """Run the GitHub Go scraper and return scraped projects.
+
+    Description:
+    - Executes the compiled Go `github-scraper` binary.
+    - Parses stdout as JSON and returns a list of project dicts.
+    - Emits metadata: project_count, first_project.
+    """
     cfg = context.resources.config
     env = build_scraper_env(cfg)
     context.log.info(f"GITHUB_SCRAPING_QUERY to Go: '{env['GITHUB_SCRAPING_QUERY']}'")
@@ -69,140 +71,7 @@ def github_scraper_asset(context):
         return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 
-@asset(
-    kinds={"python"},
-    owners=DEFAULT_OWNERS,
-    ins={"github_scraper_asset": AssetIn()},
-    required_resource_keys={"config"},
-)
-def github_top_projects_asset(context, github_scraper_asset):
-    """Ranks projects by stars and keeps only the top N (configurable)."""
-    top_n = context.resources.config.github_top_n
-    if not github_scraper_asset or not isinstance(github_scraper_asset, list):
-        context.log.warning("No projects to rank.")
-        return []
-    filtered = [p for p in github_scraper_asset if p.get("description") not in (None, "")]
-    context.log.info(f"[DEBUG] github_top_projects_asset: {len(filtered)} projects with description out of {len(github_scraper_asset)}")
-    if not filtered:
-        context.log.warning("[DEBUG] github_top_projects_asset: No project with description found.")
-        return Output(value=[], metadata={
-            "selected_count": MetadataValue.int(0),
-            "reason": MetadataValue.text("No project with description found."),
-        })
-    ranked = sorted(filtered, key=lambda p: p.get("stargazers_count", 0), reverse=True)
-    top_projects = ranked[:top_n]
-    meta = {
-        "selected_count": MetadataValue.int(len(top_projects)),
-        "input_count": MetadataValue.int(len(github_scraper_asset)),
-        "stars_range": MetadataValue.text(f"{top_projects[0].get('stargazers_count', 0)} - {top_projects[-1].get('stargazers_count', 0)}") if top_projects else MetadataValue.null(),
-    }
-    return Output(value=top_projects, metadata=meta)
 
-
-@asset(
-    kinds={"python"},
-    owners=DEFAULT_OWNERS,
-    ins={"github_top_projects_asset": AssetIn()},
-)
-def github_mapping_asset(context, github_top_projects_asset):
-    """Transforms top ranked GitHub projects to match the Prisma Project model using the mapping config."""
-    if github_top_projects_asset is None:
-        context.log.warning("No data found from github_top_projects_asset. Returning empty list.")
-        return []
-    def map_repo(repo):
-        mapped = {}
-        for prisma_field, source in GITHUB_TO_PROJECT_MAPPING.items():
-            if callable(source):
-                mapped[prisma_field] = source(repo)
-            elif isinstance(source, str) and "." in source:
-                keys = source.split(".")
-                value = repo
-                for k in keys:
-                    value = value.get(k, None) if isinstance(value, dict) else None
-                mapped[prisma_field] = value
-            elif isinstance(source, str):
-                mapped[prisma_field] = repo.get(source)
-            else:
-                mapped[prisma_field] = source
-        return mapped
-
-    projects = [map_repo(repo) for repo in github_top_projects_asset]
-    context.log.info(f"[DEBUG] github_mapping_asset: {len(projects)} mapped projects.")
-    return Output(value=projects, metadata={
-        "mapped_count": MetadataValue.int(len(projects)),
-        "input_count": MetadataValue.int(len(github_top_projects_asset)),
-    })
-
-
-@asset(
-    kinds={"python", "postgres"},
-    owners=DEFAULT_OWNERS,
-    ins={"github_mapping_asset": AssetIn()},
-)
-def github_to_db_asset(context, github_mapping_asset):
-    """Insert or update mapped projects into the Project table using the Prisma Python client.
-
-    Behavior:
-    - skip items without `repoUrl`
-    - if a project with the same `repoUrl` exists -> update it
-    - otherwise -> create it
-
-    Returns a dict with inserted/updated counters.
-    """
-    inserted = 0
-    updated = 0
-    errors: list[tuple[int, str]] = []
-    with prisma_client() as prisma:
-        for i, project in enumerate(github_mapping_asset or []):
-            repo_url = project.get("repoUrl")
-            if not repo_url:
-                context.log.warning(f"Skipping project {i}: missing repoUrl (required for insert).")
-                errors.append((i, "missing_repoUrl"))
-                continue
-
-            project_data = {k: v for k, v in project.items() if v is not None}
-
-            try:
-                # Try to find an existing project by repoUrl
-                existing = None
-                try:
-                    existing = prisma.project.find_first(where={"repoUrl": repo_url})
-                except Exception:
-                    try:
-                        existing = prisma.project.find_unique(where={"repoUrl": repo_url})
-                    except Exception:
-                        existing = None
-
-                if existing:
-                    try:
-                        prisma.project.update(where={"repoUrl": repo_url}, data=project_data)
-                        updated += 1
-                    except Exception as e:
-                        context.log.error(f"Error updating project {i} (repoUrl={repo_url}): {e}")
-                        errors.append((i, f"update_error: {e}"))
-                else:
-                    try:
-                        prisma.project.create(data=project_data)
-                        inserted += 1
-                    except Exception as e:
-                        context.log.error(f"Error inserting project {i} (repoUrl={repo_url}): {e}")
-                        errors.append((i, f"create_error: {e}"))
-
-            except Exception as e:
-                context.log.exception(f"Unexpected error processing project {i} (repoUrl={repo_url})")
-                errors.append((i, str(e)))
-
-    context.log.info(f"{inserted} projects inserted, {updated} projects updated into the Project table.")
-    if errors:
-        context.log.warning(f"{len(errors)} insert/update errors: {errors[:3]}")
-
-    result_value = {"inserted": inserted, "updated": updated}
-    return Output(value=result_value, metadata={
-        "inserted_count": MetadataValue.int(inserted),
-        "updated_count": MetadataValue.int(updated),
-        "error_count": MetadataValue.int(len(errors)),
-        "first_error": MetadataValue.text(errors[0][1]) if errors else MetadataValue.null(),
-    })
 
 
 @asset(
@@ -210,8 +79,14 @@ def github_to_db_asset(context, github_mapping_asset):
     owners=DEFAULT_OWNERS,
     required_resource_keys={"config"},
 )
-def gitlab_scraper_asset(context):
-    """Run the GitLab Go scraper and emit results as metadata."""
+def raw_gitlab__extract_projects(context):
+    """Run the GitLab Go scraper and return scraped projects.
+
+    Description:
+    - Executes the compiled Go `gitlab-scraper` binary.
+    - Parses stdout as JSON and returns a list of project dicts.
+    - Emits metadata: project_count, first_project.
+    """
     cfg = context.resources.config
     env = build_scraper_env(cfg)
     context.log.info(f"GITLAB_SCRAPING_QUERY transmis au process Go: '{env['GITLAB_SCRAPING_QUERY']}'")

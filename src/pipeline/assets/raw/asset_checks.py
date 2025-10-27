@@ -6,29 +6,29 @@ from dagster import (
 
 
 @asset_check(
-    asset="github_top_projects_asset",
-    name="github_top_projects_description_check",
+    asset="core_github__extract_top_projects",
+    name="core_github__extract_top_projects_description_is_not_empty",
 )
-def github_top_projects_description_check(context, github_top_projects_asset):
+def core_github__extract_top_projects_description_is_not_empty(context, core_github__extract_top_projects):
     """Check that each project has a non-empty description.
 
     Returns detailed metadata to help debugging.
     """
-    if not isinstance(github_top_projects_asset, list):
+    if not isinstance(core_github__extract_top_projects, list):
         msg = "Input to check is not a list."
         context.log.error(msg)
         return AssetCheckResult(
             passed=False,
             description=msg,
             metadata={
-                "type": MetadataValue.text(str(type(github_top_projects_asset))),
+                "type": MetadataValue.text(str(type(core_github__extract_top_projects))),
                 "count": MetadataValue.null(),
             },
         )
 
     missing_indices = []
     missing_examples = []
-    for i, project in enumerate(github_top_projects_asset):
+    for i, project in enumerate(core_github__extract_top_projects):
         if project.get("description") in (None, ""):
             missing_indices.append(i)
             if len(missing_examples) < 5:
@@ -39,7 +39,7 @@ def github_top_projects_description_check(context, github_top_projects_asset):
         "missing_count": MetadataValue.int(len(missing_indices)),
         "missing_indices": MetadataValue.json(missing_indices[:50]),
         "missing_examples": MetadataValue.json(missing_examples),
-        "total": MetadataValue.int(len(github_top_projects_asset)),
+    "total": MetadataValue.int(len(core_github__extract_top_projects)),
     }
 
     if missing_indices:
@@ -52,3 +52,43 @@ def github_top_projects_description_check(context, github_top_projects_asset):
     context.log.info(msg)
     metadata["info"] = MetadataValue.text(msg)
     return AssetCheckResult(passed=True, description=msg, metadata=metadata)
+
+
+@asset_check(
+    asset="raw_github__extract_projects",
+    name="raw_github__extract_projects_non_empty",
+)
+def raw_github__extract_projects_non_empty(context, raw_github__extract_projects):
+    """Ensure the GitHub scraper returned a non-empty list of projects."""
+    if not isinstance(raw_github__extract_projects, list):
+        msg = "Output is not a list."
+        context.log.error(msg)
+        return AssetCheckResult(passed=False, description=msg, metadata={"type": MetadataValue.text(str(type(raw_github__extract_projects)))} )
+
+    count = len(raw_github__extract_projects)
+    if count == 0:
+        msg = "GitHub scraper returned no projects."
+        context.log.error(msg)
+        return AssetCheckResult(passed=False, description=msg, metadata={"project_count": MetadataValue.int(0)})
+
+    return AssetCheckResult(passed=True, description=f"GitHub scraper returned {count} projects.", metadata={"project_count": MetadataValue.int(count)})
+
+
+@asset_check(
+    asset="raw_gitlab__extract_projects",
+    name="raw_gitlab__extract_projects_non_empty",
+)
+def raw_gitlab__extract_projects_non_empty(context, raw_gitlab__extract_projects):
+    """Ensure the GitLab scraper returned a non-empty list of projects."""
+    if not isinstance(raw_gitlab__extract_projects, list):
+        msg = "Output is not a list."
+        context.log.error(msg)
+        return AssetCheckResult(passed=False, description=msg, metadata={"type": MetadataValue.text(str(type(raw_gitlab__extract_projects)))} )
+
+    count = len(raw_gitlab__extract_projects)
+    if count == 0:
+        msg = "GitLab scraper returned no projects."
+        context.log.error(msg)
+        return AssetCheckResult(passed=False, description=msg, metadata={"project_count": MetadataValue.int(0)})
+
+    return AssetCheckResult(passed=True, description=f"GitLab scraper returned {count} projects.", metadata={"project_count": MetadataValue.int(count)})

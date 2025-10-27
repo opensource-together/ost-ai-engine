@@ -7,7 +7,7 @@ from pathlib import Path
 
 load_dotenv()
 
-CONFIG_YAML_PATH = Path(os.getenv("OST_CONFIG_PATH") or Path(__file__).resolve().parents[3] / "config" / "cfg.yaml")
+CONFIG_YAML_PATH = os.getenv("OST_CONFIG_PATH")
 
 with open(CONFIG_YAML_PATH, "r") as f:
     config_yaml = yaml.safe_load(f)
@@ -75,4 +75,10 @@ class PipelineConfig(Config):
     gitlab_top_n: int = Field(
         default=config_yaml.get("GITLAB_TOP_N", 30),
         description="Number of top GitLab repos to fetch per run"
+    )
+
+    # FastText model path used by core language detection
+    fasttext_model_path: str = Field(
+        default=config_yaml.get("FASTTEXT_MODEL_PATH", "/app/models/lid.176.ftz"),
+        description="Filesystem path to the FastText lid.176.ftz model used for language identification",
     )
