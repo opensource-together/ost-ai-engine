@@ -12,13 +12,13 @@ import os
 from datetime import date, timedelta
 
 # Compute a rolling "seven days ago" date used in example GitHub query
-seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+time = (date.today() - timedelta(days="X")).isoformat()
 
 github_base_filters = [
-    "stars:100..500",
-    "topics:>0",
-    "forks:>0",
-    f"created:>={seven_days_ago}",
+    "stars:X..X",
+    "topics:>X",
+    "forks:>X",
+    f"created:>={time}",
     "is:public",
     "archived:false",
     "NOT download"
@@ -47,6 +47,10 @@ GITLAB = {
     "GITLAB_PROJECTS_SORT": os.getenv("GITLAB_PROJECTS_SORT", "desc"),
     "GITLAB_TOP_N": int(os.getenv("GITLAB_TOP_N", "30")),
 }
+
+# Optional model / seed paths used by the pipeline
+FASTTEXT_MODEL_PATH = os.getenv("FASTTEXT_MODEL_PATH", "/app/models/lid.176.ftz")
+TECHSTACKS_SEED_PATH = os.getenv("TECHSTACKS_SEED_PATH", "/app/prisma/seed/techstacks-data.ts")
 
 dest_path = os.path.join(os.path.dirname(__file__), "cfg.example.yaml")
 with open(dest_path, "w") as f:
@@ -78,5 +82,8 @@ GITLAB_PROJECTS_SORT: {GITLAB['GITLAB_PROJECTS_SORT']}
 GITLAB_SCRAPING_QUERY: {GITLAB['GITLAB_SCRAPING_QUERY']}
 GITLAB_TOP_N: {GITLAB['GITLAB_TOP_N']}
 
+# Optional model / seed paths used by the pipeline
+FASTTEXT_MODEL_PATH: {FASTTEXT_MODEL_PATH}
+TECHSTACKS_SEED_PATH: {TECHSTACKS_SEED_PATH}
 # ───────────────────────────────────────────────────────── #
 """)
