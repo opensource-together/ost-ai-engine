@@ -1,3 +1,4 @@
+import pandas as pd
 from dagster import (
     asset_check,
     AssetCheckResult,
@@ -14,8 +15,13 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
 
     Returns detailed metadata to help debugging.
     """
-    if not isinstance(core_github__extract_top_projects, list):
-        msg = "Input to check is not a list."
+    # Accept list or DataFrame
+    if isinstance(core_github__extract_top_projects, pd.DataFrame):
+        core_list = core_github__extract_top_projects.to_dict(orient="records")
+    elif isinstance(core_github__extract_top_projects, list):
+        core_list = core_github__extract_top_projects
+    else:
+        msg = "Input to check is not a list or DataFrame."
         context.log.error(msg)
         return AssetCheckResult(
             passed=False,
@@ -28,7 +34,7 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
 
     missing_indices = []
     missing_examples = []
-    for i, project in enumerate(core_github__extract_top_projects):
+    for i, project in enumerate(core_list):
         if project.get("description") in (None, ""):
             missing_indices.append(i)
             if len(missing_examples) < 5:
@@ -39,7 +45,7 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
         "missing_count": MetadataValue.int(len(missing_indices)),
         "missing_indices": MetadataValue.json(missing_indices[:50]),
         "missing_examples": MetadataValue.json(missing_examples),
-    "total": MetadataValue.int(len(core_github__extract_top_projects)),
+    "total": MetadataValue.int(len(core_list)),
     }
 
     if missing_indices:

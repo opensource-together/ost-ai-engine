@@ -2,6 +2,7 @@ from dagster import (
     Definitions,
     define_asset_job,
     multiprocess_executor,
+    AssetSelection,
 )
 from .schedules.github import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
@@ -36,14 +37,9 @@ from .assets.out.asset_checks import (
 
 github_scraper_job = define_asset_job(
     name="github_scraper_job",
-    selection=[
-    "raw_github__extract_projects",
-    "core_repo_lang_detect",
-    "core_repo_primary_language_filter",
-    "core_github__extract_top_projects",
-        "core_github__table_projects_mapped",
-        "out_github__table_projects_db",
-    ],
+    # Select all assets that belong to the github_projects_scraper group so the
+    # job follows the logical grouping instead of listing assets manually.
+    selection=AssetSelection.groups("github_projects_scraper"),
     executor_def=multiprocess_executor.configured({"max_concurrent": 1}),
     description=(
         "Scrape trending repositories (GitHub and GitLab), filter and rank them, "

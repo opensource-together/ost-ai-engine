@@ -38,6 +38,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 	# Accept the DataFrame produced by `raw_github__to_df` so this asset can run
 	# in parallel with `core_repo_primary_language_filter`.
 	ins={"raw_github__df": AssetIn("raw_github__to_df")},
+	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
 def core_repo_lang_detect(context, raw_github__df: _t.Any):
@@ -60,7 +61,7 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 		raw_list = raw_github__df
 
 	cfg = context.resources.config
-	model_path = getattr(cfg, "fasttext_model_path", "/app/models/lid.176.ftz")
+	model_path = getattr(cfg, "fasttext_model_path", "")
 
 	model = None
 	if fasttext is None:
@@ -143,6 +144,7 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	ins={"core_repo_lang_detect": AssetIn(), "core_repo_primary_language_filter": AssetIn()},
+	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
 def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_primary_language_filter):
@@ -212,6 +214,7 @@ __all__ = [
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	ins={"raw_github__extract_projects": AssetIn()},
+	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
 def raw_github__to_df(context, raw_github__extract_projects: _t.List[_t.Dict]):
@@ -253,6 +256,7 @@ def raw_github__to_df(context, raw_github__extract_projects: _t.List[_t.Dict]):
 	# Accept the DataFrame produced by `raw_github__to_df` so this asset can run
 	# in parallel with `core_repo_lang_detect`.
 	ins={"raw_github__df": AssetIn("raw_github__to_df")},
+	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
 def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
@@ -322,6 +326,7 @@ def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	ins={"merged_filtered_projects": AssetIn("core_merge_filtered_projects")},
+	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
 def core_github__extract_top_projects(context, merged_filtered_projects):
@@ -362,6 +367,7 @@ def core_github__extract_top_projects(context, merged_filtered_projects):
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	ins={"core_github__extract_top_projects": AssetIn()},
+	group_name="github_projects_scraper",
 )
 def core_github__table_projects_mapped(context, core_github__extract_top_projects):
 	"""Map selected top projects to the Prisma `Project` schema.

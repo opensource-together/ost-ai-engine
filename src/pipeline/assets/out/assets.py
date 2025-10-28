@@ -1,11 +1,6 @@
 import typing as _t
 
-from dagster import (
-    asset,
-    AssetIn,
-    MetadataValue,
-    Output,
-)
+from dagster import asset, AssetIn, MetadataValue, Output
 
 from src.services.python.prisma_client import prisma_client
 
@@ -15,6 +10,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
+    group_name="github_projects_scraper",
     description=(
         "Upsert mapped projects into the Project table via Prisma. "
         "Skips items missing `repoUrl`. Returns counts of inserted/updated."
@@ -31,6 +27,7 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
     inserted = 0
     updated = 0
     errors: list[tuple[int, str]] = []
+
     with prisma_client() as prisma:
         for i, project in enumerate(core_github__table_projects_mapped or []):
             repo_url = project.get("repoUrl")
@@ -82,11 +79,6 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
         "error_count": MetadataValue.int(len(errors)),
         "first_error": MetadataValue.text(errors[0][1]) if errors else MetadataValue.null(),
     })
-"""Cleaned assets - placeholder package.
 
-Final cleaned/normalised assets should live here.
-"""
 
-from dagster import asset
-
-__all__ = []
+__all__ = ["out_github__table_projects_db"]
