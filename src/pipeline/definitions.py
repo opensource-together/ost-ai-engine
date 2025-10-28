@@ -1,6 +1,7 @@
 from dagster import (
     Definitions,
     define_asset_job,
+    multiprocess_executor,
 )
 from .schedules.github import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
@@ -9,7 +10,10 @@ from .assets.raw.assets import (
     raw_gitlab__extract_projects,
 )
 from .assets.core.assets import (
+    raw_github__to_df,
     core_repo_lang_detect,
+    core_repo_primary_language_filter,
+    core_merge_filtered_projects,
     core_github__extract_top_projects,
     core_github__table_projects_mapped,
 )
@@ -35,10 +39,12 @@ github_scraper_job = define_asset_job(
     selection=[
     "raw_github__extract_projects",
     "core_repo_lang_detect",
+    "core_repo_primary_language_filter",
     "core_github__extract_top_projects",
         "core_github__table_projects_mapped",
         "out_github__table_projects_db",
     ],
+    executor_def=multiprocess_executor.configured({"max_concurrent": 1}),
     description=(
         "Scrape trending repositories (GitHub and GitLab), filter and rank them, "
         "normalize to the Prisma Project schema, and upsert the results into the database. "
@@ -54,9 +60,12 @@ github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
 defs = Definitions(
     assets=[
     raw_github__extract_projects,
+    raw_github__to_df,
     core_repo_lang_detect,
+    core_repo_primary_language_filter,
+    core_merge_filtered_projects,
     core_github__extract_top_projects,
-        core_github__table_projects_mapped,
+    core_github__table_projects_mapped,
         out_github__table_projects_db,
         raw_gitlab__extract_projects
     ],

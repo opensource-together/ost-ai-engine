@@ -4,6 +4,10 @@ Move or implement staging transforms here. For now this module exposes
 no assets and acts as a scaffold for future work.
 """
 import typing as _t
+import pandas as pd
+from pathlib import Path
+import re
+from collections import Counter
 
 from dagster import (
 	asset,
@@ -31,18 +35,29 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 		"Detect repo language using fastText; annotate with `language` and "
 		"`language_confidence`, and filter non‑Latin/scripted languages."
 	),
-	ins={"raw_github__extract_projects": AssetIn()},
+	# Accept the DataFrame produced by `raw_github__to_df` so this asset can run
+	# in parallel with `core_repo_primary_language_filter`.
+	ins={"raw_github__df": AssetIn("raw_github__to_df")},
 	required_resource_keys={"config"},
 )
-def core_repo_lang_detect(context, raw_github__extract_projects: _t.List[_t.Dict]):
+def core_repo_lang_detect(context, raw_github__df: _t.Any):
 	"""Annotate repos with detected language and filter non-Latin/scripted languages.
 
 	Output: list of repo dicts with `language` and `language_confidence` added.
 	Fallback: if fastText/model missing -> pass-through (logs error).
 	"""
-	if not raw_github__extract_projects:
+	# Accept either a DataFrame (from the new transformer asset) or the
+	# original list-of-dicts. Be permissive for backwards compatibility.
+	if raw_github__df is None:
 		context.log.info("core_repo_lang_detect: no input projects, returning empty list")
-		return []
+		return Output(value=[], metadata={"input_count": MetadataValue.int(0)})
+
+	# If a DataFrame is provided, convert to list of dicts for the existing
+	# processing logic.
+	if isinstance(raw_github__df, pd.DataFrame):
+		raw_list = raw_github__df.to_dict(orient="records")
+	else:
+		raw_list = raw_github__df
 
 	cfg = context.resources.config
 	model_path = getattr(cfg, "fasttext_model_path", "/app/models/lid.176.ftz")
@@ -67,7 +82,7 @@ def core_repo_lang_detect(context, raw_github__extract_projects: _t.List[_t.Dict
 	accepted: _t.List[_t.Dict] = []
 	filtered_out = 0
 
-	for i, repo in enumerate(raw_github__extract_projects):
+	for i, repo in enumerate(raw_list):
 		# Build text to detect language from several possible fields
 		text_parts = []
 		for key in ("combined_text", "readme", "description", "name"):
@@ -104,35 +119,229 @@ def core_repo_lang_detect(context, raw_github__extract_projects: _t.List[_t.Dict
 
 		accepted.append(repo)
 
+	# Build helpful metadata for debugging
+	lang_counts: dict = {}
+	for r in accepted:
+		k = r.get("language") or "<none>"
+		lang_counts[k] = lang_counts.get(k, 0) + 1
+
+	sample = accepted[:3]
 	meta = {
-		"input_count": MetadataValue.int(len(raw_github__extract_projects)),
+		"input_count": MetadataValue.int(len(raw_list)),
 		"output_count": MetadataValue.int(len(accepted)),
 		"filtered_out": MetadataValue.int(filtered_out),
+		"sample": MetadataValue.json(sample),
+		"language_counts": MetadataValue.json(lang_counts),
 	}
-	context.log.info(f"core_repo_lang_detect: kept {len(accepted)} / {len(raw_github__extract_projects)} projects (filtered_out={filtered_out})")
+	context.log.info(f"core_repo_lang_detect: kept {len(accepted)} / {len(raw_list)} projects (filtered_out={filtered_out}); sample={sample}")
+	# Return a list of dicts to remain compatible with existing asset checks
 	return Output(value=accepted, metadata=meta)
 
-
-__all__ = ["core_repo_lang_detect"]
 
 
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"core_repo_lang_detect": AssetIn()},
-    required_resource_keys={"config"},
+	ins={"core_repo_lang_detect": AssetIn(), "core_repo_primary_language_filter": AssetIn()},
+	required_resource_keys={"config"},
 )
-def core_github__extract_top_projects(context, core_repo_lang_detect):
+def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_primary_language_filter):
+	"""Merge the two filtered outputs produced in parallel.
+
+	Default behavior: perform an inner join on `id` (GitHub numeric id). If `id`
+	is not present in both dataframes, fall back to `full_name`, `html_url`, or
+	`name` (in that order) if available in both.
+
+	The merge is an intersection: only repos kept by both filters remain. This
+	follows the semantics "remove rows each asset must remove".
+	"""
+	# Normalize inputs to DataFrames
+	def to_df(x):
+		if x is None:
+			return pd.DataFrame()
+		if isinstance(x, pd.DataFrame):
+			return x
+		try:
+			return pd.DataFrame(x)
+		except Exception:
+			return pd.DataFrame()
+
+	df1 = to_df(core_repo_lang_detect)
+	df2 = to_df(core_repo_primary_language_filter)
+
+	# Choose join key
+	common_keys = ["id", "full_name", "html_url", "name"]
+	join_key = None
+	for k in common_keys:
+		if k in df1.columns and k in df2.columns:
+			join_key = k
+			break
+
+	if join_key is None:
+		context.log.warning("core_merge_filtered_projects: no common join key found; returning lang-detect output as fallback")
+		merged = df1
+	else:
+		try:
+			merged = pd.merge(df1, df2[[join_key]], on=join_key, how="inner")
+			context.log.info(f"core_merge_filtered_projects: merged on '{join_key}', resulting rows={len(merged)}")
+		except Exception as e:
+			context.log.exception(f"core_merge_filtered_projects: merge failed: {e}")
+			merged = df1
+
+	records = merged.to_dict(orient="records")
+	meta = {
+		"left_count": MetadataValue.int(len(df1)),
+		"right_count": MetadataValue.int(len(df2)),
+		"merged_count": MetadataValue.int(len(records)),
+		"join_key": MetadataValue.text(join_key or "none"),
+		"sample": MetadataValue.json(records[:3]),
+		"sample_ids": MetadataValue.json([r.get(join_key) for r in records[:3]]) if join_key else MetadataValue.json([]),
+	}
+	return Output(value=records, metadata=meta)
+
+
+__all__ = [
+	"core_repo_lang_detect",
+	"core_repo_primary_language_filter",
+	"raw_github__to_df",
+	"core_merge_filtered_projects",
+]
+
+
+@asset(
+	kinds={"python"},
+	owners=DEFAULT_OWNERS,
+	ins={"raw_github__extract_projects": AssetIn()},
+	required_resource_keys={"config"},
+)
+def raw_github__to_df(context, raw_github__extract_projects: _t.List[_t.Dict]):
+	"""Convert the raw list-of-dicts into a pandas.DataFrame.
+
+	This asset provides a single DataFrame that is used as input to
+	`core_repo_lang_detect` and `core_repo_primary_language_filter` so they
+	can run in parallel on the same dataset.
+	"""
+	if not raw_github__extract_projects:
+		context.log.info("raw_github__to_df: no input projects, returning empty DataFrame")
+		df = pd.DataFrame()
+		return Output(value=df, metadata={"input_count": MetadataValue.int(0)})
+
+	try:
+		df = pd.DataFrame(raw_github__extract_projects)
+		sample_records = df.head(3).to_dict(orient="records")
+		sample_ids = [r.get("id") for r in sample_records]
+		meta = {
+			"input_count": MetadataValue.int(len(df)),
+			"columns_count": MetadataValue.int(len(df.columns)),
+			"sample": MetadataValue.json(sample_records),
+			"sample_ids": MetadataValue.json(sample_ids),
+		}
+		context.log.info(f"raw_github__to_df: converted {len(df)} projects to DataFrame; columns={list(df.columns)[:6]}")
+		return Output(value=df, metadata=meta)
+	except Exception as e:
+		context.log.exception(f"raw_github__to_df: could not convert to DataFrame: {e}")
+		# Fallback: return empty DataFrame
+		return Output(value=pd.DataFrame(), metadata={"input_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
+
+
+@asset(
+	kinds={"python"},
+	owners=DEFAULT_OWNERS,
+	description=(
+		"Filter repos whose GitHub `language` (primary language) matches a known techstack."
+	),
+	# Accept the DataFrame produced by `raw_github__to_df` so this asset can run
+	# in parallel with `core_repo_lang_detect`.
+	ins={"raw_github__df": AssetIn("raw_github__to_df")},
+	required_resource_keys={"config"},
+)
+def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
+	"""Keep only repositories whose `language` field (GitHub primary language) matches
+	one of the known tech stacks from the project seed file.
+
+	The path to the seed TS file is provided by `context.resources.config.techstacks_seed_path`.
+	The function performs a lightweight parse of the TypeScript seed to extract `name` values.
+	"""
+	seed_path = getattr(context.resources.config, "techstacks_seed_path", "/app/prisma/seed/techstacks-data.ts")
+	allowed: set[str] = set()
+	try:
+		p = Path(seed_path)
+		if p.exists():
+			txt = p.read_text(encoding="utf-8")
+			names = re.findall(r"name:\s*'([^']+)'", txt)
+			allowed = {n.strip().lower() for n in names if n.strip()}
+		else:
+			context.log.warning(f"techstacks seed file not found at {seed_path}")
+	except Exception as e:
+		context.log.warning(f"Could not read techstacks seed file {seed_path}: {e}")
+
+	try:
+		# Accept DataFrame or list-of-dicts
+		if isinstance(raw_github__df, pd.DataFrame):
+			raw_list = raw_github__df.to_dict(orient="records")
+		else:
+			raw_list = raw_github__df or []
+
+		kept = []
+		filtered_count = 0
+		for i, repo in enumerate(raw_list):
+			lang = repo.get("language")
+			if isinstance(lang, str) and lang.strip() and lang.strip().lower() in allowed:
+				kept.append(repo)
+			else:
+				filtered_count += 1
+
+		# Build metadata
+		sample_kept = kept[:3]
+		allowed_sample = list(sorted(allowed))[:10]
+		meta = {
+			"input_count": MetadataValue.int(len(raw_list)),
+			"kept_count": MetadataValue.int(len(kept)),
+			"filtered_out": MetadataValue.int(filtered_count),
+			"allowed_count": MetadataValue.int(len(allowed)),
+			"allowed_sample": MetadataValue.json(allowed_sample),
+			"sample": MetadataValue.json(sample_kept),
+		}
+		context.log.info(f"core_repo_primary_language_filter: kept {len(kept)} / {len(raw_list)} projects; allowed_count={len(allowed)}; sample={sample_kept}")
+		# Return DataFrame for downstream merging
+		try:
+			df = pd.DataFrame(kept)
+			return Output(value=df, metadata=meta)
+		except Exception:
+			return Output(value=kept, metadata=meta)
+	except Exception as e:
+		# Catch any unexpected errors to avoid crashing the dagster child process
+		context.log.exception(f"core_repo_primary_language_filter: unexpected error: {e}")
+		return Output(value=[], metadata={
+			"input_count": MetadataValue.int(0),
+			"error": MetadataValue.text(str(e)),
+		})
+
+
+@asset(
+	kinds={"python"},
+	owners=DEFAULT_OWNERS,
+	ins={"merged_filtered_projects": AssetIn("core_merge_filtered_projects")},
+	required_resource_keys={"config"},
+)
+def core_github__extract_top_projects(context, merged_filtered_projects):
 	"""Select top-N projects with non-empty descriptions, ranked by stars.
 
 	Returns the selected list and metadata (selected_count, input_count, stars_range).
 	"""
 	top_n = context.resources.config.github_top_n
-	if not core_repo_lang_detect or not isinstance(core_repo_lang_detect, list):
+	# Accept DataFrame or list-of-dicts
+	if isinstance(merged_filtered_projects, pd.DataFrame):
+		projects = merged_filtered_projects.to_dict(orient="records")
+	else:
+		projects = merged_filtered_projects
+
+	if not projects or not isinstance(projects, list):
 		context.log.warning("No projects to rank.")
 		return []
-	filtered = [p for p in core_repo_lang_detect if p.get("description") not in (None, "")]
-	context.log.info(f"[DEBUG] core_github__extract_top_projects: {len(filtered)} projects with description out of {len(core_repo_lang_detect)}")
+
+	filtered = [p for p in projects if p.get("description") not in (None, "")]
+	context.log.info(f"[DEBUG] core_github__extract_top_projects: {len(filtered)} projects with description out of {len(projects)}")
 	if not filtered:
 		context.log.warning("[DEBUG] core_github__extract_top_projects: No project with description found.")
 		return Output(value=[], metadata={
@@ -143,7 +352,7 @@ def core_github__extract_top_projects(context, core_repo_lang_detect):
 	top_projects = ranked[:top_n]
 	meta = {
 		"selected_count": MetadataValue.int(len(top_projects)),
-		"input_count": MetadataValue.int(len(core_repo_lang_detect)),
+		"input_count": MetadataValue.int(len(projects)),
 		"stars_range": MetadataValue.text(f"{top_projects[0].get('stargazers_count', 0)} - {top_projects[-1].get('stargazers_count', 0)}") if top_projects else MetadataValue.null(),
 	}
 	return Output(value=top_projects, metadata=meta)
