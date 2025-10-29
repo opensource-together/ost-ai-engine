@@ -1,5 +1,5 @@
 from dagster import ScheduleDefinition, DefaultScheduleStatus
-from src.services.python.load_cfg import PipelineConfig
+from src.pipeline.utils import PipelineConfig
 
 
 def make_github_scraper_schedule(job):

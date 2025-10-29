@@ -2,7 +2,7 @@ import typing as _t
 
 from dagster import asset, AssetIn, MetadataValue, Output
 
-from src.services.python.prisma_client import prisma_client
+from src.pipeline.utils import prisma_client
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
