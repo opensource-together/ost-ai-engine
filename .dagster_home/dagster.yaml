@@ -1,6 +1,11 @@
 # Dagster instance configuration
 # Documentation: https://docs.dagster.io/deployment/dagster-instance
 
+# Add executor configuration to disable multiprocessing
+execution:
+  config:
+    in_process:
+
 # unified storage for runs, event logs, and schedules
 storage:
   sqlite:
@@ -17,6 +22,10 @@ compute_logs:
 run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
+
+# Enable run monitoring for better error detection
+run_monitoring:
+  enabled: true
 
 # disable telemetry
 telemetry:
