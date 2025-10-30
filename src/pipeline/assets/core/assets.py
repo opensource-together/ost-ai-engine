@@ -37,6 +37,34 @@ _SENTENCE_MODEL = None
 _CATEGORY_EMBS = None
 _CATEGORIES = None
 
+
+# Generic helper: resolve a model attribute on the Prisma client using common
+# candidate names (snake_case, camelCase, PascalCase). Returns the model
+# object or None.
+def _find_model(client_obj, candidates: list[str]):
+	for n in candidates:
+		if hasattr(client_obj, n):
+			return getattr(client_obj, n)
+	return None
+
+
+# Helper to compute embeddings for Category rows fetched from the DB.
+# Returns (cat_objs, cat_embs) where cat_embs is a numpy array with one
+# embedding per category in the same order as cat_objs.
+def _get_db_category_embeddings(category_model, context):
+	all_categories = category_model.find_many()
+	cat_objs = list(all_categories or [])
+	if not cat_objs:
+		return [], None, None
+	try:
+		model = _load_model()
+		cat_texts = [getattr(c, "name", "") for c in cat_objs]
+		cat_embs = model.encode(cat_texts, convert_to_numpy=True, normalize_embeddings=True)
+		return cat_objs, cat_embs, model
+	except Exception as e:
+		context.log.exception(f"_get_db_category_embeddings: failed to load model/compute embeddings: {e}")
+		return cat_objs, None, None
+
 __all__ = [
 	"core_repo_lang_detect",
 	"core_repo_primary_language_filter",
@@ -515,6 +543,8 @@ def _load_categories_and_embeddings(seed_json_path: str):
 
 
 def _cosine_sim(a, b) -> float:
+	# Import numpy lazily to avoid loading its C extensions at module import
+	# time which can cause SIGBUS when using a multiprocess/fork executor.
 	import numpy as np
 	return float(np.dot(a, b))
 
@@ -580,6 +610,81 @@ def _fetch_repo_topics(owner: str, repo: str, headers: dict, session: requests.S
 		if r.ok:
 			json_data = r.json()
 			out = json_data.get("names") or json_data.get("topics") or []
+	except Exception:
+		pass
+	return out
+
+
+@asset(
+	kinds={"python"},
+	owners=DEFAULT_OWNERS,
+	description="Fetch GitHub README for each project (parallel).",
+	ins={"core_github__table_projects_mapped": AssetIn()},
+	group_name="github_projects_scraper",
+	required_resource_keys={"config"},
+)
+def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+	if not core_github__table_projects_mapped:
+		return Output(value=[], metadata={"count": MetadataValue.int(0)})
+
+	token = getattr(context.resources.config, "github_token", None) or os.environ.get("GITHUB_ACCESS_TOKEN")
+	headers = {"Accept": "application/vnd.github.v3+json"}
+	if token:
+		headers["Authorization"] = f"token {token}"
+
+	results = []
+	session = requests.Session()
+	max_workers = int(getattr(context.resources.config, "github_fetch_workers", 8))
+	with ThreadPoolExecutor(max_workers=max_workers) as ex:
+		futures = {}
+		for proj in core_github__table_projects_mapped:
+			repo_url = proj.get("repoUrl")
+			owner_repo = _extract_owner_repo(repo_url) if repo_url else None
+			if owner_repo:
+				owner, repo = owner_repo
+				futures[ex.submit(_fetch_readme, owner, repo, headers, session)] = {"project": proj, "repoUrl": repo_url}
+		for fut in as_completed(futures):
+			meta = futures[fut]
+			try:
+				readme = fut.result()
+			except Exception as e:
+				context.log.warning(f"fetch readme failed: {e}")
+				readme = ""
+			out = {"project": meta["project"], "repoUrl": meta["repoUrl"], "readme": readme}
+			results.append(out)
+
+	sample = results[:3]
+	sample_repo_urls = [r.get("repoUrl") for r in sample]
+	meta = {
+		"count": MetadataValue.int(len(results)),
+		"sample": MetadataValue.json(sample),
+		"sample_repo_urls": MetadataValue.json(sample_repo_urls),
+	}
+	return Output(value=results, metadata=meta)
+
+
+def _fetch_readme(owner: str, repo: str, headers: dict, session: requests.Session) -> str:
+	out = ""
+	try:
+		readme_url = f"https://api.github.com/repos/{owner}/{repo}/readme"
+		# Prefer raw content when possible
+		r = session.get(readme_url, headers={**headers, "Accept": "application/vnd.github.v3.raw"}, timeout=10)
+		if r.ok:
+			out = r.text
+		else:
+			# fallback to JSON which may contain base64 encoded content
+			r2 = session.get(readme_url, headers=headers, timeout=10)
+			if r2.ok:
+				try:
+					j = r2.json()
+					content = j.get("content")
+					encoding = j.get("encoding")
+					if content and encoding == "base64":
+						import base64
+
+						out = base64.b64decode(content.encode("utf-8")).decode("utf-8", errors="ignore")
+				except Exception:
+					out = ""
 	except Exception:
 		pass
 	return out
@@ -688,15 +793,16 @@ def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: 
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description="Merge languages and topics by repoUrl into a single repo_meta structure.",
+	description="Merge languages, topics and readme by repoUrl into a single repo_meta structure.",
 	ins={
 		"langs": AssetIn("core_github__fetch_repo_languages"),
 		"topics": AssetIn("core_github__fetch_repo_topics"),
+		"readmes": AssetIn("core_github__fetch_readme"),
 	},
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
-def core_github__merge_repo_meta(context, langs, topics):
+def core_github__merge_repo_meta(context, langs, topics, readmes):
 	# langs and topics are lists of {project, repoUrl, languages} / {project, repoUrl, topics}
 	if not langs and not topics:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
@@ -709,6 +815,15 @@ def core_github__merge_repo_meta(context, langs, topics):
 		by_url.setdefault(url, {})
 		by_url[url].setdefault("project", item.get("project"))
 		by_url[url]["languages"] = item.get("languages") or []
+		# also preserve any description present on the mapped project dict
+		try:
+			proj = by_url[url].get("project") or {}
+			if isinstance(proj, dict):
+				desc = proj.get("description")
+				if desc:
+					by_url[url]["description"] = desc
+		except Exception:
+			pass
 
 	for item in (topics or []):
 		url = item.get("repoUrl")
@@ -720,6 +835,15 @@ def core_github__merge_repo_meta(context, langs, topics):
 			by_url[url]["project"] = item.get("project")
 		by_url[url]["topics"] = item.get("topics") or []
 
+	# incorporate readme fetch results (separate asset)
+	for item in (readmes or []):
+		url = item.get("repoUrl")
+		if not url:
+			continue
+		by_url.setdefault(url, {})
+		# attach raw readme text for use in embeddings/context
+		by_url[url]["readme"] = item.get("readme") or ""
+
 	results = []
 	for url, data in by_url.items():
 		results.append({
@@ -727,6 +851,8 @@ def core_github__merge_repo_meta(context, langs, topics):
 			"repoUrl": url,
 			"languages": data.get("languages") or [],
 			"topics": data.get("topics") or [],
+			"description": data.get("description") or (data.get("project") or {}).get("description"),
+			"readme": data.get("readme") or (data.get("project") or {}).get("readme"),
 		})
 
 	# include small samples and counts in metadata for easier debugging in the Dagster UI
@@ -764,12 +890,7 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 		return s.lower().strip().replace("_", " ").replace("-", " ").replace(".", " ")
 
 	with prisma_client() as prisma:
-		# Helper: Prisma model attribute name may vary depending on client generation
-		def _find_model(client_obj, candidates: list[str]):
-			for n in candidates:
-				if hasattr(client_obj, n):
-					return getattr(client_obj, n)
-			return None
+		# use module-level _find_model
 
 		# Try the likely attribute names (match seed/ts usage and prisma-python variants)
 		model_ts = _find_model(prisma, ["tech_stack", "TechStack", "techStack", "techstack"])
@@ -800,6 +921,7 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 
 		# collect small examples of what we matched/created for Dagster metadata
 		mapped_examples: list[dict] = []
+		unmatched_count = 0
 		for item in repo_meta:
 			try:
 				proj = item.get("project")
@@ -838,6 +960,10 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 						# record matched ts name for example output
 						repo_matched_names.append(getattr(ts, "name", str(ts.id)))
 
+				# If nothing matched at all, count as unmatched
+				if not repo_matched_names:
+					unmatched_count += 1
+
 				# capture a small example for metadata (keep first few)
 				if len(mapped_examples) < 3:
 					mapped_examples.append({
@@ -857,11 +983,12 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 	# include small sample examples for debugging in Dagster UI
 	meta = {
 		"mapped": MetadataValue.int(mapped),
+		"unmatched_count": MetadataValue.int(unmatched_count),
 		"input_count": MetadataValue.int(len(repo_meta)),
 		"errors": MetadataValue.int(errors),
 		"sample_mapped": MetadataValue.json(mapped_examples[:3]),
 	}
-	context.log.info(f"core_github__map_languages_to_techstacks: mapped={mapped} relations across {len(repo_meta)} repos; sample={ [e.get('repoUrl') for e in mapped_examples[:3]] }")
+	context.log.info(f"core_github__map_languages_to_techstacks: mapped={mapped} relations across {len(repo_meta)} repos; unmatched={unmatched_count}; sample={ [e.get('repoUrl') for e in mapped_examples[:3]] }")
 	return Output(value={"mapped": mapped}, metadata=meta)
 
 
@@ -880,16 +1007,10 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 	mapped = 0
 	errors = 0
 	def _normalize(s: str) -> str:
-		return s.strip()
+		# Normalize to lowercase and replace common separators to improve matching
+		return s.lower().strip().replace("_", " ").replace("-", " ").replace(".", " ")
 
 	with prisma_client() as prisma:
-		# Helper: Prisma model attribute name may vary depending on client generation
-		def _find_model(client_obj, candidates: list[str]):
-			for n in candidates:
-				if hasattr(client_obj, n):
-					return getattr(client_obj, n)
-			return None
-
 		# Resolve models we need (Project, Category, ProjectCategory)
 		project_model = _find_model(prisma, ["project", "Project"]) or _find_model(prisma, ["project_model"])
 		if project_model is None:
@@ -906,8 +1027,15 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 			context.log.exception("core_github__map_topics_to_categories: ProjectCategory model not found on Prisma client; did you run `prisma generate`?")
 			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(1)})
 
+		# Preload categories and compute embeddings from DB names (helper)
+		cat_objs, cat_embs, model = _get_db_category_embeddings(category_model, context)
+		if not cat_objs or cat_embs is None or model is None:
+			context.log.info("core_github__map_topics_to_categories: no category embeddings available; nothing to map.")
+			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(0)})
+
 		# collect small examples for metadata
 		mapped_examples: list[dict] = []
+		unmatched_count = 0
 		for item in repo_meta:
 			try:
 				proj = item.get("project")
@@ -918,13 +1046,109 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 				project_rec = project_model.find_first(where={"repoUrl": repoUrl})
 				if not project_rec:
 					continue
-				matched_category_names = _map_topics_to_categories(topics, seed_json_path, top_k=2, thresh=0.56)
-				if not matched_category_names:
-					continue
 
-				# Normalize matched names and only keep categories that already exist in DB
-				matched_norm = [ _normalize(n) for n in matched_category_names ]
-				found = category_model.find_many(where={"name": {"in": matched_norm}})
+				# Compute topic embeddings and compare against DB category embeddings
+				try:
+
+					# Compute embeddings for the topics but also incorporate project
+					# description/readme (when available) as additional context so
+					# the semantic vector represents topics+project context.
+					# Build a small context text from available sources in `item`
+					# (this is the merged repo_meta entry and should contain
+					# `description` and `readme` after merging the readme asset).
+					context_text_parts: list[str] = []
+					# Prefer explicit description/readme fields on the merged item
+					try:
+						if isinstance(item.get("description"), str) and item.get("description").strip():
+							context_text_parts.append(item.get("description").strip())
+						if isinstance(item.get("readme"), str) and item.get("readme").strip():
+							context_text_parts.append(item.get("readme").strip())
+					except Exception:
+						pass
+					# Also include any textual fields present on the mapped project dict
+					mapped_project = item.get("project") or {}
+					if isinstance(mapped_project, dict):
+						for k in ("combined_text", "readme", "description", "name"):
+							v = mapped_project.get(k)
+							if isinstance(v, str) and v.strip():
+								context_text_parts.append(v.strip())
+
+					context_text = "\n".join(context_text_parts).strip()
+
+					# encode topics
+					topic_embs = model.encode(topics, convert_to_numpy=True, normalize_embeddings=True)
+					if hasattr(topic_embs, "ndim") and topic_embs.ndim == 1:
+						# single topic -> make it 2D
+						topic_embs = topic_embs.reshape(1, -1)
+
+					# encode context text (if any) and include it in the mean
+					ctx_vec = None
+					if context_text:
+						try:
+							ctx_emb = model.encode([context_text], convert_to_numpy=True, normalize_embeddings=True)
+							# ctx_emb should be shape (1, dim) or (dim,)
+							if hasattr(ctx_emb, "ndim"):
+								if ctx_emb.ndim == 2:
+									ctx_vec = ctx_emb[0]
+								elif ctx_emb.ndim == 1:
+									ctx_vec = ctx_emb
+						except Exception as e:
+							context.log.debug(f"core_github__map_topics_to_categories: failed to encode context_text for repoUrl={repoUrl}: {e}")
+
+					# aggregate topic embeddings (and optional context) to get a
+					# single vector representing the repo topics+context
+					# Import numpy locally to avoid loading C-extensions at
+					# module import time (prevent SIGBUS in forked children).
+					import numpy as np
+					if ctx_vec is not None:
+						try:
+							topic_vec = np.mean(np.vstack([topic_embs, ctx_vec]), axis=0)
+						except Exception:
+							topic_vec = topic_embs.mean(axis=0)
+					else:
+						topic_vec = topic_embs.mean(axis=0)
+
+					# compute similarities to each category embedding
+					scores = np.dot(cat_embs, topic_vec)
+					best_idx = int(np.argmax(scores))
+					best_score = float(scores[best_idx])
+					# threshold to avoid spurious matches
+					THRESH = float(getattr(context.resources.config, "categories_match_thresh", 0.56))
+					match_mode = None
+					if best_score >= THRESH:
+						# confident embedding match
+						found = [cat_objs[best_idx]]
+						match_mode = "embedding"
+					else:
+						# fallback: try simple text-token heuristics between topics and category names
+						# prepare normalized category texts
+						cat_texts = [getattr(c, "name", "") for c in cat_objs]
+						cat_norms = [ _normalize(t) for t in cat_texts ]
+						topics_norm = [ _normalize(t) for t in topics ]
+						best_fallback_idx = None
+						best_overlap = 0
+						for ti, tnorm in enumerate(topics_norm):
+							for ci, cnorm in enumerate(cat_norms):
+								# direct containment (topic in category name or vice versa)
+								if tnorm and (tnorm in cnorm or cnorm in tnorm):
+									best_fallback_idx = ci
+									best_overlap = max(best_overlap, 1)
+									continue
+								# word overlap
+								tokens_t = set([w for w in re.split(r"\s+", tnorm) if w])
+								tokens_c = set([w for w in re.split(r"\s+", cnorm) if w])
+								overlap = len(tokens_t & tokens_c)
+								if overlap > best_overlap:
+									best_overlap = overlap
+									best_fallback_idx = ci
+						if best_fallback_idx is not None and best_overlap > 0:
+							found = [cat_objs[best_fallback_idx]]
+							match_mode = "text_fallback"
+						else:
+							found = []
+				except Exception as e:
+					context.log.exception(f"core_github__map_topics_to_categories: failed to compute topic embeddings or similarity for repoUrl={repoUrl}: {e}")
+					found = []
 				# per-repo created counter and matched list for examples
 				repo_created = 0
 				repo_matched: list[str] = []
@@ -937,6 +1161,10 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 					# record actual category name from DB (may be normalized)
 					repo_matched.append(getattr(cat, "name", str(cat.id)))
 
+				# If nothing matched at all, count as unmatched
+				if not found:
+					unmatched_count += 1
+
 				# capture a small example for metadata (keep first few)
 				if len(mapped_examples) < 3:
 					mapped_examples.append({
@@ -944,6 +1172,7 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 						"input_topics": topics,
 						"matched": list(dict.fromkeys(repo_matched)),
 						"created": repo_created,
+						"score": float(best_score) if 'best_score' in locals() else None,
 					})
 			except Exception as e:
 				errors += 1
@@ -952,9 +1181,10 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 
 	meta = {
 		"mapped": MetadataValue.int(mapped),
+		"unmatched_count": MetadataValue.int(unmatched_count),
 		"input_count": MetadataValue.int(len(repo_meta)),
 		"errors": MetadataValue.int(errors),
 		"sample_mapped": MetadataValue.json(mapped_examples[:3]),
 	}
-	context.log.info(f"core_github__map_topics_to_categories: mapped={mapped} relations across {len(repo_meta)} repos; sample={ [e.get('repoUrl') for e in mapped_examples[:3]] }")
+	context.log.info(f"core_github__map_topics_to_categories: mapped={mapped} relations across {len(repo_meta)} repos; unmatched={unmatched_count}; sample={ [e.get('repoUrl') for e in mapped_examples[:3]] }")
 	return Output(value={"mapped": mapped}, metadata=meta)
