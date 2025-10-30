@@ -3,7 +3,7 @@ import time
 import shutil
 from pathlib import Path
 
-from dagster import op, job, schedule, RetryPolicy, Backoff, Jitter
+from dagster import op, job
 
 
 @op
@@ -17,7 +17,7 @@ def clean_dagster_home(context):
 
     Safety: only removes entries inside those two targets and logs actions.
     """
-    dagster_home = os.environ.get("DAGSTER_HOME") or str(Path.cwd() / ".dagster_home")
+    dagster_home = os.environ.get("DAGSTER_HOME")
     root = Path(dagster_home)
     if not root.exists():
         context.log.info(f"dagster home not found: {root} — nothing to clean")
@@ -62,10 +62,4 @@ def cleanup_dagster_history_job():
     clean_dagster_home()
 
 
-@schedule(cron_schedule="0 3 */3 * *", job_name="cleanup_dagster_history_job")
-def cleanup_dagster_history_schedule():
-    """Run every 3 days at 03:00 to purge old Dagster history/logs (keep 2 days)."""
-    return {}
-
-
-__all__ = ["cleanup_dagster_history_job", "cleanup_dagster_history_schedule"]
+__all__ = ["cleanup_dagster_history_job"]
