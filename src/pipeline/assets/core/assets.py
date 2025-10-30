@@ -73,6 +73,7 @@ __all__ = [
 	"core_github__fetch_repo_languages",
 	"core_github__fetch_repo_topics",
 	"core_github__merge_repo_meta",
+	"core_github__normalize_repo_meta",
 	"core_github__map_languages_to_techstacks",
 	"core_github__map_topics_to_categories",
 ]
@@ -482,11 +483,42 @@ def core_github__table_projects_mapped(context, core_github__extract_top_project
 		return mapped
 
 	projects = [map_repo(repo) for repo in core_github__extract_top_projects]
-	context.log.info(f"[DEBUG] core_github__table_projects_mapped: {len(projects)} mapped projects.")
-	return Output(value=projects, metadata={
+	# Build enriched metadata for Dagster UI: include small previews and mapping keys
+	def _preview_text(s: str, limit: int = 1000) -> str:
+		if not s:
+			return ""
+		try:
+			if len(s) <= limit:
+				return s
+			return s[:limit] + "..."
+		except Exception:
+			return ""
+
+	mapped_examples: list[dict] = []
+	for p in projects[:3]:
+		try:
+			mapped_preview = {k: p.get(k) for k in list(p.keys())[:12]}
+			mapped_examples.append({
+				"repoUrl": p.get("repoUrl"),
+				"name": p.get("name"),
+				"description": _preview_text(p.get("description") or "", limit=500),
+				"mapped_preview": mapped_preview,
+			})
+		except Exception:
+			mapped_examples.append({"repoUrl": p.get("repoUrl"), "error": "preview_failed"})
+
+	mapping_keys = list(GITHUB_TO_PROJECT_MAPPING.keys())
+
+	meta = {
 		"mapped_count": MetadataValue.int(len(projects)),
 		"input_count": MetadataValue.int(len(core_github__extract_top_projects)),
-	})
+		"sample": MetadataValue.json(projects[:3]),
+		"sample_repo_urls": MetadataValue.json([p.get("repoUrl") for p in projects[:3]]),
+		"mapping_keys": MetadataValue.json(mapping_keys),
+		"sample_mapped": MetadataValue.json(mapped_examples),
+	}
+	context.log.info(f"core_github__table_projects_mapped: mapped={len(projects)} projects; sample_urls={ [p.get('repoUrl') for p in projects[:3]] }; mapping_keys={mapping_keys[:6] }")
+	return Output(value=projects, metadata=meta)
 
 
 # ---- New assets: fetch languages/topics and map to DB relations ----
@@ -871,12 +903,86 @@ def core_github__merge_repo_meta(context, langs, topics, readmes):
 	return Output(value=results, metadata=meta)
 
 
+@asset(
+	kinds={"python"},
+	owners=DEFAULT_OWNERS,
+	description="Normalize description/readme text for embedding (lowercase + strip punctuation).",
+	ins={"repo_meta": AssetIn("core_github__merge_repo_meta")},
+	group_name="github_projects_scraper",
+	required_resource_keys={"config"},
+)
+def core_github__normalize_repo_meta(context, repo_meta: _t.List[_t.Dict]):
+	"""Produce a normalized version of repo_meta suitable for embeddings.
+
+	Adds fields to each item: `clean_description`, `clean_readme`, `clean_context`.
+	`clean_context` is a concatenation of cleaned description/readme and a few
+	project fields, truncated to a safe length.
+	"""
+	if not repo_meta:
+		return Output(value=[], metadata={"count": MetadataValue.int(0)})
+
+	def _clean_text_for_embedding(s: str, max_len: int = 8000) -> str:
+		if not s:
+			return ""
+		# Lowercase
+		s = s.lower()
+		# Remove punctuation (keep alphanumerics and whitespace)
+		s = re.sub(r"[^0-9a-z\s]", " ", s)
+		# Collapse whitespace
+		s = re.sub(r"\s+", " ", s).strip()
+		# Truncate
+		if len(s) > max_len:
+			return s[:max_len] + "..."
+		return s
+
+	out = []
+	for item in repo_meta:
+		try:
+			proj = item.get("project") or {}
+			desc = item.get("description") or (proj.get("description") if isinstance(proj, dict) else None)
+			readme = item.get("readme") or (proj.get("readme") if isinstance(proj, dict) else None)
+			# Build a combined context then clean
+			parts = []
+			if isinstance(desc, str) and desc.strip():
+				parts.append(desc.strip())
+			if isinstance(readme, str) and readme.strip():
+				parts.append(readme.strip())
+			# Also include small textual fields from mapped project if present
+			if isinstance(proj, dict):
+				for k in ("combined_text", "readme", "description", "name"):
+					v = proj.get(k)
+					if isinstance(v, str) and v.strip():
+						parts.append(v.strip())
+			context_text = "\n".join(parts).strip()
+			clean_desc = _clean_text_for_embedding(desc or "")
+			clean_readme = _clean_text_for_embedding(readme or "")
+			clean_context = _clean_text_for_embedding(context_text or "")
+			new_item = dict(item)
+			new_item["clean_description"] = clean_desc
+			new_item["clean_readme"] = clean_readme
+			new_item["clean_context"] = clean_context
+			out.append(new_item)
+		except Exception as e:
+			context.log.exception(f"core_github__normalize_repo_meta: failed for repo {item.get('repoUrl')}: {e}")
+			# still append original item to maintain pipeline shape
+			out.append(item)
+
+	# small metadata sample
+	sample = out[:3]
+	meta = {
+		"count": MetadataValue.int(len(out)),
+		"sample": MetadataValue.json(sample),
+		"sample_repo_urls": MetadataValue.json([r.get("repoUrl") for r in sample]),
+	}
+	return Output(value=out, metadata=meta)
+
+
 
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	description="Map fetched languages to tech_stack and create project_tech_stack relations.",
-	ins={"repo_meta": AssetIn("core_github__merge_repo_meta")},
+	ins={"repo_meta": AssetIn("core_github__normalize_repo_meta")},
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
@@ -996,7 +1102,7 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	description="Map fetched topics to categories using sentence-transformers and create project_category relations.",
-	ins={"repo_meta": AssetIn("core_github__merge_repo_meta")},
+	ins={"repo_meta": AssetIn("core_github__normalize_repo_meta")},
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
@@ -1050,50 +1156,29 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 				# Compute topic embeddings and compare against DB category embeddings
 				try:
 
-					# Compute embeddings for the topics but also incorporate project
-					# description/readme (when available) as additional context so
-					# the semantic vector represents topics+project context.
-					# Build a small context text from available sources in `item`
-					# (this is the merged repo_meta entry and should contain
-					# `description` and `readme` after merging the readme asset).
-					context_text_parts: list[str] = []
-					# Prefer explicit description/readme fields on the merged item
-					try:
-						if isinstance(item.get("description"), str) and item.get("description").strip():
-							context_text_parts.append(item.get("description").strip())
-						if isinstance(item.get("readme"), str) and item.get("readme").strip():
-							context_text_parts.append(item.get("readme").strip())
-					except Exception:
-						pass
-					# Also include any textual fields present on the mapped project dict
-					mapped_project = item.get("project") or {}
-					if isinstance(mapped_project, dict):
-						for k in ("combined_text", "readme", "description", "name"):
-							v = mapped_project.get(k)
-							if isinstance(v, str) and v.strip():
-								context_text_parts.append(v.strip())
-
-					context_text = "\n".join(context_text_parts).strip()
-
+					# Topics embeddings: incorporate pre-cleaned context produced by
+					# `core_github__normalize_repo_meta` when available (clean_context).
+					# This avoids duplicating cleaning logic here and ensures a single
+					# normalized text source across the pipeline.
 					# encode topics
 					topic_embs = model.encode(topics, convert_to_numpy=True, normalize_embeddings=True)
 					if hasattr(topic_embs, "ndim") and topic_embs.ndim == 1:
 						# single topic -> make it 2D
 						topic_embs = topic_embs.reshape(1, -1)
 
-					# encode context text (if any) and include it in the mean
+					# encode pre-cleaned context text if present
 					ctx_vec = None
-					if context_text:
-						try:
-							ctx_emb = model.encode([context_text], convert_to_numpy=True, normalize_embeddings=True)
-							# ctx_emb should be shape (1, dim) or (dim,)
+					try:
+						clean_ctx = item.get("clean_context") or ""
+						if isinstance(clean_ctx, str) and clean_ctx.strip():
+							ctx_emb = model.encode([clean_ctx], convert_to_numpy=True, normalize_embeddings=True)
 							if hasattr(ctx_emb, "ndim"):
 								if ctx_emb.ndim == 2:
 									ctx_vec = ctx_emb[0]
 								elif ctx_emb.ndim == 1:
 									ctx_vec = ctx_emb
-						except Exception as e:
-							context.log.debug(f"core_github__map_topics_to_categories: failed to encode context_text for repoUrl={repoUrl}: {e}")
+					except Exception as e:
+						context.log.debug(f"core_github__map_topics_to_categories: failed to encode clean_context for repoUrl={repoUrl}: {e}")
 
 					# aggregate topic embeddings (and optional context) to get a
 					# single vector representing the repo topics+context
@@ -1167,12 +1252,39 @@ def core_github__map_topics_to_categories(context, repo_meta: _t.List[_t.Dict]):
 
 				# capture a small example for metadata (keep first few)
 				if len(mapped_examples) < 3:
+					# Include short previews of description/readme in the sample so the
+					# Dagster UI can show context for why a category was chosen. We keep
+					# previews reasonably sized to avoid bloating the metadata UI.
+					def _preview_text(s: str, limit: int = 2000) -> str:
+						if not s:
+							return ""
+						try:
+							if len(s) <= limit:
+								return s
+							return s[:limit] + "..."
+						except Exception:
+							return ""
+
+					proj_desc = None
+					proj_readme = None
+					# mapped_project may not be defined in this scope if we relied on
+					# the centralized clean_context; ensure we read from item.project
+					mapped_project = item.get("project") or {}
+					try:
+						proj_desc = item.get("description") or (mapped_project or {}).get("description")
+						proj_readme = item.get("readme") or (mapped_project or {}).get("readme")
+					except Exception:
+						proj_desc = None
+						proj_readme = None
+
 					mapped_examples.append({
 						"repoUrl": repoUrl,
 						"input_topics": topics,
 						"matched": list(dict.fromkeys(repo_matched)),
 						"created": repo_created,
 						"score": float(best_score) if 'best_score' in locals() else None,
+						"description": _preview_text(proj_desc) if isinstance(proj_desc, str) else None,
+						"readme": _preview_text(proj_readme) if isinstance(proj_readme, str) else None,
 					})
 			except Exception as e:
 				errors += 1

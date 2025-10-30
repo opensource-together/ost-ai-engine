@@ -1,4 +1,3 @@
-import pandas as pd
 from dagster import (
 	asset_check,
 	AssetCheckResult,
@@ -16,6 +15,8 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
 	Produces metadata: missing_count, missing_indices, missing_examples, total.
 	"""
 	# Accept either a list or a pandas DataFrame (normalise to list of dicts)
+	import pandas as pd
+
 	if isinstance(core_github__extract_top_projects, pd.DataFrame):
 		core_list = core_github__extract_top_projects.to_dict(orient="records")
 	elif isinstance(core_github__extract_top_projects, list):
@@ -69,6 +70,8 @@ def core_repo_lang_detect_language_fields_present(context, core_repo_lang_detect
 
 	Fails when output is not a list or items are missing the expected keys.
 	"""
+	import pandas as pd
+
 	if isinstance(core_repo_lang_detect, pd.DataFrame):
 		lang_list = core_repo_lang_detect.to_dict(orient="records")
 	else:
@@ -93,6 +96,8 @@ def core_repo_lang_detect_language_fields_present(context, core_repo_lang_detect
 )
 def core_github__table_projects_mapped_repoUrl_present(context, core_github__table_projects_mapped):
 	"""Ensure mapped projects include a non-empty `repoUrl` for all items (required for DB upsert)."""
+	import pandas as pd
+
 	# Accept DataFrame or list
 	if isinstance(core_github__table_projects_mapped, pd.DataFrame):
 		mapped_list = core_github__table_projects_mapped.to_dict(orient="records")

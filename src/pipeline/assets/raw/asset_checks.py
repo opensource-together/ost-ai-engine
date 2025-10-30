@@ -1,4 +1,3 @@
-import pandas as pd
 from dagster import (
     asset_check,
     AssetCheckResult,
@@ -16,6 +15,8 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
     Returns detailed metadata to help debugging.
     """
     # Accept list or DataFrame
+    import pandas as pd
+
     if isinstance(core_github__extract_top_projects, pd.DataFrame):
         core_list = core_github__extract_top_projects.to_dict(orient="records")
     elif isinstance(core_github__extract_top_projects, list):
