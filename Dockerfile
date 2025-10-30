@@ -96,8 +96,6 @@ RUN addgroup --system app && adduser --system --group app
 
 # Copy required artifacts from previous stages
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
-COPY --chown=app:app docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
 
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
 COPY --from=builder --chown=app:app /app/.venv .venv
@@ -108,9 +106,10 @@ COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
 
 COPY --from=builder --chown=app:app /app/models /app/models
 
-# Copy helper scripts (cfg_cron, etc.) into the image so entrypoint can start them
+# Copy helper scripts
 COPY --chown=app:app scripts/ /app/scripts/
-RUN chmod +x /app/scripts/cfg_cron.py || true
+# Make entrypoint and helper scripts executable
+RUN chmod +x /app/scripts/cfg_cron.py /app/scripts/docker-entrypoint.sh || true
 
 COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
 COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
@@ -130,5 +129,5 @@ USER app
 
 EXPOSE 3000
 
-ENTRYPOINT [ "/app/docker-entrypoint.sh" ]
+ENTRYPOINT [ "/app/scripts/docker-entrypoint.sh" ]
 CMD ["dagster", "dev", "-m", "src.pipeline.definitions", "--host", "0.0.0.0", "--port", "3000" ]
