@@ -32,10 +32,8 @@ from .assets.core.assets import (
 from .assets.out.assets import (
     out_github__table_projects_db,
 )
-from .jobs.cleanup_dagster import (
-    cleanup_dagster_history_job,
-    cleanup_dagster_history_schedule,
-)
+from .jobs.cleanup_dagster import cleanup_dagster_history_job
+from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
 from .assets.raw.asset_checks import (
     raw_github__extract_projects_non_empty,
