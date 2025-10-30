@@ -667,6 +667,10 @@ def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.Li
 	results = []
 	session = requests.Session()
 	max_workers = int(getattr(context.resources.config, "github_fetch_workers", 8))
+	# Limit the number of concurrent threads to reduce contention on Dagster's
+	# SQLite event log (concurrent thread logging can cause sqlite locking
+	# errors). Keep at least 1 worker but cap to a conservative value.
+	max_workers = max(1, min(max_workers, 4))
 	with ThreadPoolExecutor(max_workers=max_workers) as ex:
 		futures = {}
 		for proj in core_github__table_projects_mapped:
@@ -742,6 +746,8 @@ def core_github__fetch_repo_languages(context, core_github__table_projects_mappe
 	results = []
 	session = requests.Session()
 	max_workers = int(getattr(context.resources.config, "github_fetch_workers", 8))
+	# Cap concurrency to avoid SQLite locking in Dagster's event log.
+	max_workers = max(1, min(max_workers, 4))
 	with ThreadPoolExecutor(max_workers=max_workers) as ex:
 		futures = {}
 		for proj in core_github__table_projects_mapped:
@@ -792,6 +798,8 @@ def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: 
 	results = []
 	session = requests.Session()
 	max_workers = int(getattr(context.resources.config, "github_fetch_workers", 8))
+	# Cap concurrency to avoid SQLite locking in Dagster's event log.
+	max_workers = max(1, min(max_workers, 4))
 	with ThreadPoolExecutor(max_workers=max_workers) as ex:
 		futures = {}
 		for proj in core_github__table_projects_mapped:
