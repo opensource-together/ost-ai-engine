@@ -38,10 +38,6 @@ class PipelineConfig(Config):
         default=config_yaml.get("GITHUB_SCRAPING_QUERY", ""),
         description="GitHub scraper parameter query"
     )
-    github_scraper_cron: str = Field(
-        default=config_yaml.get("GITHUB_SCRAPER_CRON", ""),
-        description="Cron schedule for GitHub scraper Dagster job"
-    )
     github_top_n: int = Field(
         default=config_yaml.get("GITHUB_TOP_N", 30),
         description="Number of top GitHub repos to fetch per run"
