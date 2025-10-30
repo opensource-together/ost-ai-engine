@@ -32,8 +32,6 @@ GITHUB = {
     "GITHUB_ACCESS_TOKEN": os.getenv("GITHUB_ACCESS_TOKEN", "your_github_token_here"),
     # Matches the real `cfg.py` filters but uses a dynamic date in the example generator
     "GITHUB_SCRAPING_QUERY": os.getenv("GITHUB_SCRAPING_QUERY", " ".join(github_base_filters)),
-    # The cron for the GitHub scraper is now defined in the scheduler module.
-    # Keep GITHUB_TOP_N and scraping query in examples only.
     "GITHUB_TOP_N": int(os.getenv("GITHUB_TOP_N", "30")),
 }
 
@@ -66,10 +64,11 @@ with open(dest_path, "w") as f:
 DATABASE_URL: "{database_url}"
 
 # # GitHub configuration
-GITHUB_API_URL: {GITHUB['GITHUB_API_URL']}
-GITHUB_ACCESS_TOKEN: "{GITHUB['GITHUB_ACCESS_TOKEN']}"
-GITHUB_SCRAPING_QUERY: {GITHUB['GITHUB_SCRAPING_QUERY']}
-GITHUB_TOP_N: {GITHUB['GITHUB_TOP_N']}
+    GITHUB_API_URL: {GITHUB['GITHUB_API_URL']}
+    GITHUB_ACCESS_TOKEN: "{GITHUB['GITHUB_ACCESS_TOKEN']}"
+    # Quote the scraping query because it contains special characters (colon, >, spaces)
+    GITHUB_SCRAPING_QUERY: "{GITHUB['GITHUB_SCRAPING_QUERY']}"
+    GITHUB_TOP_N: {GITHUB['GITHUB_TOP_N']}
 
 # GitLab configuration
 GITLAB_API_URL: {GITLAB['GITLAB_API_URL']}
