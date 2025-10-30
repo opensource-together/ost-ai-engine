@@ -16,7 +16,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 ## Status
 
-This project is in progress state, build in public available here: [@spideyX](https://x.com/spideyai_X)
+This project is available as Beta, build in public here: [@spideyX](https://x.com/spideyai_X) !
 
 ## Documentation
 
