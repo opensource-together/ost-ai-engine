@@ -6,11 +6,6 @@ imports throughout the repo can import `prisma_client` from
 """
 
 from src.services.python.prisma_client import prisma_client
-
-# Ré-exporter PipelineConfig pour y accéder via src.pipeline.utils
-try:
-	from src.services.python.load_cfg import PipelineConfig
-except Exception:  # pragma: no cover - defensive: keep utils import-safe
-	PipelineConfig = None
+from src.services.python.load_cfg import PipelineConfig
 
 __all__ = ["prisma_client", "PipelineConfig"]
