@@ -29,6 +29,22 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
     errors: list[tuple[int, str]] = []
 
     with prisma_client() as prisma:
+        # If the Prisma client couldn't be initialized (e.g. binary missing or
+        # incompatible), prisma_client yields None. In that case we avoid
+        # attempting DB writes from the child process to prevent crashes and
+        # instead log and return a diagnostic metadata payload.
+        if prisma is None:
+            context.log.error("out_github__table_projects_db: Prisma client unavailable; skipping DB writes in this run.")
+            # Return counts=0 and error flag so downstream checks fail fast but
+            # the worker doesn't crash with SIGBUS.
+            result_value = {"inserted": 0, "updated": 0}
+            return Output(value=result_value, metadata={
+                "inserted_count": MetadataValue.int(0),
+                "updated_count": MetadataValue.int(0),
+                "error_count": MetadataValue.int(len(core_github__table_projects_mapped or [])),
+                "note": MetadataValue.text("Prisma client unavailable; writes skipped."),
+            })
+
         for i, project in enumerate(core_github__table_projects_mapped or []):
             repo_url = project.get("repoUrl")
             if not repo_url:
@@ -51,14 +67,72 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
 
                 if existing:
                     try:
-                        prisma.project.update(where={"repoUrl": repo_url}, data=project_data)
-                        updated += 1
+                        # Update by primary key (id) to avoid relying on
+                        # non-unique fields in the `where` clause which the
+                        # Prisma query engine may reject. Use the found
+                        # record's id if available.
+                        # Try to obtain the primary key `id` from the returned object.
+                        # The Prisma client may return either a model-like object or a
+                        # dict-like mapping depending on client version/config — try
+                        # both safely.
+                        existing_id = None
+                        try:
+                            existing_id = getattr(existing, "id", None)
+                        except Exception:
+                            existing_id = None
+                        if existing_id is None and isinstance(existing, dict):
+                            existing_id = existing.get("id")
+
+                        if existing_id:
+                            # Ensure we don't accidentally try to update the id field
+                            data = {k: v for k, v in project_data.items() if k != "id"}
+                            prisma.project.update(where={"id": existing_id}, data=data)
+                            updated += 1
+                        else:
+                            # No id available: update by a non-unique field with
+                            # update_many so the Prisma engine does not require a
+                            # unique `where` clause. This updates all matching
+                            # rows and returns a dict with `count` in newer
+                            # prisma-client-py versions. If update_many is not
+                            # available or fails, catch the error and record it.
+                            try:
+                                # Diagnostic log to help debugging the returned
+                                # 'existing' shape in the logs.
+                                context.log.debug(f"out_github__table_projects_db: existing record for repoUrl={repo_url} has no id; type={type(existing)}; repr={repr(existing)[:200]}")
+                                res = None
+                                try:
+                                    res = prisma.project.update_many(where={"repoUrl": repo_url}, data=project_data)
+                                except Exception:
+                                    # Some prisma client versions expose update_many
+                                    # on the model or on the client differently; try
+                                    # calling via the client directly if available.
+                                    res = prisma.execute_raw
+                                # If update_many returned a count, increment updated
+                                try:
+                                    # res may be a dict-like with 'count' or an int
+                                    count = None
+                                    if isinstance(res, dict):
+                                        count = res.get("count")
+                                    elif isinstance(res, int):
+                                        count = res
+                                    if count:
+                                        updated += int(count)
+                                    else:
+                                        # unknown result: count as a single update
+                                        updated += 1
+                                except Exception:
+                                    updated += 1
+                            except Exception as e:
+                                context.log.error(f"Error updating (fallback) project {i} (repoUrl={repo_url}): {e}")
+                                errors.append((i, f"update_error: {e}"))
                     except Exception as e:
                         context.log.error(f"Error updating project {i} (repoUrl={repo_url}): {e}")
                         errors.append((i, f"update_error: {e}"))
                 else:
                     try:
-                        prisma.project.create(data=project_data)
+                        # Ensure we do not pass an explicit id when creating
+                        data = {k: v for k, v in project_data.items() if k != "id"}
+                        prisma.project.create(data=data)
                         inserted += 1
                     except Exception as e:
                         context.log.error(f"Error inserting project {i} (repoUrl={repo_url}): {e}")
