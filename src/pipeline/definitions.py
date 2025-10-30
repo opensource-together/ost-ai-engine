@@ -1,14 +1,6 @@
-from dagster import (
-    Definitions,
-    define_asset_job,
-    multiprocess_executor,
-    in_process_executor,
-    AssetSelection,
-    RetryPolicy,
-    Backoff,
-    Jitter,
-)
-from .schedules.github import make_github_scraper_schedule
+from dagster import Definitions
+
+from .schedules.github_scraper_schedule import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
 from .assets.raw.assets import (
     raw_github__extract_projects,
@@ -32,7 +24,7 @@ from .assets.core.assets import (
 from .assets.out.assets import (
     out_github__table_projects_db,
 )
-from .jobs.cleanup_dagster import cleanup_dagster_history_job
+from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
 from .assets.raw.asset_checks import (
