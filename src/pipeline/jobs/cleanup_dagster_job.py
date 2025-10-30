@@ -18,13 +18,17 @@ def clean_dagster_home(context):
     Safety: only removes entries inside those two targets and logs actions.
     """
     dagster_home = os.environ.get("DAGSTER_HOME")
-    root = Path(dagster_home)
-    if not root.exists():
-        context.log.info(f"dagster home not found: {root} — nothing to clean")
+    dgh = Path(dagster_home)
+    if not dgh.exists():
+        context.log.info(f"dagster home not found: {dgh} — nothing to clean")
         return {"scanned": 0, "deleted": 0}
 
     # explicit targets under DAGSTER_HOME
-    targets = [root / "history" / "history", root / "logs"]
+    targets = [
+        dgh / "logs",
+        dgh / ".logs_queue",
+        dgh / "history" / "history"
+    ]
 
     # keep items newer than this many days
     days_to_keep = 2
