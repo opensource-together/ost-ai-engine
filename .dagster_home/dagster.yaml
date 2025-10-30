@@ -18,9 +18,9 @@ run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
   config:
-    max_concurrent_runs: 4
+    max_concurrent_runs: 11
     dequeue_use_threads: true
-    dequeue_num_workers: 4
+    dequeue_num_workers: 11
 
 # Enable run monitoring for better error detection
 run_monitoring:
