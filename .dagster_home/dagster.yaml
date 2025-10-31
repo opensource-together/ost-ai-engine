@@ -4,25 +4,25 @@
 # unified storage for runs, event logs, and schedules
 storage:
   sqlite:
-    base_dir: /app/.dagster_home/history
+    # use environment variable so runtime path is configurable
+    base_dir:
+      env: DAGSTER_STORAGE_DIR
 
 # logs stored on local filesystem
 compute_logs:
   module: dagster.core.storage.local_compute_log_manager
   class: LocalComputeLogManager
   config:
-    base_dir: /app/.dagster_home/logs
+    # use environment variable so runtime path is configurable
+    base_dir:
+      env: DAGSTER_LOGS_DIR
 
 # no parallelism for now
 run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
-  config:
-    max_concurrent_runs: 11
-    dequeue_use_threads: true
-    dequeue_num_workers: 11
 
-# Enable run monitoring for better error detection
+# enable run monitoring for better error detection
 run_monitoring:
   enabled: true
 

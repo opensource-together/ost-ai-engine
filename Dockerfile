@@ -87,6 +87,8 @@ ENV PROJECT_ROOT=.
 ENV CFG_PATH=config/cfg.py
 ENV OST_CONFIG_PATH=/app/config/cfg.yaml
 ENV DAGSTER_HOME=/app/.dagster_home
+ENV DAGSTER_STORAGE_DIR=/app/.dagster_home/history
+ENV DAGSTER_LOGS_DIR=/app/.dagster_home/logs
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
 ENV PATH="/app/.venv/bin:$PATH"
@@ -115,8 +117,8 @@ COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
 COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
 # Create cache dirs and set ownership to 'app'
-RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline && \
-    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline
+RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
+    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
 
 # Create config dir and set owner
 RUN mkdir config/ && chown app:app config
