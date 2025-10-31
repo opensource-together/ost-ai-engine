@@ -22,6 +22,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"go", "github"},
     owners=DEFAULT_OWNERS,
+    group_name="github_projects_scraper",
     required_resource_keys={"config"},
 )
 def raw_github__extract_projects(context):
@@ -77,6 +78,7 @@ def raw_github__extract_projects(context):
 @asset(
     kinds={"go", "gitlab"},
     owners=DEFAULT_OWNERS,
+    group_name="gitlab",
     required_resource_keys={"config"},
 )
 def raw_gitlab__extract_projects(context):

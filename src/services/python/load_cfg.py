@@ -23,6 +23,11 @@ class PipelineConfig(Config):
         default=config_yaml.get("DATABASE_URL", ""),
         description="Database connection string (e.g. postgresql://user:pass@host:port/dbname)"
     )
+    # FastText model path used by core language detection
+    fasttext_model_path: str = Field(
+        default=config_yaml.get("FASTTEXT_MODEL_PATH", ""),
+        description="Filesystem path to the FastText lid.176.ftz model used for language identification",
+    )
 
     # GITHUB
     github_token: str = Field(
@@ -32,10 +37,6 @@ class PipelineConfig(Config):
     github_scraping_query: str = Field(
         default=config_yaml.get("GITHUB_SCRAPING_QUERY", ""),
         description="GitHub scraper parameter query"
-    )
-    github_scraper_cron: str = Field(
-        default=config_yaml.get("GITHUB_SCRAPER_CRON", ""),
-        description="Cron schedule for GitHub scraper Dagster job"
     )
     github_top_n: int = Field(
         default=config_yaml.get("GITHUB_TOP_N", 30),
@@ -77,8 +78,14 @@ class PipelineConfig(Config):
         description="Number of top GitLab repos to fetch per run"
     )
 
-    # FastText model path used by core language detection
-    fasttext_model_path: str = Field(
-        default=config_yaml.get("FASTTEXT_MODEL_PATH", "/app/models/lid.176.ftz"),
-        description="Filesystem path to the FastText lid.176.ftz model used for language identification",
+    # Path to the techstacks seed file (TypeScript). Used by assets to build allowed tech list.
+    techstacks_seed_path: str = Field(
+        default=config_yaml.get("TECHSTACKS_SEED_PATH", "/app/prisma/seed/techstacks-data.ts"),
+        description="Filesystem path to the techstacks seed file (techstacks-data.ts)",
+    )
+
+    # Strategy used by merger asset to combine parallel outputs: intersection|union|prefer_primary
+    merge_strategy: str = Field(
+        default=config_yaml.get("MERGE_STRATEGY", "intersection"),
+        description="Merge strategy for combining parallel asset outputs (intersection|union|prefer_primary)",
     )
