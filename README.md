@@ -2,7 +2,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 <div align="center">
 
-<img src="./docs/images/ost-chevalier.png" alt="Chevalier" width="100%" />
+<img width="100%" alt="ost-chevalier" src="https://github.com/user-attachments/assets/654da0ea-5b85-4f65-a03b-e3f6850977cb" />
 
 </div>
 
@@ -16,7 +16,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 ## Status
 
-This project is available as Beta, build in public here: [@Xspidey](https://x.com/spideyai_X) !
+This project is in progress state, build in public available here: [@spideyX](https://x.com/spideyai_X)
 
 ## Documentation
 
@@ -26,6 +26,6 @@ Complete [Documentation](docs/).
 
 <div align="center">
 
-Made with <3 by [@Xspidey](https://x.com/spideyai_X) & the [OST team](https://github.com/opensource-together)
+*Made with love by [@spideyX](https://x.com/spideyai_X) & the [OST team](https://github.com/opensource-together)*
 
 </div>
