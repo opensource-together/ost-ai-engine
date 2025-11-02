@@ -21,18 +21,10 @@ import os
 import json
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
-# Lazy-load heavy ML models to avoid importing C extensions at module import
-# time which can cause instability when Dagster spawns child processes.
-# The actual import is performed in `_load_model`.
+# Lazy-load heavy ML models to avoid importing C extensions at module import time which can cause instability when Dagster spawns child processes.
 from src.pipeline.utils import prisma_client
 
-# fasttext is imported lazily inside the asset that needs it to avoid
-# loading its C-extension at module import time (which can cause fork-related
-# crashes in a multiprocess executor).
-
-# Globals used by the sentence-transformers based mapping. Initialize here
-# to avoid NameError and to make state explicit before any child process
-# attempts to access them.
+# Globals used by the sentence-transformers based mapping. Initialize here to avoid NameError and to make state explicit before any child process
 _SENTENCE_MODEL = None
 _CATEGORY_EMBS = None
 _CATEGORIES = None
@@ -100,6 +92,13 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 
 	Output: list of repo dicts with `language` and `language_confidence` added.
 	Fallback: if fastText/model missing -> pass-through (logs error).
+
+	Behaviour changes:
+	- If any non‑Latin/scripted language is detected (even as a minority),
+	  the repo is filtered out.
+	- We check both textual script presence (CJK, Arabic, Devanagari, etc.)
+	  and fastText's top-k predictions to catch mixed languages like
+	  "chinese + english".
 	"""
 	# Accept either a DataFrame (from the new transformer asset) or the
 	# original list-of-dicts. Be permissive for backwards compatibility.
@@ -132,6 +131,22 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 		"hi", "bn", "ta", "te", "kn", "ml", "gu", "mr", "pa", "or", "si", "ne", "my",
 	}
 
+	# Regex to detect non-Latin script characters directly in text (CJK, Arabic, Devanagari, Bengali, Tamil, Hangul, etc.)
+	NON_LATIN_CHAR_RE = re.compile(
+		r"[\u4E00-\u9FFF"  # CJK Unified Ideographs
+		r"\u3040-\u30FF"   # Hiragana + Katakana
+		r"\uAC00-\uD7AF"   # Hangul
+		r"\u0590-\u05FF"   # Hebrew
+		r"\u0600-\u06FF"   # Arabic
+		r"\u0900-\u097F"   # Devanagari
+		r"\u0980-\u09FF"   # Bengali
+		r"\u0B80-\u0BFF"   # Tamil
+		r"\u0C00-\u0C7F"   # Telugu
+		r"\u0C80-\u0CFF"   # Kannada
+		r"\u0D00-\u0D7F"   # Malayalam
+		r"]"
+	)
+
 	accepted: _t.List[_t.Dict] = []
 	filtered_out = 0
 
@@ -144,32 +159,55 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 				text_parts.append(v.strip())
 		text = "\n".join(text_parts)[:20000]
 
-		if not text:
+		# Default annotations
+		repo["language"] = None
+		repo["language_confidence"] = 0.0
+
+		# If text contains non-Latin script characters -> immediate filter
+		if text and NON_LATIN_CHAR_RE.search(text):
+			# No need to run fastText; annotate language_confidence as 1.0 for reporting
 			repo["language"] = None
-			repo["language_confidence"] = 0.0
+			repo["language_confidence"] = 1.0
+			filtered_out += 1
+			context.log.debug(f"core_repo_lang_detect: filtering out repo [{repo.get('name')}] because non-Latin script characters were found in text")
+			continue
+
+		# If no text to analyze, keep but with null language
+		if not text:
 			accepted.append(repo)
 			continue
 
+		# Use fastText top-k predictions and treat any presence of blacklisted code
+		# (even as a minority) as reason to filter.
 		lang_code = None
 		confidence = 0.0
-		if model is not None:
-			try:
-				labels, probs = model.predict(text.replace("\n", " "), k=1)
-				if labels:
-					# fastText labels are like '__label__en'
-					lang_code = labels[0].replace("__label__", "")
-					confidence = float(probs[0]) if probs else 0.0
-			except Exception as e:
-					context.log.warning(f"fastText prediction failed for repo index {i}: {e}")
+		try:
+			# request top-3 labels to catch mixed-language predictions
+			labels, probs = model.predict(text.replace("\n", " "), k=3)
+			# labels like '__label__en'
+			preds = []
+			for lb, pr in zip(labels or [], probs or []):
+				if isinstance(lb, str):
+					code = lb.replace("__label__", "").strip()
+					preds.append((code, float(pr)))
+			# choose top for primary annotation
+			if preds:
+				lang_code, confidence = preds[0]
+			# if any predicted code is blacklisted (even with small prob), filter out
+			blacklisted = any((c in NON_LATIN_LANGS) for c, _ in preds)
+			if blacklisted:
+				repo["language"] = lang_code
+				repo["language_confidence"] = confidence
+				filtered_out += 1
+				context.log.debug(f"core_repo_lang_detect: filtering out repo [{repo.get('name')}] because fastText top-k includes non-Latin code among {preds}")
+				continue
+		except Exception as e:
+			# If fastText fails, log and keep (do not filter) to avoid dropping data silently.
+			context.log.warning(f"fastText prediction failed for repo index {i}: {e}")
 
+		# If we reach here, no non-Latin indication found -> annotate and accept
 		repo["language"] = lang_code
 		repo["language_confidence"] = confidence
-
-		if lang_code and lang_code in NON_LATIN_LANGS:
-			filtered_out += 1
-			context.log.debug(f"core_repo_lang_detect: filtering out repo [{repo.get('name')}] detected as {lang_code} (conf={confidence:.3f})")
-			continue
-
 		accepted.append(repo)
 
 	# Build helpful metadata for debugging
