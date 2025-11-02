@@ -184,12 +184,26 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 		try:
 			# request top-3 labels to catch mixed-language predictions
 			labels, probs = model.predict(text.replace("\n", " "), k=3)
-			# labels like '__label__en'
+			# Ensure we have plain Python iterables (avoid numpy array truth checks)
+			labels_list = list(labels) if labels is not None else []
+			probs_list = list(probs) if probs is not None else []
+			# labels like '__label__en' or bytes; normalize safely
 			preds = []
-			for lb, pr in zip(labels or [], probs or []):
+			for lb, pr in zip(labels_list, probs_list):
+				# decode bytes if sentence-transformers/fasttext returns bytes
+				if isinstance(lb, bytes):
+					try:
+						lb = lb.decode("utf-8")
+					except Exception:
+						lb = str(lb)
 				if isinstance(lb, str):
 					code = lb.replace("__label__", "").strip()
-					preds.append((code, float(pr)))
+					try:
+						pr_val = float(pr)
+					# some predictors may return non-float types; fallback to 0.0
+					except Exception:
+						pr_val = 0.0
+					preds.append((code, pr_val))
 			# choose top for primary annotation
 			if preds:
 				lang_code, confidence = preds[0]
@@ -436,8 +450,7 @@ def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
 		return Output(value=df, metadata=meta)
 	except Exception:
 		return Output(value=kept, metadata=meta)
-
-
+	
 
 @asset(
 	kinds={"python"},
@@ -447,44 +460,35 @@ def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
 	required_resource_keys={"config"},
 )
 def core_github__extract_top_projects(context, merged_filtered_projects):
-	"""Select top-N projects with non-empty descriptions, ranked by stars.
-
-	Returns the selected list and metadata (selected_count, input_count, stars_range).
-	"""
-	top_n = context.resources.config.github_top_n
-	# Avoid importing pandas inside the child process: importing pandas/numpy
-	# C-extensions in forked processes can trigger SIGBUS/segfaults depending on
-	# the environment (BLAS, openmp, etc.). Instead, detect a DataFrame-like
-	# object via duck-typing and call `to_dict` if available.
+	"""Select projects with non-empty descriptions. Do not sort or limit by stars."""
+	# Avoid importing pandas inside the child process; use duck-typing to convert if needed.
 	projects = merged_filtered_projects
 	if hasattr(merged_filtered_projects, "to_dict") and callable(getattr(merged_filtered_projects, "to_dict")):
 		try:
 			projects = merged_filtered_projects.to_dict(orient="records")
 		except Exception:
-			# If conversion fails, fall back to the original object and handle
-			# it below (will warn if it's not a list).
 			projects = merged_filtered_projects
 
 	if not projects or not isinstance(projects, list):
-		context.log.warning("No projects to rank.")
-		return []
+		context.log.warning("No projects to select.")
+		return Output(value=[], metadata={"selected_count": MetadataValue.int(0), "input_count": MetadataValue.int(0)})
 
+	# Keep all projects that have a non-empty description (no sorting or top-N selection).
 	filtered = [p for p in projects if p.get("description") not in (None, "")]
-	context.log.info(f"[DEBUG] core_github__extract_top_projects: {len(filtered)} projects with description out of {len(projects)}")
+	context.log.info(f"core_github__extract_top_projects: {len(filtered)} projects with description out of {len(projects)}")
+
 	if not filtered:
-		context.log.warning("[DEBUG] core_github__extract_top_projects: No project with description found.")
 		return Output(value=[], metadata={
 			"selected_count": MetadataValue.int(0),
+			"input_count": MetadataValue.int(len(projects)),
 			"reason": MetadataValue.text("No project with description found."),
 		})
-	ranked = sorted(filtered, key=lambda p: p.get("stargazers_count", 0), reverse=True)
-	top_projects = ranked[:top_n]
+
 	meta = {
-		"selected_count": MetadataValue.int(len(top_projects)),
+		"selected_count": MetadataValue.int(len(filtered)),
 		"input_count": MetadataValue.int(len(projects)),
-		"stars_range": MetadataValue.text(f"{top_projects[0].get('stargazers_count', 0)} - {top_projects[-1].get('stargazers_count', 0)}") if top_projects else MetadataValue.null(),
 	}
-	return Output(value=top_projects, metadata=meta)
+	return Output(value=filtered, metadata=meta)
 
 
 @asset(
