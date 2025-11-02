@@ -19,9 +19,7 @@ RUN apt-get update && \
         libpq5 \
         libatomic1 \
         libstdc++6 \
-        libgcc-s1 \
-        nodejs \
-        npm && \
+        libgcc-s1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -87,6 +85,8 @@ ENV PROJECT_ROOT=.
 ENV CFG_PATH=config/cfg.py
 ENV OST_CONFIG_PATH=/app/config/cfg.yaml
 ENV DAGSTER_HOME=/app/.dagster_home
+ENV DAGSTER_STORAGE_DIR=/app/.dagster_home/history
+ENV DAGSTER_LOGS_DIR=/app/.dagster_home/logs
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
 ENV PATH="/app/.venv/bin:$PATH"
@@ -96,8 +96,6 @@ RUN addgroup --system app && adduser --system --group app
 
 # Copy required artifacts from previous stages
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
-COPY --chown=app:app docker-entrypoint.sh /app/docker-entrypoint.sh
-RUN chmod +x /app/docker-entrypoint.sh
 
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
 COPY --from=builder --chown=app:app /app/.venv .venv
@@ -108,16 +106,17 @@ COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
 
 COPY --from=builder --chown=app:app /app/models /app/models
 
-# Copy helper scripts (cfg_cron, etc.) into the image so entrypoint can start them
+# Copy helper scripts
 COPY --chown=app:app scripts/ /app/scripts/
-RUN chmod +x /app/scripts/cfg_cron.py || true
+# Make entrypoint and helper scripts executable
+RUN chmod +x /app/scripts/cfg_cron.py /app/scripts/docker-entrypoint.sh || true
 
 COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
 COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
 # Create cache dirs and set ownership to 'app'
-RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline && \
-    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline
+RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
+    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
 
 # Create config dir and set owner
 RUN mkdir config/ && chown app:app config
@@ -130,5 +129,5 @@ USER app
 
 EXPOSE 3000
 
-ENTRYPOINT [ "/app/docker-entrypoint.sh" ]
+ENTRYPOINT [ "/app/scripts/docker-entrypoint.sh" ]
 CMD ["dagster", "dev", "-m", "src.pipeline.definitions", "--host", "0.0.0.0", "--port", "3000" ]

@@ -1,0 +1,362 @@
+[
+  {
+    "name": "React",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/react/react-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Next.js",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nextjs/nextjs-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Angular",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/angularjs/angularjs-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Vue.js",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vuejs/vuejs-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Node.js",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nodejs/nodejs-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Express",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/express/express-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Nest.js",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/nestjs/nestjs-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Fastify",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/fastify/fastify-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Flutter",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/flutter/flutter-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Svelte",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/svelte/svelte-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Prisma",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/prisma/prisma-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Django",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/django/django-plain.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Flask",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/flask/flask-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Spring Boot",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/spring/spring-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Laravel",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/laravel/laravel-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Symfony",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/symfony/symfony-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Rails",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/rails/rails-plain.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "ASP.NET",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/dot-net/dot-net-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Qt",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/qt/qt-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "TypeScript",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/typescript/typescript-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Go",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/go/go-original-wordmark.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Python",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/python/python-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Java",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/java/java-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "C#",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/csharp/csharp-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "PHP",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/php/php-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Ruby",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/ruby/ruby-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Rust",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/rust/rust-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "C",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/c/c-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "C++",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/cplusplus/cplusplus-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Kotlin",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kotlin/kotlin-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Swift",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/swift/swift-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Scala",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/scala/scala-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Perl",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/perl/perl-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Haskell",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/haskell/haskell-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Elixir",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/elixir/elixir-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Dart",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/dart/dart-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Objective-C",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/objectivec/objectivec-plain.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Matlab",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/matlab/matlab-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "R",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/r/r-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "Shell",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/bash/bash-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "MongoDB",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/mongodb/mongodb-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "PostgreSQL",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/postgresql/postgresql-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "MySQL",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/mysql/mysql-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Redis",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/redis/redis-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "AWS",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/amazonwebservices/amazonwebservices-original-wordmark.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "GCP",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/googlecloud/googlecloud-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Azure",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/microsoftazure/microsoftazure-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Tailwind CSS",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/tailwindcss/tailwindcss-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Docker",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/docker/docker-plain.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Kubernetes",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/kubernetes/kubernetes-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "npm",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/npm/npm-original-wordmark.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Slack",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/slack/slack-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Discord API",
+    "iconUrl": "https://upload.wikimedia.org/wikipedia/fr/thumb/4/4f/Discord_Logo_sans_texte.svg/1818px-Discord_Logo_sans_texte.svg.png",
+    "type": "TECH"
+  },
+  {
+    "name": "Markdown",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/markdown/markdown-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Figma",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/figma/figma-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Jenkins",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/jenkins/jenkins-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Travis CI",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/travis/travis-plain.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "GitHub Actions",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/github/github-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Webpack",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/webpack/webpack-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Vite",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/vite/vite-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Jest",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/jest/jest-plain.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Mocha",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/mocha/mocha-plain.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Cypress",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/cypressio/cypressio-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "GraphQL",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/graphql/graphql-plain.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Apollo",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/apollographql/apollographql-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Redux",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/redux/redux-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Sass",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/sass/sass-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Less",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/less/less-plain-wordmark.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Bootstrap",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/bootstrap/bootstrap-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "Material-UI",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/materialui/materialui-original.svg",
+    "type": "TECH"
+  },
+  {
+    "name": "HTML",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/html5/html5-original.svg",
+    "type": "LANGUAGE"
+  },
+  {
+    "name": "CSS",
+    "iconUrl": "https://cdn.jsdelivr.net/gh/devicons/devicon@latest/icons/css3/css3-original.svg",
+    "type": "LANGUAGE"
+  }
+]

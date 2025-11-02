@@ -14,8 +14,15 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
 
 	Produces metadata: missing_count, missing_indices, missing_examples, total.
 	"""
-	if not isinstance(core_github__extract_top_projects, list):
-		msg = "Input to check is not a list."
+	# Accept either a list or a pandas DataFrame (normalise to list of dicts)
+	import pandas as pd
+
+	if isinstance(core_github__extract_top_projects, pd.DataFrame):
+		core_list = core_github__extract_top_projects.to_dict(orient="records")
+	elif isinstance(core_github__extract_top_projects, list):
+		core_list = core_github__extract_top_projects
+	else:
+		msg = f"Input to check is not a list or DataFrame (got {type(core_github__extract_top_projects)})."
 		context.log.error(msg)
 		return AssetCheckResult(
 			passed=False,
@@ -28,7 +35,7 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
 
 	missing_indices = []
 	missing_examples = []
-	for i, project in enumerate(core_github__extract_top_projects):
+	for i, project in enumerate(core_list):
 		if project.get("description") in (None, ""):
 			missing_indices.append(i)
 			if len(missing_examples) < 5:
@@ -39,7 +46,7 @@ def core_github__extract_top_projects_description_is_not_empty(context, core_git
 		"missing_count": MetadataValue.int(len(missing_indices)),
 		"missing_indices": MetadataValue.json(missing_indices[:50]),
 		"missing_examples": MetadataValue.json(missing_examples),
-		"total": MetadataValue.int(len(core_github__extract_top_projects)),
+		"total": MetadataValue.int(len(core_list)),
 	}
 
 	if missing_indices:
@@ -63,13 +70,15 @@ def core_repo_lang_detect_language_fields_present(context, core_repo_lang_detect
 
 	Fails when output is not a list or items are missing the expected keys.
 	"""
-	if not isinstance(core_repo_lang_detect, list):
-		msg = "Output is not a list."
-		context.log.error(msg)
-		return AssetCheckResult(passed=False, description=msg, metadata={"type": MetadataValue.text(str(type(core_repo_lang_detect)))})
+	import pandas as pd
+
+	if isinstance(core_repo_lang_detect, pd.DataFrame):
+		lang_list = core_repo_lang_detect.to_dict(orient="records")
+	else:
+		lang_list = core_repo_lang_detect
 
 	missing = []
-	for i, item in enumerate(core_repo_lang_detect):
+	for i, item in enumerate(lang_list):
 		if not isinstance(item, dict) or ("language" not in item or "language_confidence" not in item):
 			missing.append(i)
 
@@ -78,7 +87,7 @@ def core_repo_lang_detect_language_fields_present(context, core_repo_lang_detect
 		context.log.error(msg)
 		return AssetCheckResult(passed=False, description=msg, metadata={"missing_indices": MetadataValue.json(missing[:50])})
 
-	return AssetCheckResult(passed=True, description="All items contain language and language_confidence fields.", metadata={"total": MetadataValue.int(len(core_repo_lang_detect))})
+	return AssetCheckResult(passed=True, description="All items contain language and language_confidence fields.", metadata={"total": MetadataValue.int(len(lang_list))})
 
 
 @asset_check(
@@ -87,13 +96,20 @@ def core_repo_lang_detect_language_fields_present(context, core_repo_lang_detect
 )
 def core_github__table_projects_mapped_repoUrl_present(context, core_github__table_projects_mapped):
 	"""Ensure mapped projects include a non-empty `repoUrl` for all items (required for DB upsert)."""
-	if not isinstance(core_github__table_projects_mapped, list):
-		msg = "Output is not a list."
+	import pandas as pd
+
+	# Accept DataFrame or list
+	if isinstance(core_github__table_projects_mapped, pd.DataFrame):
+		mapped_list = core_github__table_projects_mapped.to_dict(orient="records")
+	elif isinstance(core_github__table_projects_mapped, list):
+		mapped_list = core_github__table_projects_mapped
+	else:
+		msg = "Output is not a list or DataFrame."
 		context.log.error(msg)
 		return AssetCheckResult(passed=False, description=msg, metadata={"type": MetadataValue.text(str(type(core_github__table_projects_mapped)))})
 
 	missing_indices = []
-	for i, proj in enumerate(core_github__table_projects_mapped):
+	for i, proj in enumerate(mapped_list):
 		if not isinstance(proj, dict) or not proj.get("repoUrl"):
 			missing_indices.append(i)
 
@@ -102,4 +118,4 @@ def core_github__table_projects_mapped_repoUrl_present(context, core_github__tab
 		context.log.error(msg)
 		return AssetCheckResult(passed=False, description=msg, metadata={"missing_indices": MetadataValue.json(missing_indices[:50])})
 
-	return AssetCheckResult(passed=True, description="All mapped projects include repoUrl.", metadata={"mapped_count": MetadataValue.int(len(core_github__table_projects_mapped))})
+	return AssetCheckResult(passed=True, description="All mapped projects include repoUrl.", metadata={"mapped_count": MetadataValue.int(len(mapped_list))})

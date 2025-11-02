@@ -1,0 +1,20 @@
+[
+  { "name": "AI & Machine Learning" },
+  { "name": "Web Development" },
+  { "name": "Mobile Applications" },
+  { "name": "DevOps & Cloud" },
+  { "name": "Video Games" },
+  { "name": "Blockchain & Crypto" },
+  { "name": "E-commerce" },
+  { "name": "Fintech" },
+  { "name": "Health & Medicine" },
+  { "name": "Education" },
+  { "name": "Social Networks" },
+  { "name": "Productivity" },
+  { "name": "Security & Cybersecurity" },
+  { "name": "IoT & Hardware" },
+  { "name": "Data Science & Analytics" },
+  { "name": "Developer Tools" },
+  { "name": "API & Microservices" },
+  { "name": "Open Source Tools" }
+]
