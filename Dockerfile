@@ -19,9 +19,7 @@ RUN apt-get update && \
         libpq5 \
         libatomic1 \
         libstdc++6 \
-        libgcc-s1 \
-        nodejs \
-        npm && \
+        libgcc-s1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
