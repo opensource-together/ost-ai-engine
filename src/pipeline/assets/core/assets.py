@@ -235,10 +235,11 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 		"input_count": MetadataValue.int(len(raw_list)),
 		"output_count": MetadataValue.int(len(accepted)),
 		"filtered_out": MetadataValue.int(filtered_out),
+		"filtered_out_percent": MetadataValue.float(round(100 * filtered_out / len(raw_list), 2) if raw_list else 0.0),
 		"sample": MetadataValue.json(sample),
 		"language_counts": MetadataValue.json(lang_counts),
 	}
-	context.log.info(f"core_repo_lang_detect: kept {len(accepted)} / {len(raw_list)} projects (filtered_out={filtered_out}); sample={sample}")
+	context.log.info(f"core_repo_lang_detect: kept {len(accepted)} / {len(raw_list)} projects (filtered {filtered_out} = {meta['filtered_out_percent']}%); top languages={dict(sorted(lang_counts.items(), key=lambda x: x[1], reverse=True)[:5])}")
 	# Return a list of dicts to remain compatible with existing asset checks
 	return Output(value=accepted, metadata=meta)
 

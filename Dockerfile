@@ -46,8 +46,8 @@ COPY prisma/ prisma/
 RUN poetry run prisma generate
 RUN poetry run prisma py fetch
 
-RUN mkdir -p /app/models \
- && curl -L -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
+RUN mkdir -p /app/models && \
+    curl -fL -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
 
 # ==============================================================================
 # STAGE 2: Go builder - compile Go binaries
@@ -56,13 +56,26 @@ FROM golang:1.25.3 AS go-builder
 
 WORKDIR /go
 
-# Copy and build Go services
-COPY src/services/go/github/ ./github/
-COPY src/services/go/gitlab/ ./gitlab/
+# Build args/env for proxy and module fetching
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ENV GOPROXY=${GOPROXY}
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
+ENV GOTOOLCHAIN=auto
 
-RUN cd ./github && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/github-scraper main.go
-RUN cd ./gitlab && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/gitlab-scraper main.go
+# Copy sources
+COPY src/services/go/github/ /go/github/
+COPY src/services/go/gitlab/ /go/gitlab/
 
+# Build binaries (modules will be fetched automatically by go build)
+WORKDIR /go/github
+RUN go build -ldflags="-s -w" -o /go/github-scraper .
+WORKDIR /go/gitlab
+RUN go build -ldflags="-s -w" -o /go/gitlab-scraper .
 
 # ==============================================================================
 # STAGE 3: Production - create lightweight final image
@@ -76,6 +89,7 @@ RUN apt-get update && \
         libatomic1 \
         libstdc++6 \
         libgcc-s1 \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -89,16 +103,23 @@ ENV DAGSTER_STORAGE_DIR=/app/.dagster_home/history
 ENV DAGSTER_LOGS_DIR=/app/.dagster_home/logs
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
+
+# Configure Poetry to create the virtualenv inside the project
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Create a non-root user for the app
 RUN addgroup --system app && adduser --system --group app
 
-# Copy required artifacts from previous stages
+# Copy project configuration
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
+COPY --from=builder --chown=app:app /app/poetry.lock ./poetry.lock
 
+# Reuse the virtualenv built in the builder stage (no reinstall here)
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
+
+# Copy required artifacts from previous stages
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
-COPY --from=builder --chown=app:app /app/.venv .venv
 COPY --from=builder --chown=app:app /app/src src
 
 COPY --from=builder --chown=app:app /app/prisma prisma
