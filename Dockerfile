@@ -113,7 +113,7 @@ RUN apt-get update && \
     \
     pip install --no-cache-dir \
         torch==2.9.0 \
-        --index url https://download.pytorch.org/whl/cpu && \
+        --index-url https://download.pytorch.org/whl/cpu && \
     \
     poetry install --no-root --only main && \
     apt-get purge -y --auto-remove \
