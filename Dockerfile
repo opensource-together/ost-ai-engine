@@ -36,7 +36,11 @@ ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 
 # Install Python dependencies
 COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root --only main
+# Install dependencies and export a requirements.txt so we can install in the final image
+RUN poetry install --no-root --only main \
+ && /app/.venv/bin/pip freeze > /app/requirements.txt \
+ # build wheels in builder so production doesn't need build deps
+ && /app/.venv/bin/pip wheel --wheel-dir /app/wheels -r /app/requirements.txt
 
 # Copy source and generate Prisma client
 # Generate Prisma client and prefetch binaries into /app/.cache/prisma
@@ -89,16 +93,20 @@ ENV DAGSTER_STORAGE_DIR=/app/.dagster_home/history
 ENV DAGSTER_LOGS_DIR=/app/.dagster_home/logs
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
-ENV PATH="/app/.venv/bin:$PATH"
-
-# Create a non-root user for the app
-RUN addgroup --system app && adduser --system --group app
+ENV PATH="/usr/local/bin:$PATH"
 
 # Copy required artifacts from previous stages
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
 
+# Copy pipeline resources and source
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
-COPY --from=builder --chown=app:app /app/.venv .venv
+# Copy built wheels and requirements from builder and install packages (no build tools needed in production)
+COPY --from=builder --chown=app:app /app/wheels ./wheels
+COPY --from=builder --chown=app:app /app/requirements.txt ./requirements.txt
+RUN pip install --no-cache-dir --no-index --find-links /app/wheels -r /app/requirements.txt
+
+# Create a non-root user for the app
+RUN addgroup --system app && adduser --system --group app
 COPY --from=builder --chown=app:app /app/src src
 
 COPY --from=builder --chown=app:app /app/prisma prisma
@@ -123,6 +131,9 @@ RUN mkdir config/ && chown app:app config
 
 # Ensure Go binaries are executable (fix permission issues)
 RUN chmod +x /app/github-scraper /app/gitlab-scraper || true
+
+# Make project importable for Dagster (ensure /app is in PYTHONPATH)
+ENV PYTHONPATH="/app:${PYTHONPATH}"
 
 # Switch to non-root user for runtime (safer)
 USER app
