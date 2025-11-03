@@ -66,24 +66,15 @@ ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
 
-# Layered module download for better caching (GitHub)
-COPY src/services/go/github/go.mod ./github/go.mod
-COPY src/services/go/github/go.sum ./github/go.sum
-RUN cd ./github && go mod download
-
-# Layered module download for better caching (GitLab)
-COPY src/services/go/gitlab/go.mod ./gitlab/go.mod
-COPY src/services/go/gitlab/go.sum ./gitlab/go.sum
-RUN cd ./gitlab && go mod download
-
 # Copy sources
-COPY src/services/go/github/ ./github/
-COPY src/services/go/gitlab/ ./gitlab/
+COPY src/services/go/github/ /go/github/
+COPY src/services/go/gitlab/ /go/gitlab/
 
-# Build binaries
-RUN cd ./github && go build -ldflags="-s -w" -o /go/github-scraper .
-RUN cd ./gitlab && go build -ldflags="-s -w" -o /go/gitlab-scraper .
-
+# Build binaries (modules will be fetched automatically by go build)
+WORKDIR /go/github
+RUN go build -ldflags="-s -w" -o /go/github-scraper .
+WORKDIR /go/gitlab
+RUN go build -ldflags="-s -w" -o /go/gitlab-scraper .
 
 # ==============================================================================
 # STAGE 3: Production - create lightweight final image
