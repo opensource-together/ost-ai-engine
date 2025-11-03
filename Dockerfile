@@ -52,7 +52,7 @@ RUN mkdir -p /app/models && \
 # ==============================================================================
 # STAGE 2: Go builder - compile Go binaries
 # ==============================================================================
-FROM golang:1.22 AS go-builder
+FROM golang:1.25.3 AS go-builder
 
 WORKDIR /go
 
@@ -65,6 +65,7 @@ ENV GOPROXY=${GOPROXY}
 ENV CGO_ENABLED=0
 ENV GOOS=linux
 ENV GOARCH=amd64
+ENV GOTOOLCHAIN=auto
 
 # Copy sources
 COPY src/services/go/github/ /go/github/
