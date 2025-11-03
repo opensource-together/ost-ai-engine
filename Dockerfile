@@ -57,8 +57,8 @@ FROM golang:1.22 AS go-builder
 WORKDIR /go
 
 # Copy and build Go services
-COPY src/infrastructure/services/go/github/ ./github/
-COPY src/infrastructure/services/go/gitlab/ ./gitlab/
+COPY src/services/go/github/ ./github/
+COPY src/services/go/gitlab/ ./gitlab/
 
 RUN cd ./github && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/github-scraper main.go
 RUN cd ./gitlab && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/gitlab-scraper main.go
