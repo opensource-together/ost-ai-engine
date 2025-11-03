@@ -9,18 +9,18 @@ FROM python:3.11-slim AS builder
 
 # Install heavy system packages required only for build
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        gcc \
-        libpq-dev \
-        git \
-        curl \
-        ca-certificates \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        libpq-dev \
+        git \
+        curl \
+        ca-certificates \
+        libpq5 \
+        libatomic1 \
+        libstdc++6 \
+        libgcc-s1 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
 RUN pip install poetry==2.2.1
@@ -71,12 +71,12 @@ FROM python:3.11-slim AS production
 
 # Install only runtime system libraries
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        libpq5 \
+        libatomic1 \
+        libstdc++6 \
+        libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
