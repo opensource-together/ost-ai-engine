@@ -108,16 +108,15 @@ RUN apt-get update && \
         build-essential \
         gcc \
         libpq-dev \
-        curl \
-    && rm -rf /var/lib/apt/lists/* \
-    && pip install poetry==2.2.1 \
-    && poetry install --no-root --only main \
-    && apt-get purge -y --auto-remove \
+        curl && \
+    pip install --no-cache-dir poetry==2.2.1 && \
+    poetry install --no-root --only main && \
+    apt-get purge -y --auto-remove \
         build-essential \
         gcc \
         libpq-dev \
-        curl \
-    && rm -rf /var/lib/apt/lists/*
+        curl && \
+    rm -rf /var/lib/apt/lists/* /root/.cache
 
 # Copy required artifacts from previous stages
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
