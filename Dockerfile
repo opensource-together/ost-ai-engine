@@ -56,12 +56,33 @@ FROM golang:1.22 AS go-builder
 
 WORKDIR /go
 
-# Copy and build Go services
-COPY src/services/go/github/ ./github/
-COPY src/services/go/gitlab/ ./gitlab/
+# Build args/env for proxy and module fetching
+ARG GOPROXY=https://proxy.golang.org,direct
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+ENV GOPROXY=${GOPROXY}
+ENV CGO_ENABLED=0
+ENV GOOS=linux
+ENV GOARCH=amd64
 
-RUN cd ./github && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/github-scraper main.go
-RUN cd ./gitlab && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/gitlab-scraper main.go
+# Layered module download for better caching (GitHub)
+COPY src/infrastructure/services/go/github/go.mod ./github/go.mod
+COPY src/infrastructure/services/go/github/go.sum ./github/go.sum
+RUN cd ./github && go mod download
+
+# Layered module download for better caching (GitLab)
+COPY src/infrastructure/services/go/gitlab/go.mod ./gitlab/go.mod
+COPY src/infrastructure/services/go/gitlab/go.sum ./gitlab/go.sum
+RUN cd ./gitlab && go mod download
+
+# Copy sources
+COPY src/infrastructure/services/go/github/ ./github/
+COPY src/infrastructure/services/go/gitlab/ ./gitlab/
+
+# Build binaries
+RUN cd ./github && go build -ldflags="-s -w" -o /go/github-scraper .
+RUN cd ./gitlab && go build -ldflags="-s -w" -o /go/gitlab-scraper .
 
 
 # ==============================================================================
