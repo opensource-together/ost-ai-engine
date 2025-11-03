@@ -1,0 +1,90 @@
+from dagster import Definitions
+
+from .schedules.github_scraper_schedule import make_github_scraper_schedule
+from .resources.cfg_resource import config_resource
+from .assets.raw.assets import (
+    raw_github__extract_projects,
+    raw_gitlab__extract_projects,
+)
+from .assets.core.assets import (
+    raw_github__to_df,
+    core_repo_lang_detect,
+    core_repo_primary_language_filter,
+    core_merge_filtered_projects,
+    core_github__extract_top_projects,
+    core_github__table_projects_mapped,
+    core_github__fetch_repo_languages,
+    core_github__fetch_repo_topics,
+    core_github__fetch_readme,
+    core_github__merge_repo_meta,
+    core_github__normalize_repo_meta,
+    core_github__map_languages_to_techstacks,
+    core_github__map_topics_to_categories,
+)
+from .assets.out.assets import (
+    out_github__table_projects_db,
+)
+from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
+from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
+
+from .assets.raw.asset_checks import (
+    raw_github__extract_projects_non_empty,
+    raw_gitlab__extract_projects_non_empty,
+)
+from .assets.core.asset_checks import (
+    core_github__extract_top_projects_description_is_not_empty,
+    core_repo_lang_detect_language_fields_present,
+    core_github__table_projects_mapped_repoUrl_present,
+)
+from .assets.out.asset_checks import (
+    out_github__table_projects_db_counts_valid,
+)
+
+from .jobs.github_scraper_job import github_scraper_job
+
+# schedule
+github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
+
+defs = Definitions(
+    assets=[
+    # raw assets
+    raw_github__extract_projects,
+    raw_github__to_df,
+    raw_gitlab__extract_projects,
+
+    # core assets
+    core_repo_lang_detect,
+    core_repo_primary_language_filter,
+    core_merge_filtered_projects,
+    core_github__extract_top_projects,
+    core_github__table_projects_mapped,
+    core_github__fetch_repo_languages,
+    core_github__fetch_repo_topics,
+    core_github__fetch_readme,
+    core_github__merge_repo_meta,
+    core_github__normalize_repo_meta,
+    core_github__map_languages_to_techstacks,
+    core_github__map_topics_to_categories,
+
+    # out assets
+    out_github__table_projects_db
+    ],
+    resources={
+        "config": config_resource,
+    },
+    asset_checks=[
+        # raw scraper results
+        raw_github__extract_projects_non_empty,
+        raw_gitlab__extract_projects_non_empty,
+
+        # core transforms / checks
+        core_repo_lang_detect_language_fields_present,
+        core_github__extract_top_projects_description_is_not_empty,
+        core_github__table_projects_mapped_repoUrl_present,
+
+        # out checks
+        out_github__table_projects_db_counts_valid,
+    ],
+    jobs=[github_scraper_job, cleanup_dagster_history_job],
+    schedules=[github_scraper_schedule, cleanup_dagster_history_schedule],
+)

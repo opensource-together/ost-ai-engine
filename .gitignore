@@ -1,3 +1,6 @@
+# Centralized config (généré dynamiquement)
+config/cfg.py
+config/cfg.yaml
 # Ignore everything in docs/ost-docs except ai and docs.json
 docs/ost-docs/*
 
@@ -102,6 +105,7 @@ ENV/
 env.bak
 venv.bak
 src/dbt/.user.yml
+.docker.env
 
 # IDE / Editor specific
 .idea/
@@ -130,12 +134,13 @@ postgres-data/
 # Ignore generated embeddings but keep Hugging Face models
 models/*.npy
 models/*.pkl
-models/*
 src/models
 
 # Scripts (local-only for now)
-scripts/
+scripts/!cfg_cron.py
 *.sh
+!docker-entrypoint.sh
+*.old
 
 # DB test
 *.db
@@ -151,6 +156,8 @@ turbo.json
 # Go binaries
 src/infrastructure/services/go/github/scraper
 src/infrastructure/services/go/gitlab/scraper
+github-scraper
+gitlab-scraper
 
 # Local git backups
 **/.git_backups/**
@@ -170,5 +177,8 @@ uv.lock
 
 # Dagster
 .tmp*
-src/dagster/.telemetry*
-history/
+.dagster_home/*
+!.dagster_home/dagster.yaml
+
+# Docker entrypoint scripts
+entrypoint.sh

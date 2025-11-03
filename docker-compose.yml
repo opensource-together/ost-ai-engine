@@ -3,7 +3,7 @@
 # ========================================
 services:
   postgres:
-    image: postgres:latest
+    image: postgres:16
     container_name: ost-db
     environment:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
@@ -13,3 +13,40 @@ services:
       - "7777:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
+
+  dagster-daemon:
+    build:
+      context: .
+    container_name: dagster-daemon
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    volumes:
+      - ./config/cfg.py:/app/config/cfg.py
+      - ./config/cfg.yaml:/app/config/cfg.yaml
+      # Mount the whole dagster package for code changes and local history/logs
+      - ./src/:/app/src/
+      # Dagster instance storage (matches src/pipeline/dagster.yaml base_dir)
+      - ./.dagster_home:/app/.dagster_home
+    command: ["dagster-daemon", "run"]
+
+  dagster-webserver:
+    build:
+      context: .
+    container_name: dagster-webserver
+    env_file:
+      - .env
+    depends_on:
+      - postgres
+    ports:
+      - "7778:3000"
+    volumes:
+      - ./config/cfg.py:/app/config/cfg.py
+      - ./config/cfg.yaml:/app/config/cfg.yaml
+      - ./src/:/app/src
+      - ./.dagster_home:/app/.dagster_home
+    command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
+
+volumes:
+  pgdata:

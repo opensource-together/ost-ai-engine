@@ -169,25 +169,25 @@ model ProjectCategory {
 }
 
 model Project {
-  id          String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title       String
-  description String?
-  repoUrl     String?
-  provider    Provider
-  githubUrl   String?
-  gitlabUrl   String?
-  twitterUrl  String?
-  linkedinUrl String?
-  discordUrl  String?
-  websiteUrl  String?
-  published   Boolean            @default(false)
-  trending    Boolean            @default(false)
-  techStacks  ProjectTechStack[]
-  categories  ProjectCategory[]
-  ownerId     String?            @db.Uuid
-  owner       User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  logoUrl     String?
-  imagesUrls  String[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
+  id             String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title          String
+  description    String?
+  repoUrl        String?
+  provider       Provider
+  githubUrl      String?
+  gitlabUrl      String?
+  twitterUrl     String?
+  linkedinUrl    String?
+  discordUrl     String?
+  websiteUrl     String?
+  published      Boolean            @default(false)
+  trending       Boolean            @default(false)
+  techStacks     ProjectTechStack[]
+  categories     ProjectCategory[]
+  ownerId        String?            @db.Uuid
+  ownerOst       User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  logoUrl        String?
+  imagesUrls     String[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
 }

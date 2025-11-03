@@ -1,19 +1,19 @@
 
 [tool.poetry]
-name = "data-engine"
+name = "ost-ai-engine"
 version = "1.0.0"
-description = "Data Engine for GitHub repository analysis and recommendations"
+description = "Recommender-system of OST, AI powered."
 readme = "README.md"
-authors = ["spideystreet <dhicham.pro@gmail.com>"]
+authors = ["spideyai_X <dhicham.pro@gmail.com>"]
 packages = [{include = "src"}]
 
 [tool.poetry.dependencies]
-python = ">=3.13,<3.14"
+python = ">=3.11,<3.12"
 sqlalchemy = "^2.0.41"
 psycopg2-binary = "^2.9.10"
 pandas = "^2.3.0"
 pydantic-settings = "^2.4.0"
-numpy = "^2.3.0"
+numpy = "<2.0"
 pydantic = "^2.0.0"
 pgvector = "^0.4.1"
 python-dotenv = "^1.1.1"
@@ -29,9 +29,15 @@ sphinx = "^8.2.3"
 sphinx-autobuild = "^2025.8.25"
 sphinx-rtd-theme = "^3.0.2"
 furo = "^2025.9.25"
+prisma = "^0.15.0"
+dotenv = "^0.9.9"
+schedule = "^1.1.0"
+fasttext = "^0.9.3"
+fasttext-wheel = "^0.9.2"
+sentence-transformers = "^5.1.2"
 
 [tool.dagster]
-module_name = "src.dagster.definitions"
+module_name = "src.pipeline.definitions"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.0"
