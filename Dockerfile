@@ -9,18 +9,18 @@ FROM python:3.11-slim AS builder
 
 # Install heavy system packages required only for build
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        gcc \
-        libpq-dev \
-        git \
-        curl \
-        ca-certificates \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 && \
-    rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        libpq-dev \
+        git \
+        curl \
+        ca-certificates \
+        libpq5 \
+        libatomic1 \
+        libstdc++6 \
+        libgcc-s1 && \
+    rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
 RUN pip install poetry==2.2.1
@@ -47,7 +47,7 @@ RUN poetry run prisma generate
 RUN poetry run prisma py fetch
 
 RUN mkdir -p /app/models \
- && curl -L -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
+ && curl -L -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
 
 # ==============================================================================
 # STAGE 2: Go builder - compile Go binaries
@@ -71,12 +71,12 @@ FROM python:3.11-slim AS production
 
 # Install only runtime system libraries
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 \
-    && rm -rf /var/lib/apt/lists/*
+    apt-get install -y --no-install-recommends \
+        libpq5 \
+        libatomic1 \
+        libstdc++6 \
+        libgcc-s1 \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -89,16 +89,38 @@ ENV DAGSTER_STORAGE_DIR=/app/.dagster_home/history
 ENV DAGSTER_LOGS_DIR=/app/.dagster_home/logs
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
+
+# Configure Poetry to create the virtualenv inside the project
+ENV POETRY_VIRTUALENVS_IN_PROJECT=true
 ENV PATH="/app/.venv/bin:$PATH"
 
 # Create a non-root user for the app
 RUN addgroup --system app && adduser --system --group app
 
-# Copy required artifacts from previous stages
+# Copy project configuration
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
+COPY --from=builder --chown=app:app /app/poetry.lock ./poetry.lock
 
+# Install production dependencies
+# Install build-deps, install python deps, then remove build-deps in one layer
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+        build-essential \
+        gcc \
+        libpq-dev \
+        curl \
+    && rm -rf /var/lib/apt/lists/* \
+    && pip install poetry==2.2.1 \
+    && poetry install --no-root --only main \
+    && apt-get purge -y --auto-remove \
+        build-essential \
+        gcc \
+        libpq-dev \
+        curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy required artifacts from previous stages
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
-COPY --from=builder --chown=app:app /app/.venv .venv
 COPY --from=builder --chown=app:app /app/src src
 
 COPY --from=builder --chown=app:app /app/prisma prisma
@@ -116,7 +138,7 @@ COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
 # Create cache dirs and set ownership to 'app'
 RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
-    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
+    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
 
 # Create config dir and set owner
 RUN mkdir config/ && chown app:app config
