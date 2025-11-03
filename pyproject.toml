@@ -29,6 +29,7 @@ schedule = "^1.1.0"
 fasttext = "^0.9.3"
 fasttext-wheel = "^0.9.2"
 sentence-transformers = "^5.1.2"
+torch = "2.9.0"
 
 [tool.dagster]
 module_name = "src.pipeline.definitions"
@@ -114,4 +115,4 @@ markers = [
     "performance: Performance tests",
     "api: API tests",
 ]
- 
+

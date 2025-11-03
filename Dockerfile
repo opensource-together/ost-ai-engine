@@ -111,10 +111,6 @@ RUN apt-get update && \
         curl && \
     pip install --no-cache-dir poetry==2.2.1 && \
     \
-    pip install --no-cache-dir \
-        torch==2.9.0 \
-        --index-url https://download.pytorch.org/whl/cpu && \
-    \
     poetry install --no-root --only main && \
     apt-get purge -y --auto-remove \
         build-essential \
