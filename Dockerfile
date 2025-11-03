@@ -46,19 +46,19 @@ COPY prisma/ prisma/
 RUN poetry run prisma generate
 RUN poetry run prisma py fetch
 
-RUN mkdir -p /app/models \
- && curl -L -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
+RUN mkdir -p /app/models && \
+    curl -fL -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
 
 # ==============================================================================
 # STAGE 2: Go builder - compile Go binaries
 # ==============================================================================
-FROM golang:1.25.3 AS go-builder
+FROM golang:1.22 AS go-builder
 
 WORKDIR /go
 
 # Copy and build Go services
-COPY src/services/go/github/ ./github/
-COPY src/services/go/gitlab/ ./gitlab/
+COPY src/infrastructure/services/go/github/ ./github/
+COPY src/infrastructure/services/go/gitlab/ ./gitlab/
 
 RUN cd ./github && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/github-scraper main.go
 RUN cd ./gitlab && CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o /go/gitlab-scraper main.go
@@ -76,6 +76,7 @@ RUN apt-get update && \
         libatomic1 \
         libstdc++6 \
         libgcc-s1 \
+        ca-certificates \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -101,23 +102,8 @@ RUN addgroup --system app && adduser --system --group app
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
 COPY --from=builder --chown=app:app /app/poetry.lock ./poetry.lock
 
-# Install production dependencies
-# Install build-deps, install python deps, then remove build-deps in one layer
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        gcc \
-        libpq-dev \
-        curl && \
-    pip install --no-cache-dir poetry==2.2.1 && \
-    \
-    poetry install --no-root --only main && \
-    apt-get purge -y --auto-remove \
-        build-essential \
-        gcc \
-        libpq-dev \
-        curl && \
-    rm -rf /var/lib/apt/lists/* /root/.cache
+# Reuse the virtualenv built in the builder stage (no reinstall here)
+COPY --from=builder --chown=app:app /app/.venv /app/.venv
 
 # Copy required artifacts from previous stages
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
@@ -138,7 +124,7 @@ COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
 # Create cache dirs and set ownership to 'app'
 RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
-    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
+    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
 
 # Create config dir and set owner
 RUN mkdir config/ && chown app:app config
