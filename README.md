@@ -25,18 +25,20 @@ What it does :
 
 ## Quick Start
 
-Copy `.env.example` into `.env` and fill it.
-
-Then,
+1. Copy `.env.example` into `.env` and fill it.
+2. Ensure `scripts/cfg_cron.py` env vars set (PROJECT_ROOT, CFG_PATH, OST_CONFIG_PATH) if you want to use personal parameters.
+3. Start
 ```bash
 # Start the engine
 docker compose up
 ```
 
+
+
 Dagster UI : Go on http://localhost:3000
 
 ## Status
-
+Work in progress.  
 Build in public here : [@spideyX](https://x.com/spideyai_X)
 
 ---
