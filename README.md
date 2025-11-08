@@ -2,7 +2,7 @@ Part of the [OpenSource Together](https://github.com/opensource-together) platfo
 
 <div align="center">
 
-<img width="100%" alt="ost-chevalier" src="https://github.com/user-attachments/assets/654da0ea-5b85-4f65-a03b-e3f6850977cb" />
+<img width="100%" alt="ost-knight" src="https://github.com/user-attachments/assets/cdf66f76-89bf-4150-b798-e26a25dc8239" />
 
 </div>
 
