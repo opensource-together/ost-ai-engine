@@ -2,6 +2,7 @@ from dagster import Definitions
 
 from .schedules.github_scraper_schedule import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
+from .resources.fasttext_resource import fasttext_model_resource
 from .assets.raw.assets import (
     raw_github__extract_projects,
     raw_gitlab__extract_projects,
@@ -71,6 +72,9 @@ defs = Definitions(
     ],
     resources={
         "config": config_resource,
+        "fasttext_model": fasttext_model_resource.configured({
+            "model_path": "/app/models/lid.176.ftz"
+        }),
     },
     asset_checks=[
         # raw scraper results

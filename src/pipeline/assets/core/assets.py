@@ -85,7 +85,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 	# in parallel with `core_repo_primary_language_filter`.
 	ins={"raw_github__df": AssetIn("raw_github__to_df")},
 	group_name="github_projects_scraper",
-	required_resource_keys={"config"},
+	required_resource_keys={"config", "fasttext_model"},
 )
 def core_repo_lang_detect(context, raw_github__df: _t.Any):
 	"""Annotate repos with detected language and filter non-Latin/scripted languages.
@@ -116,13 +116,9 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 	else:
 		raw_list = raw_github__df
 
-	cfg = context.resources.config
-	model_path = getattr(cfg, "fasttext_model_path", "")
-
-	model = None
-	# Import fasttext directly; let ImportError surface if package is missing
-	import fasttext
-	model = fasttext.load_model(model_path)
+	# Get the fastText model from Dagster resources (loaded once, reused across runs)
+	fasttext_resource = context.resources.fasttext_model
+	model = fasttext_resource.model
 
 	# Blacklist of language codes using non-Latin scripts or languages the pipeline
 	# should exclude (Arabic, CJK, Japanese, Korean, many Indic languages...)
