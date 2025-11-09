@@ -1,6 +1,6 @@
 import os
 from dagster import resource
-from src.services.python.load_cfg import PipelineConfig
+from src.pipeline.utils import PipelineConfig
 
 
 def build_scraper_env(cfg: PipelineConfig) -> dict:

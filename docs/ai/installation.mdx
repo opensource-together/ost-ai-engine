@@ -1,0 +1,30 @@
+# Installation
+
+## Requirements
+- OS: Linux, macOS, Windows
+- Python = 3.13.7
+- Go >= 1.20
+- Node.js (for Prisma)
+- Docker
+
+## Environment Variables
+Copy `.env.example` to `.env.local` and fill in:
+
+```ini
+POSTGRES_DB=db_name
+POSTGRES_USER=db_user
+POSTGRES_PASSWORD=db_password
+DATABASE_URL=postgresql://<db_user>:<db_password>@localhost:port/<db_name>
+
+GITHUB_ACCESS_TOKEN=your_github_access_token_here
+GITLAB_ACCESS_TOKEN=your_gitlab_access_token_here
+```
+
+## Install Dependencies
+```bash
+poetry install
+go mod tidy ./src/infrastructure/services/go/github
+go mod tidy ./src/infrastructure/services/go/gitlab
+cd prisma
+npm install
+```
