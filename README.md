@@ -26,16 +26,14 @@ What it does :
 ## Quick Start
 
 1. Copy `.env.example` into `.env` and fill it.
-2. Ensure `scripts/cfg_cron.py` env vars set (PROJECT_ROOT, CFG_PATH, OST_CONFIG_PATH) if you want to use personal parameters.
+2. Copy `config/cfg_example.py` to `config/cfg.py` and adjust the config to your personal parameters.
 3. Start
 ```bash
 # Start the engine
 docker compose up
 ```
 
-
-
-Dagster UI : Go on http://localhost:3000
+Dagster UI : http://localhost:3000
 
 ## Status
 Work in progress.  
