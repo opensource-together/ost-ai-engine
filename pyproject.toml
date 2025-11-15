@@ -1,6 +1,6 @@
 
 [tool.poetry]
-name = "ost-ai-engine"
+name = "ost-linker"
 version = "1.0.0"
 description = "Recommender-system of OST, AI powered."
 readme = "README.md"
