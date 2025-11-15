@@ -65,7 +65,6 @@ __all__ = [
 	"core_github__fetch_repo_languages",
 	"core_github__fetch_repo_topics",
 	"core_github__merge_repo_meta",
-	"core_github__normalize_repo_meta",
 	"core_github__map_languages_to_techstacks",
 ]
 
@@ -952,83 +951,8 @@ def core_github__merge_repo_meta(context, langs, topics, readmes):
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description="Normalize description/readme text for embedding (lowercase + strip punctuation).",
-	ins={"repo_meta": AssetIn("core_github__merge_repo_meta")},
-	group_name="github_projects_scraper",
-	required_resource_keys={"config"},
-)
-def core_github__normalize_repo_meta(context, repo_meta: _t.List[_t.Dict]):
-	"""Produce a normalized version of repo_meta suitable for embeddings.
-
-	Adds fields to each item: `clean_description`, `clean_readme`, `clean_context`.
-	`clean_context` is a concatenation of cleaned description/readme and a few
-	project fields, truncated to a safe length.
-	"""
-	if not repo_meta:
-		return Output(value=[], metadata={"count": MetadataValue.int(0)})
-
-	def _clean_text_for_embedding(s: str, max_len: int = 8000) -> str:
-		if not s:
-			return ""
-		# Lowercase
-		s = s.lower()
-		# Remove punctuation (keep alphanumerics and whitespace)
-		s = re.sub(r"[^0-9a-z\s]", " ", s)
-		# Collapse whitespace
-		s = re.sub(r"\s+", " ", s).strip()
-		# Truncate
-		if len(s) > max_len:
-			return s[:max_len] + "..."
-		return s
-
-	out = []
-	for item in repo_meta:
-		try:
-			proj = item.get("project") or {}
-			desc = item.get("description") or (proj.get("description") if isinstance(proj, dict) else None)
-			readme = item.get("readme") or (proj.get("readme") if isinstance(proj, dict) else None)
-			# Build a combined context then clean
-			parts = []
-			if isinstance(desc, str) and desc.strip():
-				parts.append(desc.strip())
-			if isinstance(readme, str) and readme.strip():
-				parts.append(readme.strip())
-			# Also include small textual fields from mapped project if present
-			if isinstance(proj, dict):
-				for k in ("combined_text", "readme", "description", "name"):
-					v = proj.get(k)
-					if isinstance(v, str) and v.strip():
-						parts.append(v.strip())
-			context_text = "\n".join(parts).strip()
-			clean_desc = _clean_text_for_embedding(desc or "")
-			clean_readme = _clean_text_for_embedding(readme or "")
-			clean_context = _clean_text_for_embedding(context_text or "")
-			new_item = dict(item)
-			new_item["clean_description"] = clean_desc
-			new_item["clean_readme"] = clean_readme
-			new_item["clean_context"] = clean_context
-			out.append(new_item)
-		except Exception as e:
-			context.log.exception(f"core_github__normalize_repo_meta: failed for repo {item.get('repoUrl')}: {e}")
-			# still append original item to maintain pipeline shape
-			out.append(item)
-
-	# small metadata sample
-	sample = out[:3]
-	meta = {
-		"count": MetadataValue.int(len(out)),
-		"sample": MetadataValue.json(sample),
-		"sample_repo_urls": MetadataValue.json([r.get("repoUrl") for r in sample]),
-	}
-	return Output(value=out, metadata=meta)
-
-
-
-@asset(
-	kinds={"python"},
-	owners=DEFAULT_OWNERS,
 	description="Map fetched languages to tech_stack and create project_tech_stack relations.",
-	ins={"repo_meta": AssetIn("core_github__normalize_repo_meta")},
+	ins={"repo_meta": AssetIn("core_github__merge_repo_meta")},
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
@@ -1142,6 +1066,3 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 	}
 	context.log.info(f"core_github__map_languages_to_techstacks: mapped={mapped} relations across {len(repo_meta)} repos; unmatched={unmatched_count}; sample={ [e.get('repoUrl') for e in mapped_examples[:3]] }")
 	return Output(value={"mapped": mapped}, metadata=meta)
-
-
-# Removed: core_github__map_topics_to_categories asset (topics→categories mapping) per request.

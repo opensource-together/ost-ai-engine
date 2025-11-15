@@ -18,7 +18,6 @@ from .assets.core.assets import (
     core_github__fetch_repo_topics,
     core_github__fetch_readme,
     core_github__merge_repo_meta,
-    core_github__normalize_repo_meta,
     core_github__map_languages_to_techstacks,
 )
 from .assets.out.assets import (
@@ -62,7 +61,6 @@ defs = Definitions(
     core_github__fetch_repo_topics,
     core_github__fetch_readme,
     core_github__merge_repo_meta,
-    core_github__normalize_repo_meta,
     core_github__map_languages_to_techstacks,
 
     # out assets
