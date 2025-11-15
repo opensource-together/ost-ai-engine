@@ -1,12 +1,16 @@
-from dagster import schedule
+from dagster import ScheduleDefinition, DefaultScheduleStatus
 
 from src.pipeline.jobs.cleanup_dagster_job import cleanup_dagster_history_job
 
 
-@schedule(cron_schedule="0 23 */2 * *", job=cleanup_dagster_history_job)
-def cleanup_dagster_history_schedule():
-    """Run every 2 days at 23:00 to purge old Dagster history/logs (keep 2 days)."""
-    return {}
+# Enable by default at Dagster start, like the GitHub scraper schedule
+cleanup_dagster_history_schedule = ScheduleDefinition(
+    name="cleanup_dagster_history_schedule",
+    job=cleanup_dagster_history_job,
+    cron_schedule="0 23 */2 * *",
+    default_status=DefaultScheduleStatus.RUNNING,
+    run_config={},
+)
 
 
 __all__ = ["cleanup_dagster_history_schedule"]
