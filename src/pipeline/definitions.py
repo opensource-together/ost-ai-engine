@@ -20,7 +20,6 @@ from .assets.core.assets import (
     core_github__merge_repo_meta,
     core_github__normalize_repo_meta,
     core_github__map_languages_to_techstacks,
-    core_github__map_topics_to_categories,
 )
 from .assets.out.assets import (
     out_github__table_projects_db,
@@ -65,7 +64,6 @@ defs = Definitions(
     core_github__merge_repo_meta,
     core_github__normalize_repo_meta,
     core_github__map_languages_to_techstacks,
-    core_github__map_topics_to_categories,
 
     # out assets
     out_github__table_projects_db
