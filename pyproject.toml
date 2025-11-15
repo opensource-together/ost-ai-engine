@@ -28,8 +28,8 @@ dotenv = "^0.9.9"
 schedule = "^1.1.0"
 fasttext = "^0.9.3"
 fasttext-wheel = "^0.9.2"
-sentence-transformers = "^5.1.2"
-torch = {version = "2.9.0", source = "pytorch"}
+sentence-transformers = {version = "^5.1.2", markers = "sys_platform == 'linux'"}
+torch = {version = "2.5.1", source = "pytorch", markers = "sys_platform == 'linux'"}
 
 [[tool.poetry.source]]
 name = "pytorch"
