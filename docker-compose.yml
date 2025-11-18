@@ -1,9 +1,9 @@
-# ========================================
-# DOCKER COMPOSE - OST AI ENGINE
-# ========================================
 services:
+# ========================================
+# POSTGRES
+# ========================================
   postgres:
-    image: postgres:16
+    image: pgvector/pgvector:pg16
     container_name: ost-db
     env_file:
       - ./prisma/.env
@@ -16,6 +16,9 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
+# ========================================
+# DAGSTER
+# ========================================
   dagster-daemon:
     build:
       context: .
