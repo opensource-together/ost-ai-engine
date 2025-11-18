@@ -40,6 +40,11 @@ from .assets.out.asset_checks import (
 )
 
 from .jobs.github_scraper_job import github_scraper_job
+from .jobs.embedding_jobs import (
+    projects_embedding_job,
+    categories_embedding_job,
+    users_embedding_job,
+)
 
 # schedule
 github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
@@ -85,6 +90,12 @@ defs = Definitions(
         # out checks
         out_github__table_projects_db_counts_valid,
     ],
-    jobs=[github_scraper_job, cleanup_dagster_history_job],
+    jobs=[
+        github_scraper_job,
+        cleanup_dagster_history_job,
+        projects_embedding_job,
+        categories_embedding_job,
+        users_embedding_job,
+    ],
     schedules=[github_scraper_schedule, cleanup_dagster_history_schedule],
 )
