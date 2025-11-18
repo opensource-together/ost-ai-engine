@@ -39,6 +39,24 @@ def main():
             model.upsert(where=where, data={"create": create, "update": update})
 
         print(f"✅ Seeded {len(data)} tech stacks")
+
+        # Seed Categories
+        p_cat = Path(__file__).with_name("categories-data.json")
+        if p_cat.exists():
+            data_cat = json.loads(p_cat.read_text())
+            model_cat = find_model(client, ["category", "Category"])
+            
+            if model_cat:
+                print("Seeding categories...")
+                for c in data_cat:
+                    where = {"name": c["name"]}
+                    create = {"name": c["name"]}
+                    model_cat.upsert(where=where, data={"create": create, "update": {}})
+                print(f"✅ Seeded {len(data_cat)} categories")
+            else:
+                print("⚠️  Category model not found, skipping categories.")
+        else:
+            print(f"⚠️  Categories data file not found: {p_cat}")
     finally:
         client.disconnect()
 
