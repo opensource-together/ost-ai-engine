@@ -27,14 +27,13 @@ What it does :
 
 1. Copy `.env.example` into `.env` and fill it.
 2. Copy `config/cfg_example.py` to `config/cfg.py` and adjust the config to your personal parameters.
-3. Generate prisma client & migrations
+3. Generate prisma client, migrations & seed
 ```bash
-docker compose exec dagster-webserver bash
-prisma generate && prisma migrate dev
+make setup
 ```
 4. Start Linker
 ```bash
-docker compose up -d
+make up
 ```
 
 Dagster UI : http://localhost:3000
