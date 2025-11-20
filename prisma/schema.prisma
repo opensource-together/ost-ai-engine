@@ -14,7 +14,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [uuidOssp(map: "uuid-ossp")]
+  extensions = [uuidOssp(map: "uuid-ossp"), vector]
 }
 
 enum Provider {
@@ -61,6 +61,7 @@ model User {
   githubId       String?         @unique
   gitlabId       String?         @unique
   Project        Project[]
+  embeddings     UserEmbedding[]
 
   @@unique([email])
   @@map("user")
@@ -169,25 +170,46 @@ model ProjectCategory {
 }
 
 model Project {
-  id             String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title          String
-  description    String?
-  repoUrl        String?
-  provider       Provider
-  githubUrl      String?
-  gitlabUrl      String?
-  twitterUrl     String?
-  linkedinUrl    String?
-  discordUrl     String?
-  websiteUrl     String?
-  published      Boolean            @default(false)
-  trending       Boolean            @default(false)
-  techStacks     ProjectTechStack[]
-  categories     ProjectCategory[]
-  ownerId        String?            @db.Uuid
-  ownerOst       User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  logoUrl        String?
-  imagesUrls     String[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id          String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title       String
+  description String?
+  repoUrl     String?
+  provider    Provider
+  githubUrl   String?
+  gitlabUrl   String?
+  twitterUrl  String?
+  linkedinUrl String?
+  discordUrl  String?
+  websiteUrl  String?
+  published   Boolean            @default(false)
+  trending    Boolean            @default(false)
+  techStacks  ProjectTechStack[]
+  categories  ProjectCategory[]
+  ownerId     String?            @db.Uuid
+  ownerOst    User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  logoUrl     String?
+  imagesUrls  String[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  embeddings  ProjectEmbedding[]
+}
+
+model UserEmbedding {
+  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String                 @db.Uuid
+  embedding Unsupported("vector")?
+  createdAt DateTime               @default(now())
+  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_embedding")
+}
+
+model ProjectEmbedding {
+  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String                 @db.Uuid
+  embedding Unsupported("vector")?
+  createdAt DateTime               @default(now())
+  project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@map("project_embedding")
 }
