@@ -3,11 +3,10 @@ from dagster import Definitions
 from .schedules.github_scraper_schedule import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
 from .resources.fasttext_resource import fasttext_model_resource
-from .assets.raw.assets import (
+from .assets.scraper.raw.assets import (
     raw_github__extract_projects,
-    raw_gitlab__extract_projects,
 )
-from .assets.core.assets import (
+from .assets.scraper.core.assets import (
     raw_github__to_df,
     core_repo_lang_detect,
     core_repo_primary_language_filter,
@@ -20,21 +19,21 @@ from .assets.core.assets import (
     core_github__merge_repo_meta,
     core_github__map_languages_to_techstacks,
 )
-from .assets.out.assets import (
+from .assets.scraper.out.assets import (
     out_github__table_projects_db,
 )
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
-
-from .assets.raw.asset_checks import (
+from .assets.scraper.raw.asset_checks import (
     raw_github__extract_projects_non_empty,
 )
-from .assets.core.asset_checks import (
+
+from .assets.scraper.core.asset_checks import (
     core_github__extract_top_projects_description_is_not_empty,
     core_repo_lang_detect_language_fields_present,
     core_github__table_projects_mapped_repoUrl_present,
 )
-from .assets.out.asset_checks import (
+from .assets.scraper.out.asset_checks import (
     out_github__table_projects_db_counts_valid,
 )
 
