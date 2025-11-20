@@ -28,7 +28,6 @@ from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
 from .assets.raw.asset_checks import (
     raw_github__extract_projects_non_empty,
-    raw_gitlab__extract_projects_non_empty,
 )
 from .assets.core.asset_checks import (
     core_github__extract_top_projects_description_is_not_empty,
@@ -54,7 +53,6 @@ defs = Definitions(
     # raw assets
     raw_github__extract_projects,
     raw_github__to_df,
-    raw_gitlab__extract_projects,
 
     # core assets
     core_repo_lang_detect,
@@ -80,7 +78,6 @@ defs = Definitions(
     asset_checks=[
         # raw scraper results
         raw_github__extract_projects_non_empty,
-        raw_gitlab__extract_projects_non_empty,
 
         # core transforms / checks
         core_repo_lang_detect_language_fields_present,
