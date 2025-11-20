@@ -1,41 +1,23 @@
-from dagster import Definitions
+from dagster import Definitions, load_assets_from_modules
 
 from .schedules.github_scraper_schedule import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
 from .resources.fasttext_resource import fasttext_model_resource
-from .assets.scraper.raw.assets import (
-    raw_github__extract_projects,
-)
-from .assets.scraper.core.assets import (
-    raw_github__to_df,
-    core_repo_lang_detect,
-    core_repo_primary_language_filter,
-    core_merge_filtered_projects,
-    core_github__extract_top_projects,
-    core_github__table_projects_mapped,
-    core_github__fetch_repo_languages,
-    core_github__fetch_repo_topics,
-    core_github__fetch_readme,
-    core_github__merge_repo_meta,
-    core_github__map_languages_to_techstacks,
-)
-from .assets.scraper.out.assets import (
-    out_github__table_projects_db,
-)
+from .assets.scraper.raw import github as raw_github
+from .assets.scraper.core import filtering, fetching, mapping, categorization
+from .assets.scraper.out import github as out_github
+
+raw_assets = load_assets_from_modules([raw_github])
+core_assets = load_assets_from_modules([
+    filtering,
+    fetching,
+    mapping,
+    categorization
+])
+out_assets = load_assets_from_modules([out_github])
+
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
-from .assets.scraper.raw.asset_checks import (
-    raw_github__extract_projects_non_empty,
-)
-
-from .assets.scraper.core.asset_checks import (
-    core_github__extract_top_projects_description_is_not_empty,
-    core_repo_lang_detect_language_fields_present,
-    core_github__table_projects_mapped_repoUrl_present,
-)
-from .assets.scraper.out.asset_checks import (
-    out_github__table_projects_db_counts_valid,
-)
 
 from .jobs.github_scraper_job import github_scraper_job
 from .jobs.embedding_jobs import (
@@ -50,23 +32,13 @@ github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
 defs = Definitions(
     assets=[
     # raw assets
-    raw_github__extract_projects,
-    raw_github__to_df,
+    *raw_assets,
 
     # core assets
-    core_repo_lang_detect,
-    core_repo_primary_language_filter,
-    core_merge_filtered_projects,
-    core_github__extract_top_projects,
-    core_github__table_projects_mapped,
-    core_github__fetch_repo_languages,
-    core_github__fetch_repo_topics,
-    core_github__fetch_readme,
-    core_github__merge_repo_meta,
-    core_github__map_languages_to_techstacks,
+    *core_assets,
 
     # out assets
-    out_github__table_projects_db
+    *out_assets,
     ],
     resources={
         "config": config_resource,
@@ -74,18 +46,6 @@ defs = Definitions(
             "model_path": "/app/models/lid.176.ftz"
         }),
     },
-    asset_checks=[
-        # raw scraper results
-        raw_github__extract_projects_non_empty,
-
-        # core transforms / checks
-        core_repo_lang_detect_language_fields_present,
-        core_github__extract_top_projects_description_is_not_empty,
-        core_github__table_projects_mapped_repoUrl_present,
-
-        # out checks
-        out_github__table_projects_db_counts_valid,
-    ],
     jobs=[
         github_scraper_job,
         cleanup_dagster_history_job,

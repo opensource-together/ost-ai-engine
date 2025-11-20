@@ -1,6 +1,11 @@
 import typing as _t
 
-from dagster import asset, AssetIn, MetadataValue, Output
+from dagster import (
+    asset,
+    AssetIn,
+    MetadataValue,
+    Output,
+)
 
 from src.pipeline.utils import prisma_client
 
@@ -153,6 +158,3 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
         "error_count": MetadataValue.int(len(errors)),
         "first_error": MetadataValue.text(errors[0][1]) if errors else MetadataValue.null(),
     })
-
-
-__all__ = ["out_github__table_projects_db"]
