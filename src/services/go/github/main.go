@@ -120,7 +120,7 @@ func main() {
 	}
 	maxRepos := config.GitHubTopN
 	if maxRepos <= 0 {
-		maxRepos = 1000
+		maxRepos = 1000 // Github API limit is 1000
 	}
 
 	client := newHTTPClient()
