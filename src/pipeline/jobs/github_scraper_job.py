@@ -20,7 +20,7 @@ github_scraper_job = define_asset_job(
         jitter=Jitter.FULL,
     ),
     description=(
-        "Scrape trending repositories (GitHub and GitLab), filter and rank them, "
+        "Scrape trending repositories (GitHub), filter and rank them, "
         "normalize to the Prisma Project schema, and upsert the results into the database. "
         "The job runs the Go scrapers, applies language detection and data-quality checks, "
         "maps fields to the Project model, and emits insert/update metrics. "
