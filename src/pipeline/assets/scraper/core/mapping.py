@@ -16,17 +16,17 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"core_github__extract_top_projects": AssetIn()},
+	ins={"core_merge_filtered_projects": AssetIn()},
 	group_name="github_projects_scraper",
 )
-def core_github__table_projects_mapped(context, core_github__extract_top_projects):
+def core_github__table_projects_mapped(context, core_merge_filtered_projects):
 	"""Map selected top projects to the Prisma `Project` schema.
 
 	Uses `GITHUB_TO_PROJECT_MAPPING` to populate Prisma fields. Returns mapped list
 	and metadata (mapped_count, input_count).
 	"""
-	if core_github__extract_top_projects is None:
-		context.log.warning("No data found from core_github__extract_top_projects. Returning empty list.")
+	if core_merge_filtered_projects is None:
+		context.log.warning("No data found from core_merge_filtered_projects. Returning empty list.")
 		return []
 
 	def map_repo(repo):
@@ -46,7 +46,7 @@ def core_github__table_projects_mapped(context, core_github__extract_top_project
 				mapped[prisma_field] = source
 		return mapped
 
-	projects = [map_repo(repo) for repo in core_github__extract_top_projects]
+	projects = [map_repo(repo) for repo in core_merge_filtered_projects]
 	# Build enriched metadata for Dagster UI: include small previews and mapping keys
 	def _preview_text(s: str, limit: int = 1000) -> str:
 		if not s:
@@ -75,7 +75,7 @@ def core_github__table_projects_mapped(context, core_github__extract_top_project
 
 	meta = {
 		"mapped_count": MetadataValue.int(len(projects)),
-		"input_count": MetadataValue.int(len(core_github__extract_top_projects)),
+		"input_count": MetadataValue.int(len(core_merge_filtered_projects)),
 		"sample": MetadataValue.json(projects[:3]),
 		"sample_repo_urls": MetadataValue.json([p.get("repoUrl") for p in projects[:3]]),
 		"mapping_keys": MetadataValue.json(mapping_keys),
@@ -94,8 +94,10 @@ def core_github__table_projects_mapped(context, core_github__extract_top_project
 	required_resource_keys={"config"},
 )
 def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict]):
+	context.log.info(f"core_github__map_languages_to_techstacks: Starting with {len(repo_meta) if repo_meta else 0} input items")
 	if not repo_meta:
-		return Output(value={"mapped": 0})
+		context.log.warning("core_github__map_languages_to_techstacks: No input data (repo_meta is empty)")
+		return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "input_count": MetadataValue.int(0)})
 
 	mapped = 0
 	errors = 0
@@ -112,6 +114,7 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(1)})
 		try:
 			all_ts = model_ts.find_many()
+			context.log.info(f"core_github__map_languages_to_techstacks: Loaded {len(all_ts) if all_ts else 0} tech_stack records from database")
 		except Exception as e:
 			context.log.exception(f"core_github__map_languages_to_techstacks: failed to load tech_stack rows: {e}")
 			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(1)})
@@ -201,5 +204,12 @@ def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict
 		"errors": MetadataValue.int(errors),
 		"sample_mapped": MetadataValue.json(mapped_examples[:3]),
 	}
-	context.log.info(f"core_github__map_languages_to_techstacks: mapped={mapped} relations across {len(repo_meta)} repos; unmatched={unmatched_count}; sample={ [e.get('repoUrl') for e in mapped_examples[:3]] }")
+	context.log.info(
+		f"core_github__map_languages_to_techstacks: COMPLETE - "
+		f"mapped={mapped} relations, "
+		f"input_count={len(repo_meta)}, "
+		f"unmatched_repos={unmatched_count}, "
+		f"errors={errors}, "
+		f"sample={mapped_examples[:1]}"
+	)
 	return Output(value={"mapped": mapped}, metadata=meta)

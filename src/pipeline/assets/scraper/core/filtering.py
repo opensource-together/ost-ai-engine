@@ -181,19 +181,21 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"core_repo_lang_detect": AssetIn(), "core_repo_primary_language_filter": AssetIn()},
+	ins={
+		"core_repo_lang_detect": AssetIn(),
+		"core_repo_primary_language_filter": AssetIn(),
+		"core_github__extract_top_projects": AssetIn(),
+	},
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
-def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_primary_language_filter):
-	"""Merge the two filtered outputs produced in parallel.
+def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_primary_language_filter, core_github__extract_top_projects):
+	"""Merge the three filtered outputs produced in parallel.
 
-	Default behavior: perform an inner join on `id` (GitHub numeric id). If `id`
-	is not present in both dataframes, fall back to `full_name`, `html_url`, or
-	`name` (in that order) if available in both.
+	Performs a 3-way inner join on `id` (GitHub numeric id). If `id` is not present
+	in all dataframes, falls back to `full_name`, `html_url`, or `name` (in that order).
 
-	The merge is an intersection: only repos kept by both filters remain. This
-	follows the semantics "remove rows each asset must remove".
+	The merge is an intersection: only repos kept by ALL three filters remain.
 	"""
 	# Import pandas locally; if missing fail fast with a clear log.
 	import pandas as pd
@@ -201,22 +203,23 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 	# Normalize inputs to DataFrames
 	def to_df(x):
 		if x is None:
-			return pd.DataFrame() if pd is not None else []
-		if pd is not None and isinstance(x, pd.DataFrame):
+			return pd.DataFrame()
+		if isinstance(x, pd.DataFrame):
 			return x
 		try:
-			return pd.DataFrame(x) if pd is not None else x
+			return pd.DataFrame(x)
 		except Exception:
-			return pd.DataFrame() if pd is not None else []
+			return pd.DataFrame()
 
 	df1 = to_df(core_repo_lang_detect)
 	df2 = to_df(core_repo_primary_language_filter)
+	df3 = to_df(core_github__extract_top_projects)
 
 	# Choose join key
 	common_keys = ["id", "full_name", "html_url", "name"]
 	join_key = None
 	for k in common_keys:
-		if k in df1.columns and k in df2.columns:
+		if k in df1.columns and k in df2.columns and k in df3.columns:
 			join_key = k
 			break
 
@@ -225,16 +228,19 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 		merged = df1
 	else:
 		try:
+			# Perform 3-way inner join
 			merged = pd.merge(df1, df2[[join_key]], on=join_key, how="inner")
-			context.log.info(f"core_merge_filtered_projects: merged on '{join_key}', resulting rows={len(merged)}")
+			merged = pd.merge(merged, df3[[join_key]], on=join_key, how="inner")
+			context.log.info(f"core_merge_filtered_projects: 3-way merge on '{join_key}', resulting rows={len(merged)}")
 		except Exception as e:
 			context.log.exception(f"core_merge_filtered_projects: merge failed: {e}")
 			merged = df1
 
 	records = merged.to_dict(orient="records")
 	meta = {
-		"left_count": MetadataValue.int(len(df1)),
-		"right_count": MetadataValue.int(len(df2)),
+		"lang_detect_count": MetadataValue.int(len(df1)),
+		"primary_lang_count": MetadataValue.int(len(df2)),
+		"description_count": MetadataValue.int(len(df3)),
 		"merged_count": MetadataValue.int(len(records)),
 		"join_key": MetadataValue.text(join_key or "none"),
 		"sample": MetadataValue.json(records[:3]),
@@ -347,37 +353,43 @@ def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"merged_filtered_projects": AssetIn("core_merge_filtered_projects")},
+	ins={"raw_github__df": AssetIn("raw_github__to_df")},
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
-def core_github__extract_top_projects(context, merged_filtered_projects):
-	"""Select projects with non-empty descriptions. Do not sort or limit by stars."""
-	# Avoid importing pandas inside the child process; use duck-typing to convert if needed.
-	projects = merged_filtered_projects
-	if hasattr(merged_filtered_projects, "to_dict") and callable(getattr(merged_filtered_projects, "to_dict")):
-		try:
-			projects = merged_filtered_projects.to_dict(orient="records")
-		except Exception:
-			projects = merged_filtered_projects
+def core_github__extract_top_projects(context, raw_github__df):
+	"""Filter projects with non-empty descriptions."""
+	# Import pandas locally
+	try:
+		import pandas as pd
+	except ImportError as e:
+		context.log.error(f"core_github__extract_top_projects: pandas is required but not installed: {e}")
+		raise
+
+	# Convert DataFrame to list of dicts
+	if isinstance(raw_github__df, pd.DataFrame):
+		projects = raw_github__df.to_dict(orient="records")
+	else:
+		projects = raw_github__df or []
 
 	if not projects or not isinstance(projects, list):
-		context.log.warning("No projects to select.")
-		return Output(value=[], metadata={"selected_count": MetadataValue.int(0), "input_count": MetadataValue.int(0)})
+		context.log.warning("No projects to filter.")
+		return Output(value=pd.DataFrame(), metadata={"kept_count": MetadataValue.int(0), "input_count": MetadataValue.int(0)})
 
-	# Keep all projects that have a non-empty description (no sorting or top-N selection).
+	# Keep all projects that have a non-empty description
 	filtered = [p for p in projects if p.get("description") not in (None, "")]
 	context.log.info(f"core_github__extract_top_projects: {len(filtered)} projects with description out of {len(projects)}")
 
-	if not filtered:
-		return Output(value=[], metadata={
-			"selected_count": MetadataValue.int(0),
-			"input_count": MetadataValue.int(len(projects)),
-			"reason": MetadataValue.text("No project with description found."),
-		})
-
 	meta = {
-		"selected_count": MetadataValue.int(len(filtered)),
 		"input_count": MetadataValue.int(len(projects)),
+		"kept_count": MetadataValue.int(len(filtered)),
+		"filtered_out": MetadataValue.int(len(projects) - len(filtered)),
+		"sample": MetadataValue.json(filtered[:3]),
 	}
-	return Output(value=filtered, metadata=meta)
+	
+	# Return DataFrame for merging
+	try:
+		df = pd.DataFrame(filtered)
+		return Output(value=df, metadata=meta)
+	except Exception:
+		return Output(value=filtered, metadata=meta)

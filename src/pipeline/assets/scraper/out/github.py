@@ -29,6 +29,7 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
     - Updates when a matching `repoUrl` exists, otherwise creates.
     - Returns a dict with inserted/updated counters and metadata.
     """
+    context.log.info(f"out_github__table_projects_db: Starting with {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects to upsert")
     inserted = 0
     updated = 0
     errors: list[tuple[int, str]] = []
@@ -50,12 +51,16 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
                 "note": MetadataValue.text("Prisma client unavailable; writes skipped."),
             })
 
+        context.log.info(f"out_github__table_projects_db: Starting upsert loop for {len(core_github__table_projects_mapped or [])} projects")
         for i, project in enumerate(core_github__table_projects_mapped or []):
             repo_url = project.get("repoUrl")
             if not repo_url:
                 context.log.warning(f"Skipping project {i}: missing repoUrl (required for insert).")
                 errors.append((i, "missing_repoUrl"))
                 continue
+            
+            if i < 3:  # Log first 3 for debugging
+                context.log.debug(f"out_github__table_projects_db: Processing project {i}: repoUrl={repo_url}")
 
             project_data = {k: v for k, v in project.items() if v is not None}
 
@@ -147,14 +152,21 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
                 context.log.exception(f"Unexpected error processing project {i} (repoUrl={repo_url})")
                 errors.append((i, str(e)))
 
-    context.log.info(f"{inserted} projects inserted, {updated} projects updated into the Project table.")
+    context.log.info(
+        f"out_github__table_projects_db: COMPLETE - "
+        f"inserted={inserted}, "
+        f"updated={updated}, "
+        f"errors={len(errors)}, "
+        f"total_processed={len(core_github__table_projects_mapped or [])}"
+    )
     if errors:
-        context.log.warning(f"{len(errors)} insert/update errors: {errors[:3]}")
+        context.log.warning(f"out_github__table_projects_db: {len(errors)} errors occurred: {errors[:3]}")
 
     result_value = {"inserted": inserted, "updated": updated}
     return Output(value=result_value, metadata={
         "inserted_count": MetadataValue.int(inserted),
         "updated_count": MetadataValue.int(updated),
         "error_count": MetadataValue.int(len(errors)),
-        "first_error": MetadataValue.text(errors[0][1]) if errors else MetadataValue.null(),
+        "total_input": MetadataValue.int(len(core_github__table_projects_mapped or [])),
+        "error_sample": MetadataValue.json(errors[:5]) if errors else MetadataValue.null(),
     })
