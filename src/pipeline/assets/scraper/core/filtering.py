@@ -242,49 +242,7 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 	}
 	return Output(value=records, metadata=meta)
 
-@asset(
-	kinds={"python"},
-	owners=DEFAULT_OWNERS,
-	ins={"raw_github__extract_projects": AssetIn()},
-	group_name="github_projects_scraper",
-	required_resource_keys={"config"},
-)
-def raw_github__to_df(context, raw_github__extract_projects: _t.List[_t.Dict]):
-	"""Convert the raw list-of-dicts into a pandas.DataFrame.
 
-	This asset provides a single DataFrame that is used as input to
-	`core_repo_lang_detect` and `core_repo_primary_language_filter` so they
-	can run in parallel on the same dataset.
-	"""
-	if not raw_github__extract_projects:
-		context.log.info("raw_github__to_df: no input projects, returning empty DataFrame")
-		df = pd.DataFrame()
-		return Output(value=df, metadata={"input_count": MetadataValue.int(0)})
-
-	try:
-		# Import pandas directly; let ImportError surface after logging
-		import pandas as pd
-		df = pd.DataFrame(raw_github__extract_projects)
-		sample_records = df.head(3).to_dict(orient="records")
-		sample_ids = [r.get("id") for r in sample_records]
-		meta = {
-			"input_count": MetadataValue.int(len(df)),
-			"columns_count": MetadataValue.int(len(df.columns)),
-			"sample": MetadataValue.json(sample_records),
-			"sample_ids": MetadataValue.json(sample_ids),
-		}
-		context.log.info(f"raw_github__to_df: converted {len(df)} projects to DataFrame; columns={list(df.columns)[:6]}")
-		return Output(value=df, metadata=meta)
-	except ImportError as e:
-		context.log.error(f"raw_github__to_df: pandas is required but not installed: {e}")
-		raise
-	except Exception as e:
-		context.log.exception(f"raw_github__to_df: could not convert to DataFrame: {e}")
-		# Fallback: return empty DataFrame representation
-		try:
-			return Output(value=pd.DataFrame(), metadata={"input_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
-		except Exception:
-			return Output(value=[], metadata={"input_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 
 @asset(
