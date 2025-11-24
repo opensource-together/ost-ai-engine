@@ -69,13 +69,10 @@ ENV GOTOOLCHAIN=auto
 
 # Copy sources
 COPY src/services/go/github/ /go/github/
-COPY src/services/go/gitlab/ /go/gitlab/
 
 # Build binaries (modules will be fetched automatically by go build)
 WORKDIR /go/github
 RUN go build -ldflags="-s -w" -o /go/github-scraper .
-WORKDIR /go/gitlab
-RUN go build -ldflags="-s -w" -o /go/gitlab-scraper .
 
 # ==============================================================================
 # STAGE 3: Production - create lightweight final image
@@ -133,7 +130,6 @@ COPY --chown=app:app scripts/ /app/scripts/
 RUN chmod +x /app/scripts/cfg_cron.py /app/scripts/docker-entrypoint.sh || true
 
 COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
-COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
 
 # Create cache dirs and set ownership to 'app'
 RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
@@ -143,7 +139,7 @@ RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_S
 RUN mkdir config/ && chown app:app config
 
 # Ensure Go binaries are executable (fix permission issues)
-RUN chmod +x /app/github-scraper /app/gitlab-scraper || true
+RUN chmod +x /app/github-scraper || true
 
 # Switch to non-root user for runtime (safer)
 USER app
