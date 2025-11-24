@@ -1,7 +1,7 @@
 services:
-# ========================================
-# POSTGRES
-# ========================================
+  # ========================================
+  # POSTGRES
+  # ========================================
   postgres:
     image: pgvector/pgvector:pg16
     container_name: ost-db
@@ -16,13 +16,14 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
 
-# ========================================
-# DAGSTER
-# ========================================
+  # ========================================
+  # DAGSTER
+  # ========================================
   dagster-daemon:
     build:
       context: .
     container_name: dagster-daemon
+    shm_size: '2gb'
     env_file:
       - .env
     depends_on:
@@ -34,12 +35,13 @@ services:
       - ./src/:/app/src/
       # Dagster instance storage (matches src/pipeline/dagster.yaml base_dir)
       - ./.dagster_home:/app/.dagster_home
-    command: ["dagster-daemon", "run"]
+    command: [ "dagster-daemon", "run" ]
 
   dagster-webserver:
     build:
       context: .
     container_name: dagster-webserver
+    shm_size: '2gb'
     env_file:
       - .env
     depends_on:
@@ -51,7 +53,7 @@ services:
       - ./config/cfg.yaml:/app/config/cfg.yaml
       - ./src/:/app/src
       - ./.dagster_home:/app/.dagster_home
-    command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
+    command: [ "dagster-webserver", "-h", "0.0.0.0", "-p", "3000" ]
 
 volumes:
   pgdata:
