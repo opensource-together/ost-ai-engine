@@ -1,6 +1,7 @@
 from dagster import (
     define_asset_job,
     in_process_executor,
+    multiprocess_executor,
     AssetSelection,
     RetryPolicy,
     Backoff,
@@ -11,9 +12,8 @@ from dagster import (
 github_scraper_job = define_asset_job(
     name="github_scraper_job",
     selection=AssetSelection.groups("github_projects_scraper"),
-    executor_def=in_process_executor,
-    # default retry policy for ops computing assets in this job.
-    op_retry_policy=RetryPolicy(
+    executor_def=in_process_executor,  # Avoid SIGBUS with multiprocessing
+    op_retry_policy=RetryPolicy( # default retry policy for ops computing assets in this job.
         max_retries=2,
         delay=30,
         backoff=Backoff.EXPONENTIAL,

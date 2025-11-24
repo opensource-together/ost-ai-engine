@@ -17,10 +17,11 @@ compute_logs:
     base_dir:
       env: DAGSTER_LOGS_DIR
 
-# no parallelism for now
 run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 3 # safe default to avoid SIGBUS error
 
 # enable run monitoring for better error detection
 run_monitoring:
