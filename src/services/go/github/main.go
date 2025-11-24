@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"net/url"
@@ -63,8 +62,8 @@ func fetchGitHubRepos(client *http.Client, token string, apiURL string, query st
 
 	req, _ := http.NewRequest("GET", base.String(), nil)
 	req.Header.Set("Accept", "application/vnd.github+json")
-	req.Header.Set("User-Agent", "ost-ai-engine-scraper")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
+	req.Header.Set("User-Agent", "ost-linker-scraper")
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28") // Recommended version by Github
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -87,17 +86,17 @@ func main() {
 	configPath := os.Getenv("OST_CONFIG_PATH")
 
 	// Load configuration from YAML file
-	configBytes, err := ioutil.ReadFile(configPath)
+	configBytes, err := os.ReadFile(configPath)
 	if err != nil {
 		log.Fatalf("[ERROR] Config file could not be read: %v", err)
 	}
 	var config struct {
 		DatabaseURL         string `yaml:"DATABASE_URL"`
 		GitHubAccessToken   string `yaml:"GITHUB_ACCESS_TOKEN"`
-		GitLabAccessToken   string `yaml:"GITLAB_ACCESS_TOKEN"`
 		GitHubScrapingQuery string `yaml:"GITHUB_SCRAPING_QUERY"`
 		GitHubTopN          int    `yaml:"GITHUB_TOP_N"`
 		GitHubApiUrl        string `yaml:"GITHUB_API_URL"`
+		GitHubPerPage       int    `yaml:"GITHUB_PER_PAGE"`
 	}
 	if err := yaml.Unmarshal(configBytes, &config); err != nil {
 		log.Fatalf("[ERROR] Config file could not be parsed: %v", err)
@@ -116,7 +115,7 @@ func main() {
 	}
 	apiURL := config.GitHubApiUrl
 	if apiURL == "" {
-		log.Fatal("GITHUB_API_URL is required in config")
+		log.Fatal("GITHUB_API_URL is required")
 	}
 	maxRepos := config.GitHubTopN
 	if maxRepos <= 0 {
@@ -124,7 +123,13 @@ func main() {
 	}
 
 	client := newHTTPClient()
-	perPage := 100
+	perPage := config.GitHubPerPage
+	if perPage <= 0 {
+		perPage = 100
+	}
+	if perPage > 100 {
+		perPage = 100 // GitHub API limit
+	}
 	collected := 0
 	var allRepos []githubRepo
 	for page := 1; collected < maxRepos; page++ {
@@ -140,7 +145,16 @@ func main() {
 	}
 
 	// Display results as JSON
-	if err := json.NewEncoder(os.Stdout).Encode(allRepos); err != nil {
+	output := struct {
+		Items []githubRepo `json:"items"`
+	}{
+		Items: allRepos,
+	}
+	if output.Items == nil {
+		output.Items = []githubRepo{}
+	}
+
+	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
 		log.Fatalf("json encode: %v", err)
 	}
 }
