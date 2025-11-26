@@ -34,11 +34,11 @@ async function seed() {
       },
     });
   }
-  console.log(`✅ Seeded ${categoriesData.length} domain`);
+  console.log(`✅ Seeded ${categoriesData.length} categories`);
 
-  console.log('Seeding domain...');
+  console.log('Seeding domains...');
   for (const domain of domainsData) {
-    await prisma.category.upsert({
+    await prisma.domain.upsert({
       where: { name: domain.name },
       update: {},
       create: {
@@ -46,7 +46,7 @@ async function seed() {
       },
     });
   }
-  console.log(`✅ Seeded ${domainsData.length} domain`);
+  console.log(`✅ Seeded ${domainsData.length} domains`);
 }
 
 async function main() {
