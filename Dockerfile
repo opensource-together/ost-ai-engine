@@ -10,16 +10,16 @@ FROM python:3.11-slim AS builder
 # Install heavy system packages required only for build
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        build-essential \
-        gcc \
-        libpq-dev \
-        git \
-        curl \
-        ca-certificates \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 && \
+    build-essential \
+    gcc \
+    libpq-dev \
+    git \
+    curl \
+    ca-certificates \
+    libpq5 \
+    libatomic1 \
+    libstdc++6 \
+    libgcc-s1 && \
     rm -rf /var/lib/apt/lists/*
 
 # Install Poetry
@@ -82,11 +82,14 @@ FROM python:3.11-slim AS production
 # Install only runtime system libraries
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 \
-        ca-certificates \
+    libpq5 \
+    libatomic1 \
+    libstdc++6 \
+    libgcc-s1 \
+    ca-certificates \
+    curl \
+    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
+    && apt-get install -y nodejs \
     && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
@@ -103,7 +106,7 @@ ENV XDG_CACHE_HOME=/app/.cache
 
 # Configure Poetry to create the virtualenv inside the project
 ENV POETRY_VIRTUALENVS_IN_PROJECT=true
-ENV PATH="/app/.venv/bin:$PATH"
+ENV PATH="/app/.venv/bin:/app/node_modules/.bin:$PATH"
 
 # Create a non-root user for the app
 RUN addgroup --system app && adduser --system --group app
@@ -111,6 +114,11 @@ RUN addgroup --system app && adduser --system --group app
 # Copy project configuration
 COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
 COPY --from=builder --chown=app:app /app/poetry.lock ./poetry.lock
+
+# Copy Node configuration and install dependencies
+COPY --chown=app:app package.json package-lock.json ./
+RUN npm ci
+
 
 # Reuse the virtualenv built in the builder stage (no reinstall here)
 COPY --from=builder --chown=app:app /app/.venv /app/.venv
@@ -121,6 +129,7 @@ COPY --from=builder --chown=app:app /app/src src
 
 COPY --from=builder --chown=app:app /app/prisma prisma
 COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
+RUN npx prisma generate
 
 COPY --from=builder --chown=app:app /app/models /app/models
 

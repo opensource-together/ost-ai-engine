@@ -1,7 +1,6 @@
 setup:
 	docker compose exec dagster-webserver bash -c " \
-		prisma generate && \
 		prisma migrate dev && \
-		python prisma/seed/seed.py"
+		npx ts-node --compiler-options '{\"module\":\"commonjs\"}' prisma/seed/seed.ts"
 up:
 	docker compose up -d
