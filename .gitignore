@@ -182,3 +182,7 @@ uv.lock
 
 # Docker entrypoint scripts
 entrypoint.sh
+
+# Node
+package-lock.json
+package.json

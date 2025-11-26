@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider        = "prisma-client-py"
-  interface       = "sync"
+  provider        = "prisma-client-js"
   binaryTargets   = ["native", "linux-musl-arm64-openssl-3.0.x"]
   previewFeatures = ["postgresqlExtensions"]
 }
@@ -14,7 +13,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [uuidOssp(map: "uuid-ossp"), vector]
+  extensions = [uuidOssp(map: "uuid-ossp")]
 }
 
 enum Provider {
@@ -37,31 +36,35 @@ model Skeleton {
 }
 
 model User {
-  id             String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name           String
-  email          String
-  emailVerified  Boolean         @default(false)
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @default(now()) @updatedAt
-  bio            String?
-  jobTitle       String?
-  sessions       Session[]
-  accounts       Account[]
-  techStacks     UserTechStack[]
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name            String
+  email           String
+  emailVerified   Boolean           @default(false)
+  image           String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
+  bio             String?
+  jobTitle        String?
+  experiences     Json?
+  sessions        Session[]
+  accounts        Account[]
+  techStacks      UserTechStack[]
   // Social Links URLs
-  githubUrl      String?
-  gitlabUrl      String?
-  twitterUrl     String?
-  linkedinUrl    String?
-  discordUrl     String?
-  websiteUrl     String?
-  githubUsername String?         @unique
-  gitlabUsername String?         @unique
-  githubId       String?         @unique
-  gitlabId       String?         @unique
-  Project        Project[]
-  embeddings     UserEmbedding[]
+  githubUrl       String?
+  gitlabUrl       String?
+  twitterUrl      String?
+  linkedinUrl     String?
+  discordUrl      String?
+  websiteUrl      String?
+  githubUsername  String?           @unique
+  gitlabUsername  String?           @unique
+  githubId        String?           @unique
+  gitlabId        String?           @unique
+  Project         Project[]
+  categories      UserCategories[]
+  domain          UserDomains[]
+  projectBookmark ProjectBookmark[]
+  betaTester      Boolean           @default(false)
 
   @@unique([email])
   @@map("user")
@@ -137,6 +140,30 @@ model UserTechStack {
   @@map("user_tech_stack")
 }
 
+model UserCategories {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String   @db.Uuid
+  categoryId String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, categoryId])
+  @@map("user_categories")
+}
+
+model UserDomains {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @db.Uuid
+  domainId  String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, domainId])
+  @@map("user_domain")
+}
+
 model ProjectTechStack {
   id          String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   projectId   String    @db.Uuid
@@ -155,6 +182,7 @@ model Category {
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   ProjectCategory ProjectCategory[]
+  UserCategories  UserCategories[]
 }
 
 model ProjectCategory {
@@ -169,47 +197,68 @@ model ProjectCategory {
   @@map("project_category")
 }
 
+model Domain {
+  id            String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name          String          @unique
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+  ProjectDomain ProjectDomain[]
+  UserDomains   UserDomains[]
+}
+
+model ProjectDomain {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String   @db.Uuid
+  domainId  String   @db.Uuid
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, domainId])
+  @@map("project_domain")
+}
+
 model Project {
-  id          String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title       String
-  description String?
-  repoUrl     String?
-  provider    Provider
-  githubUrl   String?
-  gitlabUrl   String?
-  twitterUrl  String?
-  linkedinUrl String?
-  discordUrl  String?
-  websiteUrl  String?
-  published   Boolean            @default(false)
-  trending    Boolean            @default(false)
-  techStacks  ProjectTechStack[]
-  categories  ProjectCategory[]
-  ownerId     String?            @db.Uuid
-  ownerOst    User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  logoUrl     String?
-  imagesUrls  String[]
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  embeddings  ProjectEmbedding[]
+  id              String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title           String
+  description     String?
+  repoUrl         String?            @unique
+  provider        Provider
+  githubUrl       String?
+  gitlabUrl       String?
+  twitterUrl      String?
+  linkedinUrl     String?
+  discordUrl      String?
+  websiteUrl      String?
+  published       Boolean            @default(false)
+  trending        Boolean            @default(false)
+  techStacks      ProjectTechStack[]
+  categories      ProjectCategory[]
+  domains         ProjectDomain[]
+  ownerId         String?            @db.Uuid
+  owner           User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  logoUrl         String?
+  imagesUrls      String[]
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  projectBookmark ProjectBookmark[]
 }
 
-model UserEmbedding {
-  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId    String                 @db.Uuid
-  embedding Unsupported("vector")?
-  createdAt DateTime               @default(now())
-  user      User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+model ProjectBookmark {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @db.Uuid
+  projectId String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
 
-  @@map("user_embedding")
+  @@unique([userId, projectId])
+  @@map("project_bookmark")
 }
 
-model ProjectEmbedding {
-  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId String                 @db.Uuid
-  embedding Unsupported("vector")?
-  createdAt DateTime               @default(now())
-  project   Project                @relation(fields: [projectId], references: [id], onDelete: Cascade)
+model BetaSignup {
+  id    String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email String @unique
 
-  @@map("project_embedding")
+  @@map("beta_signup")
 }
