@@ -10,6 +10,12 @@ generator client {
   previewFeatures = ["postgresqlExtensions"]
 }
 
+generator client_py {
+  provider             = "prisma-client-py"
+  interface            = "sync"
+  recursive_type_depth = 5
+}
+
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
