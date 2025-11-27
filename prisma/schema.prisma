@@ -13,7 +13,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [uuidOssp(map: "uuid-ossp")]
+  extensions = [uuidOssp(map: "uuid-ossp"), vector]
 }
 
 enum Provider {
@@ -235,6 +235,7 @@ model Project {
   techStacks      ProjectTechStack[]
   categories      ProjectCategory[]
   domains         ProjectDomain[]
+  embeddings      ProjectEmbedding[]
   ownerId         String?            @db.Uuid
   owner           User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   logoUrl         String?
@@ -242,6 +243,16 @@ model Project {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   projectBookmark ProjectBookmark[]
+}
+
+model ProjectEmbedding {
+  id        String                      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String                      @db.Uuid
+  vector    Unsupported("vector(1024)")
+  project   Project                     @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime                    @default(now())
+
+  @@map("project_embedding")
 }
 
 model ProjectBookmark {
