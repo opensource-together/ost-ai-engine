@@ -85,131 +85,101 @@ def core_github__table_projects_mapped(context, core_merge_filtered_projects):
 	return Output(value=projects, metadata=meta)
 
 
+
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description="Map fetched languages to tech_stack and create project_tech_stack relations.",
 	ins={"repo_meta": AssetIn("core_github__merge_repo_meta")},
-	group_name="github_projects_scraper",
+	group_name="map_repos_metadatas",
 	required_resource_keys={"config"},
 )
-def core_github__map_languages_to_techstacks(context, repo_meta: _t.List[_t.Dict]):
-	context.log.info(f"core_github__map_languages_to_techstacks: Starting with {len(repo_meta) if repo_meta else 0} input items")
-	if not repo_meta:
-		context.log.warning("core_github__map_languages_to_techstacks: No input data (repo_meta is empty)")
-		return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "input_count": MetadataValue.int(0)})
+def core_github__enrich_project_data(context, repo_meta: _t.List[_t.Dict]):
+	"""
+	Enriches project data by mapping languages to TechStacks.
 
-	mapped = 0
-	errors = 0
+	**Description:**
+	Maps detected languages to existing TechStack records in the database to establish relationships.
+
+	**Logic:**
+	1. **Fetch TechStacks**: Retrieves all TechStack records from the database.
+	2. **Normalization**: Normalizes language names and TechStack names for matching.
+	3. **Mapping**: Matches languages to TechStacks using exact and fuzzy matching.
+	4. **Structure**: Prepares the data with `tech_stack_ids` for the database upsert.
+
+	**Output:**
+	List of enriched project dictionaries ready for database insertion.
+	"""
+	context.log.info(f"core_github__enrich_project_data: Starting with {len(repo_meta) if repo_meta else 0} input items")
+	if not repo_meta:
+		return Output(value=[], metadata={"count": MetadataValue.int(0)})
+
 	def _normalize(s: str) -> str:
 		return s.lower().strip().replace("_", " ").replace("-", " ").replace(".", " ")
 
 	with prisma_client() as prisma:
-		# use module-level _find_model
+		if prisma is None:
+			context.log.error("core_github__enrich_project_data: Prisma client unavailable.")
+			return Output(value=[], metadata={"error": MetadataValue.text("Prisma client unavailable")})
 
-		# Try the likely attribute names (match seed/ts usage and prisma-python variants)
+		# Fetch TechStacks
 		model_ts = _find_model(prisma, ["tech_stack", "TechStack", "techStack", "techstack"])
-		if model_ts is None:
-			context.log.exception("core_github__map_languages_to_techstacks: TechStack model not found on Prisma client; did you run `prisma generate`?")
-			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(1)})
-		try:
-			all_ts = model_ts.find_many()
-			context.log.info(f"core_github__map_languages_to_techstacks: Loaded {len(all_ts) if all_ts else 0} tech_stack records from database")
-		except Exception as e:
-			context.log.exception(f"core_github__map_languages_to_techstacks: failed to load tech_stack rows: {e}")
-			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(1)})
-
-		# Resolve Project and ProjectTechStack models dynamically as well
-		project_model = _find_model(prisma, ["project", "Project"]) or _find_model(prisma, ["project_model"])
-		if project_model is None:
-			context.log.exception("core_github__map_languages_to_techstacks: Project model not found on Prisma client")
-			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(1)})
-
-		pts_model = _find_model(prisma, ["project_tech_stack", "ProjectTechStack", "projectTechStack", "projecttechstack"])
-		if pts_model is None:
-			context.log.exception("core_github__map_languages_to_techstacks: ProjectTechStack model not found on Prisma client; did you run `prisma generate`?")
-			return Output(value={"mapped": 0}, metadata={"mapped": MetadataValue.int(0), "errors": MetadataValue.int(1)})
-
-		ts_map: dict[str, dict] = {}
-		for ts in all_ts or []:
-			key = _normalize(ts.name)
-			ts_map.setdefault(key, []).append(ts)
-
-		# collect small examples of what we matched/created for Dagster metadata
-		mapped_examples: list[dict] = []
-		unmatched_count = 0
-		for item in repo_meta:
+		ts_map = {}
+		if model_ts:
 			try:
-				proj = item.get("project")
-				repoUrl = item.get("repoUrl")
-				raw_langs = [l for l in (item.get("languages") or []) if isinstance(l, str)]
-				if not proj or not raw_langs:
-					continue
-				# per-repo created counter and matched names list for examples
-				repo_created = 0
-				repo_matched_names: list[str] = []
-				project_rec = project_model.find_first(where={"repoUrl": repoUrl})
-				if not project_rec:
-					context.log.debug(f"core_github__map_languages_to_techstacks: no project found for repoUrl={repoUrl}")
-					continue
-
-				# Normalize and attempt to match each language against seeded tech_stack
-				for lang in raw_langs:
-					nlang = _normalize(lang)
-					matched = []
-					# direct normalized match
-					if nlang in ts_map:
-						matched = ts_map[nlang]
-					else:
-						# fuzzy-ish: check containment both ways
-						for k, ts_list in ts_map.items():
-							if nlang in k or k in nlang:
-								matched.extend(ts_list)
-
-					# create relations for matched tech stacks only (do NOT create TechStack)
-					for ts in matched:
-						exists = pts_model.find_first(where={"projectId": project_rec.id, "techStackId": ts.id})
-						if not exists:
-							pts_model.create(data={"projectId": project_rec.id, "techStackId": ts.id})
-							mapped += 1
-							repo_created += 1
-						# record matched ts name for example output
-						repo_matched_names.append(getattr(ts, "name", str(ts.id)))
-
-				# If nothing matched at all, count as unmatched
-				if not repo_matched_names:
-					unmatched_count += 1
-
-				# capture a small example for metadata (keep first few)
-				if len(mapped_examples) < 3:
-					mapped_examples.append({
-						"repoUrl": repoUrl,
-						"input_languages": raw_langs,
-						"matched": list(dict.fromkeys(repo_matched_names)),
-						"created": repo_created,
-					})
+				all_ts = model_ts.find_many()
+				for ts in all_ts:
+					key = _normalize(ts.name)
+					ts_map.setdefault(key, []).append(ts)
+				context.log.info(f"Loaded {len(all_ts)} TechStacks for mapping.")
 			except Exception as e:
-				errors += 1
-				context.log.exception(
-					f"core_github__map_languages_to_techstacks: error processing repoUrl={item.get('repoUrl')} languages={item.get('languages')}: {e}"
-				)
-				continue
+				context.log.warning(f"Failed to fetch TechStacks: {e}")
+		else:
+			context.log.error("TechStack model not found in Prisma client.")
 
-	meta = {"mapped": mapped, "input_count": len(repo_meta), "errors": errors}
-	# include small sample examples for debugging in Dagster UI
+		# ProjectTechStack model (added by user instruction)
+		pts_model = _find_model(prisma, ["project_tech_stack", "ProjectTechStack", "projectTechStack", "projecttechstack"])
+		if not pts_model:
+			context.log.error("ProjectTechStack model not found in Prisma client.")
+
+		results = []
+		for item in repo_meta:
+			project_data = item.get("project") or {}
+			repo_url = item.get("repoUrl")
+			
+			# Map Languages -> TechStacks
+			raw_langs = item.get("languages") or []
+			matched_ts_ids = set()
+			for lang in raw_langs:
+				if not isinstance(lang, str): continue
+				nlang = _normalize(lang)
+				if nlang in ts_map:
+					for ts in ts_map[nlang]:
+						matched_ts_ids.add(ts.id)
+				else:
+					# fuzzy check
+					for k, ts_list in ts_map.items():
+						if nlang in k or k in nlang:
+							for ts in ts_list:
+								matched_ts_ids.add(ts.id)
+
+			# Structure for upsert
+			# We pass the original project data plus the lists of IDs to connect
+			enriched_item = {
+				"project": project_data,
+				"repoUrl": repo_url,
+				"readme": item.get("readme"),
+				"tech_stack_ids": list(matched_ts_ids),
+			}
+			results.append(enriched_item)
+			
+			if len(results) <= 3:
+				context.log.info(f"Sample enriched item: {repo_url} -> matched {len(matched_ts_ids)} tech stacks: {list(matched_ts_ids)}")
+
+	# Metadata
+	sample = results[:3]
 	meta = {
-		"mapped": MetadataValue.int(mapped),
-		"unmatched_count": MetadataValue.int(unmatched_count),
-		"input_count": MetadataValue.int(len(repo_meta)),
-		"errors": MetadataValue.int(errors),
-		"sample_mapped": MetadataValue.json(mapped_examples[:3]),
+		"count": MetadataValue.int(len(results)),
+		"sample": MetadataValue.json(sample),
 	}
-	context.log.info(
-		f"core_github__map_languages_to_techstacks: COMPLETE - "
-		f"mapped={mapped} relations, "
-		f"input_count={len(repo_meta)}, "
-		f"unmatched_repos={unmatched_count}, "
-		f"errors={errors}, "
-		f"sample={mapped_examples[:1]}"
-	)
-	return Output(value={"mapped": mapped}, metadata=meta)
+	context.log.info(f"core_github__enrich_project_data: Enriched {len(results)} projects.")
+	return Output(value=results, metadata=meta)

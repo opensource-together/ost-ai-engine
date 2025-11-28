@@ -8,6 +8,7 @@ from dagster import (
 )
 
 from src.pipeline.utils import prisma_client
+from ..core.utils import _find_model
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -20,16 +21,16 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
         "Upsert mapped projects into the Project table via Prisma. "
         "Skips items missing `repoUrl`. Returns counts of inserted/updated."
     ),
-    ins={"core_github__table_projects_mapped": AssetIn()},
+    ins={"core_github__enrich_project_data": AssetIn()},
 )
-def out_github__table_projects_db(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+def out_github__table_projects_db(context, core_github__enrich_project_data: _t.List[_t.Dict]):
     """Upsert mapped projects into the Project table using Prisma.
 
     - Skips items missing `repoUrl`.
     - Updates when a matching `repoUrl` exists, otherwise creates.
     - Returns a dict with inserted/updated counters and metadata.
     """
-    context.log.info(f"out_github__table_projects_db: Starting with {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects to upsert")
+    context.log.info(f"out_github__table_projects_db: Starting with {len(core_github__enrich_project_data) if core_github__enrich_project_data else 0} projects to upsert")
     inserted = 0
     updated = 0
     errors: list[tuple[int, str]] = []
@@ -47,13 +48,24 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
             return Output(value=result_value, metadata={
                 "inserted_count": MetadataValue.int(0),
                 "updated_count": MetadataValue.int(0),
-                "error_count": MetadataValue.int(len(core_github__table_projects_mapped or [])),
+                "error_count": MetadataValue.int(len(core_github__enrich_project_data or [])),
                 "note": MetadataValue.text("Prisma client unavailable; writes skipped."),
             })
 
-        context.log.info(f"out_github__table_projects_db: Starting upsert loop for {len(core_github__table_projects_mapped or [])} projects")
-        for i, project in enumerate(core_github__table_projects_mapped or []):
-            repo_url = project.get("repoUrl")
+        context.log.info(f"out_github__table_projects_db: Starting upsert loop for {len(core_github__enrich_project_data or [])} projects")
+        for i, item in enumerate(core_github__enrich_project_data or []):
+            # The item from enrich_project_data has structure:
+            # { "project": {...}, "repoUrl": "...", "readme": "...", "tech_stack_ids": [...], "category_ids": [...] }
+            # We need to extract the project dict and potentially enrich it or just use it.
+            # For now, we primarily want the project data that was mapped.
+            project = item.get("project")
+            if not project:
+                context.log.warning(f"Skipping item {i}: missing 'project' data.")
+                errors.append((i, "missing_project_data"))
+                continue
+            
+            # Ensure repoUrl is consistent
+            repo_url = item.get("repoUrl") or project.get("repoUrl")
             if not repo_url:
                 context.log.warning(f"Skipping project {i}: missing repoUrl (required for insert).")
                 errors.append((i, "missing_repoUrl"))
@@ -75,17 +87,11 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
                     except Exception:
                         existing = None
 
+                existing_id = None
+
                 if existing:
                     try:
-                        # Update by primary key (id) to avoid relying on
-                        # non-unique fields in the `where` clause which the
-                        # Prisma query engine may reject. Use the found
-                        # record's id if available.
-                        # Try to obtain the primary key `id` from the returned object.
-                        # The Prisma client may return either a model-like object or a
-                        # dict-like mapping depending on client version/config — try
-                        # both safely.
-                        existing_id = None
+                        # Try to obtain the primary key `id`
                         try:
                             existing_id = getattr(existing, "id", None)
                         except Exception:
@@ -94,59 +100,56 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
                             existing_id = existing.get("id")
 
                         if existing_id:
-                            # Ensure we don't accidentally try to update the id field
+                            # Update by primary key
                             data = {k: v for k, v in project_data.items() if k != "id"}
                             prisma.project.update(where={"id": existing_id}, data=data)
                             updated += 1
                         else:
-                            # No id available: update by a non-unique field with
-                            # update_many so the Prisma engine does not require a
-                            # unique `where` clause. This updates all matching
-                            # rows and returns a dict with `count` in newer
-                            # prisma-client-py versions. If update_many is not
-                            # available or fails, catch the error and record it.
+                            # Fallback: update_many
+                            # We won't have an ID for relations here easily unless we fetch again, 
+                            # but let's assume we can't reliably get it if we are here.
+                            # However, for the sake of relations, we might want to try fetching it again if update succeeded?
+                            # For now, let's skip relation upsert if we can't get ID.
                             try:
-                                # Diagnostic log to help debugging the returned
-                                # 'existing' shape in the logs.
-                                context.log.debug(f"out_github__table_projects_db: existing record for repoUrl={repo_url} has no id; type={type(existing)}; repr={repr(existing)[:200]}")
-                                res = None
-                                try:
-                                    res = prisma.project.update_many(where={"repoUrl": repo_url}, data=project_data)
-                                except Exception:
-                                    # Some prisma client versions expose update_many
-                                    # on the model or on the client differently; try
-                                    # calling via the client directly if available.
-                                    res = prisma.execute_raw
-                                # If update_many returned a count, increment updated
-                                try:
-                                    # res may be a dict-like with 'count' or an int
-                                    count = None
-                                    if isinstance(res, dict):
-                                        count = res.get("count")
-                                    elif isinstance(res, int):
-                                        count = res
-                                    if count:
-                                        updated += int(count)
-                                    else:
-                                        # unknown result: count as a single update
-                                        updated += 1
-                                except Exception:
-                                    updated += 1
-                            except Exception as e:
-                                context.log.error(f"Error updating (fallback) project {i} (repoUrl={repo_url}): {e}")
-                                errors.append((i, f"update_error: {e}"))
+                                res = prisma.project.update_many(where={"repoUrl": repo_url}, data=project_data)
+                            except Exception:
+                                res = prisma.execute_raw
+                            
+                            updated += 1 # Simplified counting
                     except Exception as e:
                         context.log.error(f"Error updating project {i} (repoUrl={repo_url}): {e}")
                         errors.append((i, f"update_error: {e}"))
                 else:
                     try:
-                        # Ensure we do not pass an explicit id when creating
+                        # Create
                         data = {k: v for k, v in project_data.items() if k != "id"}
-                        prisma.project.create(data=data)
+                        created = prisma.project.create(data=data)
+                        existing_id = created.id
                         inserted += 1
                     except Exception as e:
                         context.log.error(f"Error inserting project {i} (repoUrl={repo_url}): {e}")
                         errors.append((i, f"create_error: {e}"))
+
+                # Upsert relations if we have a project ID
+                if existing_id:
+                    tech_stack_ids = item.get("tech_stack_ids") or []
+
+                    # ProjectTechStack
+                    pts_model = _find_model(prisma, ["project_tech_stack", "ProjectTechStack", "projectTechStack", "projecttechstack"])
+                    if pts_model:
+                        for ts_id in tech_stack_ids:
+                            try:
+                                pts_model.upsert(
+                                    where={"projectId_techStackId": {"projectId": existing_id, "techStackId": ts_id}},
+                                    data={
+                                        "create": {"projectId": existing_id, "techStackId": ts_id},
+                                        "update": {},
+                                    }
+                                )
+                            except Exception as e:
+                                context.log.warning(f"Failed to upsert ProjectTechStack for project {existing_id}, ts {ts_id}: {e}")
+                    else:
+                        context.log.error("ProjectTechStack model not found in Prisma client.")
 
             except Exception as e:
                 context.log.exception(f"Unexpected error processing project {i} (repoUrl={repo_url})")
@@ -157,7 +160,7 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
         f"inserted={inserted}, "
         f"updated={updated}, "
         f"errors={len(errors)}, "
-        f"total_processed={len(core_github__table_projects_mapped or [])}"
+        f"total_processed={len(core_github__enrich_project_data or [])}"
     )
     if errors:
         context.log.warning(f"out_github__table_projects_db: {len(errors)} errors occurred: {errors[:3]}")
@@ -167,6 +170,6 @@ def out_github__table_projects_db(context, core_github__table_projects_mapped: _
         "inserted_count": MetadataValue.int(inserted),
         "updated_count": MetadataValue.int(updated),
         "error_count": MetadataValue.int(len(errors)),
-        "total_input": MetadataValue.int(len(core_github__table_projects_mapped or [])),
+        "total_input": MetadataValue.int(len(core_github__enrich_project_data or [])),
         "error_sample": MetadataValue.json(errors[:5]) if errors else MetadataValue.null(),
     })

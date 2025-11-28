@@ -127,7 +127,7 @@ def raw_github__extract_projects(context):
 def raw_github__to_df(context, raw_github__extract_projects: _t.List[_t.Dict]):
     """Convert the raw list-of-dicts into a pandas.DataFrame.
 
-    This asset provides a single DataFrame that is used as input to
+    Provides a single DataFrame that is used as input to
     `core_repo_lang_detect` and `core_repo_primary_language_filter` so they
     can run in parallel on the same dataset.
     """

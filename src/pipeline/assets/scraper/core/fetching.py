@@ -22,7 +22,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 	owners=DEFAULT_OWNERS,
 	description="Fetch GitHub README for each project (parallel).",
 	ins={"core_github__table_projects_mapped": AssetIn()},
-	group_name="github_projects_scraper",
+	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
 def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
@@ -74,7 +74,7 @@ def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.Li
 	owners=DEFAULT_OWNERS,
 	description="Fetch GitHub /languages for each project (parallel).",
 	ins={"core_github__table_projects_mapped": AssetIn()},
-	group_name="github_projects_scraper",
+	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
 def core_github__fetch_repo_languages(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
@@ -126,7 +126,7 @@ def core_github__fetch_repo_languages(context, core_github__table_projects_mappe
 	owners=DEFAULT_OWNERS,
 	description="Fetch GitHub /topics for each project (parallel).",
 	ins={"core_github__table_projects_mapped": AssetIn()},
-	group_name="github_projects_scraper",
+	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
 def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
@@ -182,7 +182,7 @@ def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: 
 		"topics": AssetIn("core_github__fetch_repo_topics"),
 		"readmes": AssetIn("core_github__fetch_readme"),
 	},
-	group_name="github_projects_scraper",
+	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
 def core_github__merge_repo_meta(context, langs, topics, readmes):

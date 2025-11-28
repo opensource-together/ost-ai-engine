@@ -14,10 +14,6 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description=(
-		"Detect repo language using fastText; annotate with `language` and "
-		"`language_confidence`, and filter non‑Latin/scripted languages."
-	),
 	# Accept the DataFrame produced by `raw_github__to_df` so this asset can run
 	# in parallel with `core_repo_primary_language_filter`.
 	ins={"raw_github__df": AssetIn("raw_github__to_df")},
@@ -25,17 +21,20 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 	required_resource_keys={"config", "fasttext_model"},
 )
 def core_repo_lang_detect(context, raw_github__df: _t.Any):
-	"""Annotate repos with detected language and filter non-Latin/scripted languages.
+	"""
+	Detects and filters repositories based on language using fastText.
 
-	Output: list of repo dicts with `language` and `language_confidence` added.
-	Fallback: if fastText/model missing -> pass-through (logs error).
+	**Description:**
+	Annotates repositories with `language` and `language_confidence`. Filters out repositories containing non-Latin scripts (e.g., CJK, Arabic) or where the detected language is not compatible.
 
-	Behaviour changes:
-	- If any non‑Latin/scripted language is detected (even as a minority),
-	  the repo is filtered out.
-	- We check both textual script presence (CJK, Arabic, Devanagari, etc.)
-	  and fastText's top-k predictions to catch mixed languages like
-	  "chinese + english".
+	**Logic:**
+	1. **Text Extraction**: Combines `readme`, `description`, and `name`.
+	2. **Script Check**: Filters immediately if non-Latin characters are found.
+	3. **FastText Prediction**: Predicts top-k languages. Filters if any blacklisted language is detected.
+	4. **Annotation**: Adds `language` and `language_confidence` to the repo data.
+
+	**Output:**
+	List of repository dictionaries with added language metadata.
 	"""
 	# Accept either a DataFrame (from the new transformer asset) or the
 	# original list-of-dicts. Be permissive for backwards compatibility.
@@ -190,12 +189,19 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 	required_resource_keys={"config"},
 )
 def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_primary_language_filter, core_github__extract_top_projects):
-	"""Merge the three filtered outputs produced in parallel.
+	"""
+	Merges the results of parallel filtering steps.
 
-	Performs a 3-way inner join on `id` (GitHub numeric id). If `id` is not present
-	in all dataframes, falls back to `full_name`, `html_url`, or `name` (in that order).
+	**Description:**
+	Combines the outputs of language detection, primary language filtering, and description filtering into a single dataset.
 
-	The merge is an intersection: only repos kept by ALL three filters remain.
+	**Logic:**
+	1. **Normalization**: Converts all inputs to DataFrames.
+	2. **Key Selection**: Identifies a common join key (`id`, `full_name`, etc.).
+	3. **Intersection**: Performs a 3-way inner join to keep only repositories present in all filtered sets.
+
+	**Output:**
+	List of merged repository dictionaries.
 	"""
 	# Import pandas locally; if missing fail fast with a clear log.
 	import pandas as pd
@@ -254,9 +260,6 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description=(
-		"Filter repos whose GitHub `language` (primary language) matches a known techstack."
-	),
 	# Accept the DataFrame produced by `raw_github__to_df` so this asset can run
 	# in parallel with `core_repo_lang_detect`.
 	ins={"raw_github__df": AssetIn("raw_github__to_df")},
@@ -264,11 +267,18 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 	required_resource_keys={"config"},
 )
 def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
-	"""Keep only repositories whose `language` field (GitHub primary language) matches
-	one of the known tech stacks from the project seed file.
+	"""
+	Filters repositories based on their primary GitHub language.
 
-	The path to the seed TS file is provided by `context.resources.config.techstacks_seed_path`.
-	The function performs a lightweight parse of the TypeScript seed to extract `name` values.
+	**Description:**
+	Retains only repositories where the `language` field matches a known TechStack defined in the project seed.
+
+	**Logic:**
+	1. **Seed Loading**: Loads allowed languages from `techstacks-data` (JSON or TS).
+	2. **Filtering**: Checks if `repo['language']` exists in the allowed set (case-insensitive).
+
+	**Output:**
+	DataFrame of filtered repositories.
 	"""
 	seed_path = getattr(context.resources.config, "techstacks_seed_path", "")
 	allowed: set[str] = set()
@@ -358,7 +368,19 @@ def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
 	required_resource_keys={"config"},
 )
 def core_github__extract_top_projects(context, raw_github__df):
-	"""Filter projects with non-empty descriptions."""
+	"""
+	Filters repositories to ensure they have a description.
+
+	**Description:**
+	Removes repositories that lack a description, ensuring a minimum level of metadata quality.
+
+	**Logic:**
+	1. **Check**: Iterates through projects and checks the `description` field.
+	2. **Filter**: Keeps projects where description is not None and not empty.
+
+	**Output:**
+	DataFrame of repositories with descriptions.
+	"""
 	# Import pandas locally
 	try:
 		import pandas as pd
