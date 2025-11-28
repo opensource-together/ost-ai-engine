@@ -24,11 +24,21 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     ins={"core_github__enrich_project_data": AssetIn()},
 )
 def out_github__table_projects_db(context, core_github__enrich_project_data: _t.List[_t.Dict]):
-    """Upsert mapped projects into the Project table using Prisma.
+    """
+    Upsert mapped projects into the Project table using Prisma.
 
-    - Skips items missing `repoUrl`.
-    - Updates when a matching `repoUrl` exists, otherwise creates.
-    - Returns a dict with inserted/updated counters and metadata.
+    **Description:**
+    Persists the enriched project data into the PostgreSQL database, handling both creation and updates.
+
+    **Logic:**
+    1. **Validation**: Checks for valid Prisma client and input data.
+    2. **Upsert Loop**: Iterates through projects, checking for existence by `repoUrl`.
+    3. **Project Upsert**: Creates new projects or updates existing ones.
+    4. **Relation Upsert**: Updates `ProjectTechStack` relations if project ID is available.
+    5. **Error Handling**: Captures and logs errors per project without failing the entire batch.
+
+    **Output:**
+    Dictionary containing counts of inserted, updated, and failed records.
     """
     context.log.info(f"out_github__table_projects_db: Starting with {len(core_github__enrich_project_data) if core_github__enrich_project_data else 0} projects to upsert")
     inserted = 0

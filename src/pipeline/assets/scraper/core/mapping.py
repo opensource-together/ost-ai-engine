@@ -20,11 +20,21 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 	group_name="github_projects_scraper",
 )
 def core_github__table_projects_mapped(context, core_github__merge_filtered_projects):
-	"""Map selected top projects to the Prisma `Project` schema.
-
-	Uses `GITHUB_TO_PROJECT_MAPPING` to populate Prisma fields. Returns mapped list
-	and metadata (mapped_count, input_count).
 	"""
+	Map selected top projects to the Prisma `Project` schema.
+
+	**Description:**
+	Transforms the merged project data into a format compatible with the Prisma `Project` model using a predefined mapping.
+
+	**Logic:**
+	1. **Mapping**: Iterates through projects and applies `GITHUB_TO_PROJECT_MAPPING`.
+	2. **Preview**: Generates small previews of mapped data for debugging.
+	3. **Metadata**: Emits counts and sample data.
+
+	**Output:**
+	List of mapped project dictionaries ready for enrichment and insertion.
+	"""
+	context.log.info(f"core_github__table_projects_mapped: Starting mapping for {len(core_github__merge_filtered_projects) if core_github__merge_filtered_projects else 0} projects")
 	if core_github__merge_filtered_projects is None:
 		context.log.warning("No data found from core_github__merge_filtered_projects. Returning empty list.")
 		return []

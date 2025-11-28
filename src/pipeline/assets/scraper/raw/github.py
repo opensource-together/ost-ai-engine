@@ -27,13 +27,22 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     required_resource_keys={"config"},
 )
 def raw_github__extract_projects(context):
-    """Run the GitHub Go scraper and return scraped projects.
-
-    Description:
-    - Executes the compiled Go `github-scraper` binary.
-    - Parses stdout as JSON and returns a list of project dicts.
-    - Emits metadata: project_count, file_size_bytes, query, preview.
     """
+    Run the GitHub Go scraper and return scraped projects.
+
+    **Description:**
+    Executes the compiled Go `github-scraper` binary to fetch trending repositories.
+
+    **Logic:**
+    1. **Setup**: Builds the environment variables from config.
+    2. **Execution**: Runs the `github-scraper` binary, capturing stdout/stderr.
+    3. **Parsing**: Parses the JSON output into a list of project dictionaries.
+    4. **Validation**: Checks for execution errors and empty outputs.
+
+    **Output:**
+    List of raw project dictionaries.
+    """
+    context.log.info("raw_github__extract_projects: Starting GitHub scraper execution")
     cfg = context.resources.config
     env = build_scraper_env(cfg)
     import tempfile
@@ -125,12 +134,21 @@ def raw_github__extract_projects(context):
     required_resource_keys={"config"},
 )
 def raw_github__to_df(context, raw_github__extract_projects: _t.List[_t.Dict]):
-    """Convert the raw list-of-dicts into a pandas.DataFrame.
-
-    Provides a single DataFrame that is used as input to
-    `core_repo_lang_detect` and `core_repo_primary_language_filter` so they
-    can run in parallel on the same dataset.
     """
+    Convert the raw list-of-dicts into a pandas.DataFrame.
+
+    **Description:**
+    Transforms the raw project list into a DataFrame to enable parallel processing by downstream assets.
+
+    **Logic:**
+    1. **Input Check**: Handles empty input gracefully.
+    2. **Conversion**: Converts list of dicts to pandas DataFrame.
+    3. **Metadata**: Generates sample data and column info for debugging.
+
+    **Output:**
+    Pandas DataFrame containing project data.
+    """
+    context.log.info(f"raw_github__to_df: Starting conversion for {len(raw_github__extract_projects) if raw_github__extract_projects else 0} projects")
     # Import pandas directly; let ImportError surface after logging
     try:
         import pandas as pd

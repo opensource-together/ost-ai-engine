@@ -20,12 +20,26 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description="Fetch GitHub README for each project (parallel).",
 	ins={"core_github__table_projects_mapped": AssetIn()},
 	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
 def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+	"""
+	Fetch GitHub README for each project (parallel).
+
+	**Description:**
+	Retrieves the README content for each mapped project to be used for embedding generation.
+
+	**Logic:**
+	1. **Setup**: Configures GitHub token and thread pool.
+	2. **Parallel Fetching**: Submits requests to GitHub API for each project.
+	3. **Error Handling**: Captures failures and returns empty string for missing READMEs.
+
+	**Output:**
+	List of dictionaries containing project metadata and README content.
+	"""
+	context.log.info(f"core_github__fetch_readme: Starting fetch for {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects")
 	if not core_github__table_projects_mapped:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
 
@@ -72,12 +86,26 @@ def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.Li
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description="Fetch GitHub /languages for each project (parallel).",
 	ins={"core_github__table_projects_mapped": AssetIn()},
 	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
 def core_github__fetch_repo_languages(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+	"""
+	Fetch GitHub /languages for each project (parallel).
+
+	**Description:**
+	Retrieves the language breakdown for each project from GitHub API.
+
+	**Logic:**
+	1. **Setup**: Configures GitHub token and thread pool.
+	2. **Parallel Fetching**: Submits requests to GitHub API `languages` endpoint.
+	3. **Error Handling**: Returns empty list on failure.
+
+	**Output:**
+	List of dictionaries containing project metadata and list of languages.
+	"""
+	context.log.info(f"core_github__fetch_repo_languages: Starting fetch for {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects")
 	if not core_github__table_projects_mapped:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
 
@@ -124,12 +152,26 @@ def core_github__fetch_repo_languages(context, core_github__table_projects_mappe
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description="Fetch GitHub /topics for each project (parallel).",
 	ins={"core_github__table_projects_mapped": AssetIn()},
 	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
 def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+	"""
+	Fetch GitHub /topics for each project (parallel).
+
+	**Description:**
+	Retrieves the repository topics (tags) for each project from GitHub API.
+
+	**Logic:**
+	1. **Setup**: Configures GitHub token and thread pool.
+	2. **Parallel Fetching**: Submits requests to GitHub API `topics` endpoint (mercy-preview).
+	3. **Error Handling**: Returns empty list on failure.
+
+	**Output:**
+	List of dictionaries containing project metadata and list of topics.
+	"""
+	context.log.info(f"core_github__fetch_repo_topics: Starting fetch for {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects")
 	if not core_github__table_projects_mapped:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
 
@@ -176,7 +218,6 @@ def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: 
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	description="Merge languages, topics and readme by repoUrl into a single repo_meta structure.",
 	ins={
 		"langs": AssetIn("core_github__fetch_repo_languages"),
 		"topics": AssetIn("core_github__fetch_repo_topics"),
@@ -186,7 +227,22 @@ def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: 
 	required_resource_keys={"config"},
 )
 def core_github__merge_repo_meta(context, langs, topics, readmes):
+	"""
+	Merge languages, topics and readme by repoUrl into a single repo_meta structure.
+
+	**Description:**
+	Aggregates the results from parallel metadata fetching steps into a single unified structure per repository.
+
+	**Logic:**
+	1. **Aggregation**: Iterates through languages, topics, and readmes results.
+	2. **Indexing**: Groups data by `repoUrl`.
+	3. **Merging**: Combines all metadata fields into a single dictionary for each project.
+
+	**Output:**
+	List of fully enriched repository metadata dictionaries.
+	"""
 	# langs and topics are lists of {project, repoUrl, languages} / {project, repoUrl, topics}
+	context.log.info(f"core_github__merge_repo_meta: Merging metadata (langs={len(langs) if langs else 0}, topics={len(topics) if topics else 0}, readmes={len(readmes) if readmes else 0})")
 	if not langs and not topics:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
 

@@ -38,6 +38,7 @@ def core_github__detect_languages(context, raw_github__df: _t.Any):
 	"""
 	# Accept either a DataFrame (from the new transformer asset) or the
 	# original list-of-dicts. Be permissive for backwards compatibility.
+	context.log.info("core_github__detect_languages: Starting language detection")
 	if raw_github__df is None:
 		context.log.info("core_github__detect_languages: no input projects, returning empty list")
 		return Output(value=[], metadata={"input_count": MetadataValue.int(0)})
@@ -280,6 +281,7 @@ def core_github__filter_by_primary_language(context, raw_github__df: _t.Any):
 	**Output:**
 	DataFrame of filtered repositories.
 	"""
+	context.log.info("core_github__filter_by_primary_language: Starting primary language filtering")
 	seed_path = getattr(context.resources.config, "techstacks_seed_path", "")
 	allowed: set[str] = set()
 	try:
@@ -381,6 +383,7 @@ def core_github__extract_top_projects(context, raw_github__df):
 	**Output:**
 	DataFrame of repositories with descriptions.
 	"""
+	context.log.info("core_github__extract_top_projects: Starting description filtering")
 	# Import pandas locally
 	try:
 		import pandas as pd
