@@ -6,6 +6,7 @@ from .resources.fasttext_resource import fasttext_model_resource
 from .assets.scraper.raw import github as raw_github
 from .assets.scraper.core import filtering, fetching, mapping, categorization
 from .assets.scraper.out import github as out_github
+from .assets.embedding.raw import project_assets as embedding_project
 
 raw_assets = load_assets_from_modules([raw_github])
 core_assets = load_assets_from_modules([
@@ -15,16 +16,14 @@ core_assets = load_assets_from_modules([
     categorization
 ])
 out_assets = load_assets_from_modules([out_github])
+embedding_assets = load_assets_from_modules([embedding_project])
 
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
 from .jobs.github_scraper_job import github_scraper_job
-from .jobs.embedding_jobs import (
-    projects_embedding_job,
-    categories_embedding_job,
-    users_embedding_job,
-)
+from .jobs.embedding_jobs import project_embedding_job
+from .sensors import embedding_job_sensor
 
 # schedule
 github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
@@ -39,6 +38,9 @@ defs = Definitions(
 
     # out assets
     *out_assets,
+
+    # embedding assets
+    *embedding_assets,
     ],
     resources={
         "config": config_resource,
@@ -49,9 +51,8 @@ defs = Definitions(
     jobs=[
         github_scraper_job,
         cleanup_dagster_history_job,
-        projects_embedding_job,
-        categories_embedding_job,
-        users_embedding_job,
+        project_embedding_job,
     ],
     schedules=[github_scraper_schedule, cleanup_dagster_history_schedule],
+    sensors=[embedding_job_sensor],
 )
