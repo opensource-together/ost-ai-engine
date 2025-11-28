@@ -16,17 +16,17 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"core_merge_filtered_projects": AssetIn()},
+	ins={"core_github__merge_filtered_projects": AssetIn()},
 	group_name="github_projects_scraper",
 )
-def core_github__table_projects_mapped(context, core_merge_filtered_projects):
+def core_github__table_projects_mapped(context, core_github__merge_filtered_projects):
 	"""Map selected top projects to the Prisma `Project` schema.
 
 	Uses `GITHUB_TO_PROJECT_MAPPING` to populate Prisma fields. Returns mapped list
 	and metadata (mapped_count, input_count).
 	"""
-	if core_merge_filtered_projects is None:
-		context.log.warning("No data found from core_merge_filtered_projects. Returning empty list.")
+	if core_github__merge_filtered_projects is None:
+		context.log.warning("No data found from core_github__merge_filtered_projects. Returning empty list.")
 		return []
 
 	def map_repo(repo):
@@ -46,7 +46,7 @@ def core_github__table_projects_mapped(context, core_merge_filtered_projects):
 				mapped[prisma_field] = source
 		return mapped
 
-	projects = [map_repo(repo) for repo in core_merge_filtered_projects]
+	projects = [map_repo(repo) for repo in core_github__merge_filtered_projects]
 	# Build enriched metadata for Dagster UI: include small previews and mapping keys
 	def _preview_text(s: str, limit: int = 1000) -> str:
 		if not s:
@@ -75,7 +75,7 @@ def core_github__table_projects_mapped(context, core_merge_filtered_projects):
 
 	meta = {
 		"mapped_count": MetadataValue.int(len(projects)),
-		"input_count": MetadataValue.int(len(core_merge_filtered_projects)),
+		"input_count": MetadataValue.int(len(core_github__merge_filtered_projects)),
 		"sample": MetadataValue.json(projects[:3]),
 		"sample_repo_urls": MetadataValue.json([p.get("repoUrl") for p in projects[:3]]),
 		"mapping_keys": MetadataValue.json(mapping_keys),

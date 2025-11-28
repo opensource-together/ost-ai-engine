@@ -20,7 +20,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 	group_name="github_projects_scraper",
 	required_resource_keys={"config", "fasttext_model"},
 )
-def core_repo_lang_detect(context, raw_github__df: _t.Any):
+def core_github__detect_languages(context, raw_github__df: _t.Any):
 	"""
 	Detects and filters repositories based on language using fastText.
 
@@ -39,7 +39,7 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 	# Accept either a DataFrame (from the new transformer asset) or the
 	# original list-of-dicts. Be permissive for backwards compatibility.
 	if raw_github__df is None:
-		context.log.info("core_repo_lang_detect: no input projects, returning empty list")
+		context.log.info("core_github__detect_languages: no input projects, returning empty list")
 		return Output(value=[], metadata={"input_count": MetadataValue.int(0)})
 
 	# Lazily import pandas to avoid loading C-extensions at module import time.
@@ -101,7 +101,7 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 			repo["language"] = None
 			repo["language_confidence"] = 1.0
 			filtered_out += 1
-			context.log.debug(f"core_repo_lang_detect: filtering out repo [{repo.get('name')}] because non-Latin script characters were found in text")
+			context.log.debug(f"core_github__detect_languages: filtering out repo [{repo.get('name')}] because non-Latin script characters were found in text")
 			continue
 
 		# If no text to analyze, keep but with null language
@@ -145,7 +145,7 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 				repo["language"] = lang_code
 				repo["language_confidence"] = confidence
 				filtered_out += 1
-				context.log.debug(f"core_repo_lang_detect: filtering out repo [{repo.get('name')}] because fastText top-k includes non-Latin code among {preds}")
+				context.log.debug(f"core_github__detect_languages: filtering out repo [{repo.get('name')}] because fastText top-k includes non-Latin code among {preds}")
 				continue
 		except Exception as e:
 			# If fastText fails, log and keep (do not filter) to avoid dropping data silently.
@@ -171,7 +171,7 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 		"sample": MetadataValue.json(sample),
 		"language_counts": MetadataValue.json(lang_counts),
 	}
-	context.log.info(f"core_repo_lang_detect: kept {len(accepted)} / {len(raw_list)} projects (filtered {filtered_out} = {meta['filtered_out_percent']}%); top languages={dict(sorted(lang_counts.items(), key=lambda x: x[1], reverse=True)[:5])}")
+	context.log.info(f"core_github__detect_languages: kept {len(accepted)} / {len(raw_list)} projects (filtered {filtered_out} = {meta['filtered_out_percent']}%); top languages={dict(sorted(lang_counts.items(), key=lambda x: x[1], reverse=True)[:5])}")
 	# Return a list of dicts to remain compatible with existing asset checks
 	return Output(value=accepted, metadata=meta)
 
@@ -181,14 +181,14 @@ def core_repo_lang_detect(context, raw_github__df: _t.Any):
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
 	ins={
-		"core_repo_lang_detect": AssetIn(),
-		"core_repo_primary_language_filter": AssetIn(),
+		"core_github__detect_languages": AssetIn(),
+		"core_github__filter_by_primary_language": AssetIn(),
 		"core_github__extract_top_projects": AssetIn(),
 	},
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
-def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_primary_language_filter, core_github__extract_top_projects):
+def core_github__merge_filtered_projects(context, core_github__detect_languages, core_github__filter_by_primary_language, core_github__extract_top_projects):
 	"""
 	Merges the results of parallel filtering steps.
 
@@ -217,8 +217,8 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 		except Exception:
 			return pd.DataFrame()
 
-	df1 = to_df(core_repo_lang_detect)
-	df2 = to_df(core_repo_primary_language_filter)
+	df1 = to_df(core_github__detect_languages)
+	df2 = to_df(core_github__filter_by_primary_language)
 	df3 = to_df(core_github__extract_top_projects)
 
 	# Choose join key
@@ -230,16 +230,16 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 			break
 
 	if join_key is None:
-		context.log.warning("core_merge_filtered_projects: no common join key found; returning lang-detect output as fallback")
+		context.log.warning("core_github__merge_filtered_projects: no common join key found; returning lang-detect output as fallback")
 		merged = df1
 	else:
 		try:
 			# Perform 3-way inner join
 			merged = pd.merge(df1, df2[[join_key]], on=join_key, how="inner")
 			merged = pd.merge(merged, df3[[join_key]], on=join_key, how="inner")
-			context.log.info(f"core_merge_filtered_projects: 3-way merge on '{join_key}', resulting rows={len(merged)}")
+			context.log.info(f"core_github__merge_filtered_projects: 3-way merge on '{join_key}', resulting rows={len(merged)}")
 		except Exception as e:
-			context.log.exception(f"core_merge_filtered_projects: merge failed: {e}")
+			context.log.exception(f"core_github__merge_filtered_projects: merge failed: {e}")
 			merged = df1
 
 	records = merged.to_dict(orient="records")
@@ -266,7 +266,7 @@ def core_merge_filtered_projects(context, core_repo_lang_detect, core_repo_prima
 	group_name="github_projects_scraper",
 	required_resource_keys={"config"},
 )
-def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
+def core_github__filter_by_primary_language(context, raw_github__df: _t.Any):
 	"""
 	Filters repositories based on their primary GitHub language.
 
@@ -322,7 +322,7 @@ def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
 	try:
 		import pandas as pd
 	except ImportError as e:
-		context.log.error(f"core_repo_primary_language_filter: pandas is required but not installed: {e}")
+		context.log.error(f"core_github__filter_by_primary_language: pandas is required but not installed: {e}")
 		raise
 
 	# Accept DataFrame or list-of-dicts
@@ -351,7 +351,7 @@ def core_repo_primary_language_filter(context, raw_github__df: _t.Any):
 		"allowed_sample": MetadataValue.json(allowed_sample),
 		"sample": MetadataValue.json(sample_kept),
 	}
-	context.log.info(f"core_repo_primary_language_filter: kept {len(kept)} / {len(raw_list)} projects; allowed_count={len(allowed)}; sample={sample_kept}")
+	context.log.info(f"core_github__filter_by_primary_language: kept {len(kept)} / {len(raw_list)} projects; allowed_count={len(allowed)}; sample={sample_kept}")
 	# Return DataFrame for downstream merging
 	try:
 		df = pd.DataFrame(kept)
