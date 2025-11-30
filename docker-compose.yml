@@ -23,6 +23,7 @@ services:
     build:
       context: .
     container_name: dagster-daemon
+    mem_limit: 4g
     shm_size: '2gb'
     env_file:
       - .env
@@ -41,6 +42,7 @@ services:
     build:
       context: .
     container_name: dagster-webserver
+    mem_limit: 4g
     shm_size: '2gb'
     env_file:
       - .env
