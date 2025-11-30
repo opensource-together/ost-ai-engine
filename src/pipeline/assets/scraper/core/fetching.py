@@ -70,6 +70,9 @@ def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.Li
 			except Exception as e:
 				context.log.warning(f"fetch readme failed: {e}")
 				readme = ""
+			# Truncate readme to avoid OOM/SIGBUS on large files (limit to 50KB)
+			if len(readme) > 50000:
+				readme = readme[:50000]
 			out = {"project": meta["project"], "repoUrl": meta["repoUrl"], "readme": readme}
 			results.append(out)
 
