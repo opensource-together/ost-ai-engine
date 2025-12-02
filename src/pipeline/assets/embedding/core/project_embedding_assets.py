@@ -1,5 +1,5 @@
 import typing as _t
-from dagster import asset, Output, MetadataValue, AssetIn
+from dagster import asset, Output, MetadataValue, AssetIn, AssetExecutionContext
 from src.pipeline.resources.embedding_model_resource import EmbeddingModelResource
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
@@ -9,7 +9,8 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     owners=DEFAULT_OWNERS,
     group_name="projects_embedding",
     io_manager_key="io_manager",
-    ins={"raw_project_data": AssetIn("raw_project_data")}
+    ins={"raw_project_data": AssetIn("raw_project_data")},
+    required_resource_keys={"embedding_model"}
 )
 def core_project_embeddings(context: AssetExecutionContext, raw_project_data: list[dict]):
     """
