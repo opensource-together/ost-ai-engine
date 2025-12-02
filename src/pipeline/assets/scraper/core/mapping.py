@@ -178,6 +178,7 @@ def core_github__enrich_project_data(context, repo_meta: _t.List[_t.Dict]):
 				"project": project_data,
 				"repoUrl": repo_url,
 				"readme": item.get("readme"),
+				"topics": item.get("topics") or [],
 				"tech_stack_ids": list(matched_ts_ids),
 			}
 			results.append(enriched_item)

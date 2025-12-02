@@ -1,21 +1,29 @@
-from dagster import define_asset_job, AssetSelection
+from dagster import (
+    define_asset_job,
+    in_process_executor,
+    AssetSelection,
+    RetryPolicy,
+    Backoff,
+    Jitter,
+)
 
-# Placeholder jobs focused on future embedding asset groups.
-# These jobs currently select groups that do not yet contain assets.
-# Once assets are added with group_name matching the group keys below,
-# these jobs will run those assets.
 
-projects_embedding_job = define_asset_job(
-    name="projects_embedding_job",
+project_embedding_job = define_asset_job(
+    name="project_embedding_job",
     selection=AssetSelection.groups("projects_embedding"),
+    executor_def=in_process_executor,  # Consistent with scraper job
+    op_retry_policy=RetryPolicy(
+        max_retries=2,
+        delay=30,
+        backoff=Backoff.EXPONENTIAL,
+        jitter=Jitter.FULL,
+    ),
+    description=(
+        "Generate embeddings for projects scraped by github_scraper_job. "
+        "This job is automatically triggered by the embedding_job_sensor after "
+        "successful completion of the scraper job. It processes project data "
+        "and generates vector embeddings for similarity search and recommendations."
+    ),
 )
 
-categories_embedding_job = define_asset_job(
-    name="categories_embedding_job",
-    selection=AssetSelection.groups("categories_embedding"),
-)
-
-users_embedding_job = define_asset_job(
-    name="users_embedding_job",
-    selection=AssetSelection.groups("users_embedding"),
-)
+__all__ = ["project_embedding_job"]
