@@ -3,7 +3,7 @@ from dagster import Definitions, load_assets_from_modules
 from .schedules.github_scraper_schedule import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
 from .resources.fasttext_resource import fasttext_model_resource
-from .resources.embedding_model_resource import BGEModelResource
+from .resources.embedding_model_resource import EmbeddingModelResource
 from .assets.scraper.raw import github as raw_github
 from .assets.scraper.core import filtering, fetching, mapping, categorization
 from .assets.scraper.out import github as out_github
