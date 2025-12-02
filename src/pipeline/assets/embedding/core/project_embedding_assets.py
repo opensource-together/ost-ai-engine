@@ -1,6 +1,6 @@
 import typing as _t
 from dagster import asset, Output, MetadataValue, AssetIn
-from src.pipeline.resources.embedding_model_resource import BGEModelResource
+from src.pipeline.resources.embedding_model_resource import EmbeddingModelResource
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
