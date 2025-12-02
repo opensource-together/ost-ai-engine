@@ -252,11 +252,11 @@ model Project {
 }
 
 model ProjectEmbedding {
-  id        String                      @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId String                      @db.Uuid
-  vector    Unsupported("vector(1024)")
-  project   Project                     @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime                    @default(now())
+  id        String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String                     @db.Uuid
+  vector    Unsupported("vector(384)")
+  project   Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime                   @default(now())
 
   @@map("project_embedding")
 }
