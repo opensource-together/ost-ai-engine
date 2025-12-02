@@ -54,7 +54,7 @@ defs = Definitions(
         "fasttext_model": fasttext_model_resource.configured({
             "model_path": "/app/models/lid.176.ftz"
         }),
-        "embedding_model": BGEModelResource(device="cpu"),
+        "embedding_model": EmbeddingModelResource(),
     },
     jobs=[
         github_scraper_job,
