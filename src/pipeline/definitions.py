@@ -7,9 +7,9 @@ from .resources.embedding_model_resource import EmbeddingModelResource
 from .assets.scraper.raw import github as raw_github
 from .assets.scraper.core import filtering, fetching, mapping, categorization
 from .assets.scraper.out import github as out_github
-from .assets.embedding.raw import project_assets as embedding_project
-from .assets.embedding.core import project_embedding_assets as embedding_core
-from .assets.embedding.out import project_embedding_assets as embedding_out
+from .assets.embedding.raw import projects as embedding_project
+from .assets.embedding.core import projects as embedding_core
+from .assets.embedding.out import projects as embedding_out
 
 raw_assets = load_assets_from_modules([raw_github])
 core_assets = load_assets_from_modules([

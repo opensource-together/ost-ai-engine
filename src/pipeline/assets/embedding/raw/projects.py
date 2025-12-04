@@ -12,7 +12,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     description="Format project data from enriched metadata into a context string for embedding.",
     ins={"core_github__enrich_project_data": AssetIn()},
 )
-def raw_project_data(context, core_github__enrich_project_data: _t.List[_t.Dict]):
+def raw_projects__prepare_context(context, core_github__enrich_project_data: _t.List[_t.Dict]):
     """
     Formats the data into a single context string for each project.
     Uses enriched input data and resolves tech stack names from the DB.

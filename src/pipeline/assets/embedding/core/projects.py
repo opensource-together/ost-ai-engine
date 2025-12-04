@@ -9,10 +9,10 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     owners=DEFAULT_OWNERS,
     group_name="projects_embedding",
     io_manager_key="io_manager",
-    ins={"raw_project_data": AssetIn("raw_project_data")},
+    ins={"raw_projects__prepare_context": AssetIn("raw_projects__prepare_context")},
     required_resource_keys={"embedding_model"}
 )
-def core_project_embeddings(context: AssetExecutionContext, raw_project_data: list[dict]):
+def core_projects__compute_embeddings(context: AssetExecutionContext, raw_projects__prepare_context: list[dict]):
     """
     Computes vector embeddings for each project's context string.
     """
