@@ -49,6 +49,11 @@ RUN poetry run prisma py fetch
 RUN mkdir -p /app/models && \
     curl -fL -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
 
+# Pre-download embedding models
+ENV SENTENCE_TRANSFORMERS_HOME=/app/models/sentence-transformers
+COPY scripts/download_models.py /app/scripts/
+RUN poetry run python /app/scripts/download_models.py
+
 # ==============================================================================
 # STAGE 2: Go builder - compile Go binaries
 # ==============================================================================
@@ -132,6 +137,7 @@ COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
 RUN npx prisma generate
 
 COPY --from=builder --chown=app:app /app/models /app/models
+ENV SENTENCE_TRANSFORMERS_HOME=/app/models/sentence-transformers
 
 # Copy helper scripts
 COPY --chown=app:app scripts/ /app/scripts/
