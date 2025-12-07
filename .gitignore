@@ -189,3 +189,4 @@ package.json
 
 # dbt
 dbt/profiles.yml
+dbt/.user.yml
