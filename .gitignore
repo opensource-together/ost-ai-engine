@@ -186,3 +186,6 @@ entrypoint.sh
 # Node
 package-lock.json
 package.json
+
+# dbt
+dbt/profiles.yml
