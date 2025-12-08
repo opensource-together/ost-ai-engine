@@ -5,21 +5,26 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dagster import (
     asset,
     AssetIn,
+    AssetKey,
     MetadataValue,
     Output,
 )
 from .utils import (
     _extract_owner_repo,
     _fetch_repo_languages,
+    _make_serializable,
 )
+from src.services.python.db import get_db_cursor
+import json
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 @asset(
-    kinds={"python"},
+    kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    ins={"core_github__detect_languages": AssetIn()},
+    ins={"core_github__detect_languages": AssetIn(key=AssetKey(["ost", "raw_github_detection"]))},
     group_name="fetch_projects_metadatas",
+    key=AssetKey(["ost", "raw_github_languages"]), # Matches dbt source
     required_resource_keys={"config"},
 )
 def core_github__fetch_repo_languages(context, core_github__detect_languages: _t.List[_t.Dict]):
@@ -69,14 +74,31 @@ def core_github__fetch_repo_languages(context, core_github__detect_languages: _t
                 langs = []
             out = {"project": meta["project"], "repoUrl": meta["repoUrl"], "languages": langs}
             results.append(out)
+
+    # Insert languages into raw_github_languages
+    try:
+        with get_db_cursor(commit=True) as cur:
+            for item in results:
+                proj_id = item["project"].get("id")
+                if not proj_id: continue
+                cur.execute(
+                    """
+                    INSERT INTO "analytics"."raw_github_languages" ("project_id", "repo_url", "languages", "created_at")
+                    VALUES (%s, %s, %s, NOW())
+                    """,
+                    (proj_id, item["repoUrl"], json.dumps(item["languages"]))
+                )
+            context.log.info(f"Inserted {len(results)} language records into raw_github_languages.")
+    except Exception as e:
+        context.log.error(f"Failed to insert language records: {e}")
     # include small samples in metadata for debugging
     sample = results[:3]
     sample_repo_urls = [r.get("repoUrl") for r in sample]
     sample_languages = [r.get("languages") for r in sample]
     meta = {
         "count": MetadataValue.int(len(results)),
-        "sample": MetadataValue.json(sample),
-        "sample_repo_urls": MetadataValue.json(sample_repo_urls),
-        "sample_languages": MetadataValue.json(sample_languages),
+        "sample": MetadataValue.json(_make_serializable(sample)),
+        "sample_repo_urls": MetadataValue.json(_make_serializable(sample_repo_urls)),
+        "sample_languages": MetadataValue.json(_make_serializable(sample_languages)),
     }
     return Output(value=results, metadata=meta)

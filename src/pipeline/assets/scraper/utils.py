@@ -1,6 +1,17 @@
 import typing as _t
 import requests
 from urllib.parse import urlparse
+import datetime
+
+def _make_serializable(obj):
+    """Recursively convert datetime objects to ISO format strings for JSON serialization."""
+    if isinstance(obj, (datetime.date, datetime.datetime)):
+        return obj.isoformat()
+    if isinstance(obj, dict):
+        return {k: _make_serializable(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_make_serializable(v) for v in obj]
+    return obj
 
 def _extract_owner_repo(repo_url: str) -> _t.Optional[_t.Tuple[str, str]]:
 	try:

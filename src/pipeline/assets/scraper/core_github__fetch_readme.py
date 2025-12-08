@@ -5,21 +5,25 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from dagster import (
     asset,
     AssetIn,
+    AssetKey,
     MetadataValue,
     Output,
 )
 from .utils import (
     _extract_owner_repo,
     _fetch_readme,
+    _make_serializable,
 )
+from src.services.python.db import get_db_cursor
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 @asset(
-    kinds={"python"},
+    kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    ins={"core_github__detect_languages": AssetIn()},
+    ins={"core_github__detect_languages": AssetIn(key=AssetKey(["ost", "raw_github_detection"]))},
     group_name="fetch_projects_metadatas",
+    key=AssetKey(["ost", "raw_github_readme"]), # Matches dbt source
     required_resource_keys={"config"},
 )
 def core_github__fetch_readme(context, core_github__detect_languages: _t.List[_t.Dict]):
@@ -79,11 +83,28 @@ def core_github__fetch_readme(context, core_github__detect_languages: _t.List[_t
             out = {"project": meta["project"], "repoUrl": meta["repoUrl"], "readme": readme}
             results.append(out)
 
+    # Insert readmes into raw_github_readme
+    try:
+        with get_db_cursor(commit=True) as cur:
+            for item in results:
+                proj_id = item["project"].get("id")
+                if not proj_id: continue
+                cur.execute(
+                    """
+                    INSERT INTO "analytics"."raw_github_readme" ("project_id", "repo_url", "content", "created_at")
+                    VALUES (%s, %s, %s, NOW())
+                    """,
+                    (proj_id, item["repoUrl"], item["readme"])
+                )
+            context.log.info(f"Inserted {len(results)} readme records into raw_github_readme.")
+    except Exception as e:
+        context.log.error(f"Failed to insert readme records: {e}")
+
     sample = results[:3]
     sample_repo_urls = [r.get("repoUrl") for r in sample]
     meta = {
         "count": MetadataValue.int(len(results)),
-        "sample": MetadataValue.json(sample),
-        "sample_repo_urls": MetadataValue.json(sample_repo_urls),
+        "sample": MetadataValue.json(_make_serializable(sample)),
+        "sample_repo_urls": MetadataValue.json(_make_serializable(sample_repo_urls)),
     }
     return Output(value=results, metadata=meta)
