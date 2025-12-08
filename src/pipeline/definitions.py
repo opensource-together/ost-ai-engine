@@ -44,9 +44,6 @@ from .assets.scraper import (
     core_github__fetch_readme,
     core_github__fetch_repo_languages,
     core_github__fetch_repo_topics,
-    core_github__merge_repo_meta,
-    core_github__enrich_project_data,
-    out_github__table_projects_db,
 )
 
 # Embedding Assets
@@ -63,9 +60,6 @@ scraper_assets = load_assets_from_modules([
     core_github__fetch_readme,
     core_github__fetch_repo_languages,
     core_github__fetch_repo_topics,
-    core_github__merge_repo_meta,
-    core_github__enrich_project_data,
-    out_github__table_projects_db,
 ])
 
 embedding_assets = load_assets_from_modules([
