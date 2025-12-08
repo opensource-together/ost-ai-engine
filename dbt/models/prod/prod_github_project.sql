@@ -6,6 +6,7 @@ embeddings as (
     select * from {{ source('ost', 'embd_github_project') }}
 ),
 
+final as (
     select
         p.id,
         p.name,
