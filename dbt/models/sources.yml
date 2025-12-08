@@ -6,6 +6,14 @@ sources:
     tables:
       - name: raw_github_project
         description: "Raw GitHub project data ingested by Go scraper"
+      - name: raw_github_readme
+        description: "Raw README content fetched from GitHub"
+      - name: raw_github_topics
+        description: "Raw topics fetched from GitHub"
+      - name: raw_github_languages
+        description: "Raw language breakdown fetched from GitHub"
+      - name: raw_github_detection
+        description: "Language detection results from fastText"
       - name: int_github_project
         description: "Intermediate project data enriched by Python"
       - name: embd_github_project
