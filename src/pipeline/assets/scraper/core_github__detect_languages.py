@@ -180,7 +180,21 @@ def core_github__detect_languages(context):
             return [_make_serializable(v) for v in obj]
         return obj
 
-    sample = _make_serializable(accepted[:1])
+    # Create a clean sample with only requested fields
+    raw_sample = accepted[:1]
+    clean_sample = []
+    for item in raw_sample:
+        clean_item = {
+            "id": item.get("id"),
+            "name": item.get("name"),
+            "lang_detected": item.get("language_detected"),
+            "lang_confidence": item.get("language_confidence"),
+            # Add description if useful, but user wanted minimal
+            "description": (item.get("description") or "")[:50] + "..." if item.get("description") else None
+        }
+        clean_sample.append(clean_item)
+
+    sample = _make_serializable(clean_sample)
     meta = {
         "input_count": MetadataValue.int(len(projects)),
         "output_count": MetadataValue.int(len(accepted)),
