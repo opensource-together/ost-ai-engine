@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: prod_github_project
+  - name: prd_github_project
     description: "Production model joining project data with generated embeddings."
     columns:
       - name: id
