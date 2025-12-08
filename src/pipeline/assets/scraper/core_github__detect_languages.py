@@ -155,7 +155,18 @@ def core_github__detect_languages(context):
         k = r.get("language_detected") or "<none>"
         lang_counts[k] = lang_counts.get(k, 0) + 1
 
-    sample = accepted[:3]
+    # Helper to serialize datetime objects for metadata
+    def _make_serializable(obj):
+        import datetime
+        if isinstance(obj, (datetime.date, datetime.datetime)):
+            return obj.isoformat()
+        if isinstance(obj, dict):
+            return {k: _make_serializable(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_make_serializable(v) for v in obj]
+        return obj
+
+    sample = _make_serializable(accepted[:3])
     meta = {
         "input_count": MetadataValue.int(len(projects)),
         "output_count": MetadataValue.int(len(accepted)),
