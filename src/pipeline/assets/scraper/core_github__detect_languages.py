@@ -81,7 +81,7 @@ def core_github__detect_languages(context):
     )
 
     accepted: _t.List[_t.Dict] = []
-    filtered_out = 0
+    filtered_out_projects: _t.List[_t.Dict] = []
 
     context.log.info("core_github__detect_languages: Starting loop...")
     for i, repo in enumerate(projects):
@@ -103,7 +103,7 @@ def core_github__detect_languages(context):
 
         # If text contains non-Latin script characters -> immediate filter
         if text and NON_LATIN_CHAR_RE.search(text):
-            filtered_out += 1
+            filtered_out_projects.append({"id": repo.get("id"), "name": repo.get("name"), "reason": "non_latin_script"})
             continue
 
         # If no text to analyze, keep but with null language
@@ -138,7 +138,7 @@ def core_github__detect_languages(context):
             
             blacklisted = any((c in NON_LATIN_LANGS) for c, _ in preds)
             if blacklisted:
-                filtered_out += 1
+                filtered_out_projects.append({"id": repo.get("id"), "name": repo.get("name"), "reason": "blacklisted_lang", "lang": lang_code})
                 continue
         except Exception as e:
             context.log.warning(f"fastText prediction failed for repo index {i}: {e}")
@@ -166,12 +166,13 @@ def core_github__detect_languages(context):
             return [_make_serializable(v) for v in obj]
         return obj
 
-    sample = _make_serializable(accepted[:3])
+    sample = _make_serializable(accepted[:1])
     meta = {
         "input_count": MetadataValue.int(len(projects)),
         "output_count": MetadataValue.int(len(accepted)),
-        "filtered_out": MetadataValue.int(filtered_out),
-        "filtered_out_percent": MetadataValue.float(round(100 * filtered_out / len(projects), 2) if projects else 0.0),
+        "filtered_out_count": MetadataValue.int(len(filtered_out_projects)),
+        "filtered_out_percent": MetadataValue.float(round(100 * len(filtered_out_projects) / len(projects), 2) if projects else 0.0),
+        "filtered_projects": MetadataValue.json(filtered_out_projects),
         "sample": MetadataValue.json(sample),
         "language_counts": MetadataValue.json(lang_counts),
     }
