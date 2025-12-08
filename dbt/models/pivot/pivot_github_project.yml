@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: pivot_github_project
+    description: "Pivot model joining staging data with enriched metadata (TechStacks, Readmes)."
+    columns:
+      - name: id
+        description: "Unique identifier for the project."
+        tests:
+          - unique
+          - not_null
+      - name: name
+        description: "Name of the repository."
+      - name: description
+        description: "Description of the repository."
+      - name: url
+        description: "URL of the repository."
+      - name: stars
+        description: "Number of stars."
+      - name: forks
+        description: "Number of forks."
+      - name: language
+        description: "Primary language of the repository."
+      - name: stg_topics
+        description: "Topics from the staging layer."
+      - name: enrichedData
+        description: "JSON object containing enriched metadata (readme, tech_stack_ids, etc.)."
+      - name: created_at
+        description: "Timestamp when the record was created."
+      - name: updated_at
+        description: "Timestamp when the record was last updated."
