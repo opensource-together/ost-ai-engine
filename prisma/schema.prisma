@@ -241,7 +241,6 @@ model Project {
   techStacks      ProjectTechStack[]
   categories      ProjectCategory[]
   domains         ProjectDomain[]
-  embeddings      ProjectEmbedding[]
   ownerId         String?            @db.Uuid
   owner           User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
   logoUrl         String?
@@ -249,16 +248,6 @@ model Project {
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   projectBookmark ProjectBookmark[]
-}
-
-model ProjectEmbedding {
-  id        String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId String                     @db.Uuid
-  vector    Unsupported("vector(384)")
-  project   Project                    @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime                   @default(now())
-
-  @@map("project_embedding")
 }
 
 model ProjectBookmark {
@@ -278,4 +267,32 @@ model BetaSignup {
   email String @unique
 
   @@map("beta_signup")
+}
+
+model RawGithubProject {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("raw_github_project")
+}
+
+model IntGithubProject {
+  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId    String   @db.Uuid
+  enrichedData Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("int_github_project")
+}
+
+model EmbdGithubProject {
+  id              String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId       String                     @db.Uuid
+  embeddingVector Unsupported("vector(384)")
+  createdAt       DateTime                   @default(now())
+
+  @@map("embd_github_project")
 }
