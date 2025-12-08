@@ -58,7 +58,7 @@ from .assets.embedding import (
 
 scraper_assets = load_assets_from_modules([
     raw_github__extract_projects,
-    raw_github__load_to_postgres,
+    raw_github__load_project,
     core_github__detect_languages,
     core_github__fetch_readme,
     core_github__fetch_repo_languages,
