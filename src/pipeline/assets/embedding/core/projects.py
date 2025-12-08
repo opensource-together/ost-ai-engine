@@ -16,14 +16,14 @@ def core_projects__compute_embeddings(context: AssetExecutionContext, raw_projec
     """
     Computes vector embeddings for each project's context string.
     """
-    context.log.info(f"core_project_embeddings: Starting with {len(raw_project_data) if raw_project_data else 0} items...")
+    context.log.info(f"core_projects__compute_embeddings: Starting with {len(raw_projects__prepare_context) if raw_projects__prepare_context else 0} items...")
     
     model_resource: EmbeddingModelResource = context.resources.embedding_model
     
     results = []
-    total = len(raw_project_data) if raw_project_data else 0
+    total = len(raw_projects__prepare_context) if raw_projects__prepare_context else 0
     
-    for i, item in enumerate(raw_project_data or []):
+    for i, item in enumerate(raw_projects__prepare_context or []):
         if i % 10 == 0:
             context.log.info(f"Processing item {i+1}/{total}...")
             

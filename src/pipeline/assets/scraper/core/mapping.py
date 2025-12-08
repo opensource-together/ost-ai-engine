@@ -5,96 +5,11 @@ from dagster import (
 	MetadataValue,
 	Output,
 )
-from src.pipeline.resources.map.mapping_map import (
-    GITHUB_TO_PROJECT_MAPPING,
-)
+
 from src.pipeline.utils import prisma_client
 from .utils import _find_model
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
-
-@asset(
-	kinds={"python"},
-	owners=DEFAULT_OWNERS,
-	ins={"core_github__merge_filtered_projects": AssetIn()},
-	group_name="github_projects_scraper",
-)
-def core_github__table_projects_mapped(context, core_github__merge_filtered_projects):
-	"""
-	Map selected top projects to the Prisma `Project` schema.
-
-	**Description:**
-	Transforms the merged project data into a format compatible with the Prisma `Project` model using a predefined mapping.
-
-	**Logic:**
-	1. **Mapping**: Iterates through projects and applies `GITHUB_TO_PROJECT_MAPPING`.
-	2. **Preview**: Generates small previews of mapped data for debugging.
-	3. **Metadata**: Emits counts and sample data.
-
-	**Output:**
-	List of mapped project dictionaries ready for enrichment and insertion.
-	"""
-	context.log.info(f"core_github__table_projects_mapped: Starting mapping for {len(core_github__merge_filtered_projects) if core_github__merge_filtered_projects else 0} projects")
-	if core_github__merge_filtered_projects is None:
-		context.log.warning("No data found from core_github__merge_filtered_projects. Returning empty list.")
-		return []
-
-	def map_repo(repo):
-		mapped = {}
-		for prisma_field, source in GITHUB_TO_PROJECT_MAPPING.items():
-			if callable(source):
-				mapped[prisma_field] = source(repo)
-			elif isinstance(source, str) and "." in source:
-				keys = source.split(".")
-				value = repo
-				for k in keys:
-					value = value.get(k, None) if isinstance(value, dict) else None
-				mapped[prisma_field] = value
-			elif isinstance(source, str):
-				mapped[prisma_field] = repo.get(source)
-			else:
-				mapped[prisma_field] = source
-		return mapped
-
-	projects = [map_repo(repo) for repo in core_github__merge_filtered_projects]
-	# Build enriched metadata for Dagster UI: include small previews and mapping keys
-	def _preview_text(s: str, limit: int = 1000) -> str:
-		if not s:
-			return ""
-		try:
-			if len(s) <= limit:
-				return s
-			return s[:limit] + "..."
-		except Exception:
-			return ""
-
-	mapped_examples: list[dict] = []
-	for p in projects[:3]:
-		try:
-			mapped_preview = {k: p.get(k) for k in list(p.keys())[:12]}
-			mapped_examples.append({
-				"repoUrl": p.get("repoUrl"),
-				"name": p.get("name"),
-				"description": _preview_text(p.get("description") or "", limit=500),
-				"mapped_preview": mapped_preview,
-			})
-		except Exception:
-			mapped_examples.append({"repoUrl": p.get("repoUrl"), "error": "preview_failed"})
-
-	mapping_keys = list(GITHUB_TO_PROJECT_MAPPING.keys())
-
-	meta = {
-		"mapped_count": MetadataValue.int(len(projects)),
-		"input_count": MetadataValue.int(len(core_github__merge_filtered_projects)),
-		"sample": MetadataValue.json(projects[:3]),
-		"sample_repo_urls": MetadataValue.json([p.get("repoUrl") for p in projects[:3]]),
-		"mapping_keys": MetadataValue.json(mapping_keys),
-		"sample_mapped": MetadataValue.json(mapped_examples),
-	}
-	context.log.info(f"core_github__table_projects_mapped: mapped={len(projects)} projects; sample_urls={ [p.get('repoUrl') for p in projects[:3]] }; mapping_keys={mapping_keys[:6] }")
-	return Output(value=projects, metadata=meta)
-
-
 
 @asset(
 	kinds={"python"},

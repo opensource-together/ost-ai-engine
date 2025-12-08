@@ -7,6 +7,7 @@ from contextlib import contextmanager
 from dagster import (
     asset,
     AssetIn,
+    AssetKey,
     MetadataValue,
     Output,
 )
@@ -29,18 +30,6 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 def raw_github__extract_projects(context):
     """
     Run the GitHub Go scraper and return scraped projects.
-
-    **Description:**
-    Executes the compiled Go `github-scraper` binary to fetch trending repositories.
-
-    **Logic:**
-    1. **Setup**: Builds the environment variables from config.
-    2. **Execution**: Runs the `github-scraper` binary, capturing stdout/stderr.
-    3. **Parsing**: Parses the JSON output into a list of project dictionaries.
-    4. **Validation**: Checks for execution errors and empty outputs.
-
-    **Output:**
-    List of raw project dictionaries.
     """
     context.log.info("raw_github__extract_projects: Starting GitHub scraper execution")
     cfg = context.resources.config
@@ -51,14 +40,16 @@ def raw_github__extract_projects(context):
         context.log.info(f"GITHUB_SCRAPING_QUERY to Go: '{env['GITHUB_SCRAPING_QUERY']}'")
         try:
             # Redirect stdout to a temporary file to avoid OOM with large outputs
+            # Redirect stdout to a temporary file to avoid OOM with large outputs
+            scraper_path = os.environ.get("GO_SCRAPER_PATH", "/app/github-scraper")
             with open(tmp_out.name, "w") as f_out:
                 result = subprocess.run(
-                    ["/app/github-scraper"],
+                    [scraper_path],
                     stdout=f_out,
                     stderr=subprocess.PIPE,
                     text=True,
                     env=env,
-                    cwd="/app",
+                    cwd=os.getcwd(), # Use current working directory instead of hardcoded /app
                     timeout=120
                 )
             
@@ -126,60 +117,45 @@ def raw_github__extract_projects(context):
             return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
 
 
+
+
+
 @asset(
-    kinds={"python"},
+    kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    ins={"raw_github__extract_projects": AssetIn()},
+    ins={"projects": AssetIn("raw_github__extract_projects")},
     group_name="github_projects_scraper",
-    required_resource_keys={"config"},
+    key=AssetKey(["ost", "raw_github_project"]), # Matches dbt source
 )
-def raw_github__to_df(context, raw_github__extract_projects: _t.List[_t.Dict]):
+def raw_github__load_to_postgres(context, projects: _t.List[_t.Dict]):
     """
-    Convert the raw list-of-dicts into a pandas.DataFrame.
-
-    **Description:**
-    Transforms the raw project list into a DataFrame to enable parallel processing by downstream assets.
-
-    **Logic:**
-    1. **Input Check**: Handles empty input gracefully.
-    2. **Conversion**: Converts list of dicts to pandas DataFrame.
-    3. **Metadata**: Generates sample data and column info for debugging.
-
-    **Output:**
-    Pandas DataFrame containing project data.
+    Load raw GitHub projects into Postgres for dbt processing.
     """
-    context.log.info(f"raw_github__to_df: Starting conversion for {len(raw_github__extract_projects) if raw_github__extract_projects else 0} projects")
-    # Import pandas directly; let ImportError surface after logging
+    context.log.info(f"raw_github__load_to_postgres: Loading {len(projects)} projects to Postgres...")
+    
+    # Import Prisma inside the asset to avoid top-level import issues if client isn't generated
     try:
-        import pandas as pd
-    except ImportError as e:
-        context.log.error(f"raw_github__to_df: pandas is required but not installed: {e}")
+        from prisma import Prisma
+    except ImportError:
+        context.log.error("Prisma client not found. Run 'prisma generate'.")
         raise
 
-    if not raw_github__extract_projects:
-        context.log.info("raw_github__to_df: no input projects, returning empty DataFrame")
-        df = pd.DataFrame()
-        return Output(value=df, metadata={"input_count": MetadataValue.int(0)})
-
+    db = Prisma()
+    db.connect()
+    
+    count = 0
     try:
-        df = pd.DataFrame(raw_github__extract_projects)
-        sample_records = df.head(3).to_dict(orient="records")
-        sample_ids = [r.get("id") for r in sample_records]
-        meta = {
-            "input_count": MetadataValue.int(len(df)),
-            "columns_count": MetadataValue.int(len(df.columns)),
-            "sample": MetadataValue.json(sample_records),
-            "sample_ids": MetadataValue.json(sample_ids),
-        }
-        context.log.info(f"raw_github__to_df: converted {len(df)} projects to DataFrame; columns={list(df.columns)[:6]}")
-        return Output(value=df, metadata=meta)
-    except ImportError as e:
-        context.log.error(f"raw_github__to_df: pandas is required but not installed: {e}")
-        raise
-    except Exception as e:
-        context.log.exception(f"raw_github__to_df: could not convert to DataFrame: {e}")
-        # Fallback: return empty DataFrame representation
-        try:
-            return Output(value=pd.DataFrame(), metadata={"input_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
-        except Exception:
-            return Output(value=[], metadata={"input_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
+        for project in projects:
+            try:
+                # Store the entire project dict as JSON
+                # Explicitly dump to string to avoid Prisma validation issues with complex dicts
+                db.rawgithubproject.create(data={"data": json.dumps(project)})
+                count += 1
+            except Exception as e:
+                context.log.warning(f"Failed to insert project {project.get('name', 'unknown')}: {e}")
+    finally:
+        if db.is_connected():
+            db.disconnect()
+
+    context.log.info(f"raw_github__load_to_postgres: Loaded {count} projects.")
+    return Output(value=None, metadata={"loaded_count": MetadataValue.int(count)})

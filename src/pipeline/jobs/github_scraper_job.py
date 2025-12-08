@@ -11,7 +11,7 @@ from dagster import (
 
 github_scraper_job = define_asset_job(
     name="github_scraper_job",
-    selection=AssetSelection.groups("github_projects_scraper", "fetch_projects_metadatas", "map_repos_metadatas"),
+    selection=AssetSelection.groups("github_projects_scraper", "fetch_projects_metadatas", "map_repos_metadatas", "default"),
     executor_def=in_process_executor,  # Avoid SIGBUS with multiprocessing
     op_retry_policy=RetryPolicy( # default retry policy for ops computing assets in this job.
         max_retries=2,
@@ -19,13 +19,7 @@ github_scraper_job = define_asset_job(
         backoff=Backoff.EXPONENTIAL,
         jitter=Jitter.FULL,
     ),
-    description=(
-        "Scrape trending repositories (GitHub), filter and rank them, "
-        "normalize to the Prisma Project schema, and upsert the results into the database. "
-        "The job runs the Go scrapers, applies language detection and data-quality checks, "
-        "maps fields to the Project model, and emits insert/update metrics. "
-        "Configurable (scraper queries, top-N, fastText model path) and safe for repeated runs."
-    ),
+    description="Scrape trending repositories, filter, normalize, and upsert to database.",
 )
 
 __all__ = ["github_scraper_job"]
