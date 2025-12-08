@@ -61,6 +61,7 @@ def out_github__table_projects_db(context, core_github__enrich_project_data: _t.
             }
             
             try:
+                cur.execute("SAVEPOINT upsert_project")
                 enriched_json = json.dumps(enriched_data)
                 
                 # Upsert logic using INSERT ON CONFLICT
@@ -76,10 +77,12 @@ def out_github__table_projects_db(context, core_github__enrich_project_data: _t.
                     """,
                     (str(uuid.uuid4()), project_id, enriched_json)
                 )
+                cur.execute("RELEASE SAVEPOINT upsert_project")
                 
                 inserted += 1
 
             except Exception as e:
+                cur.execute("ROLLBACK TO SAVEPOINT upsert_project")
                 context.log.error(f"Error upserting IntGithubProject for {project_id}: {e}")
                 errors.append((i, str(e)))
 

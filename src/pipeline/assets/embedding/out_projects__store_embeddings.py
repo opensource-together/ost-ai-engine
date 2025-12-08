@@ -43,6 +43,7 @@ def out_projects__store_embeddings(context, core_projects__compute_embeddings: _
                 continue
 
             try:
+                cur.execute("SAVEPOINT store_embedding")
                 # 1. Insert into int_github_project (Enriched Data)
                 enriched_data = {
                     "context": item.get("context"),
@@ -78,9 +79,11 @@ def out_projects__store_embeddings(context, core_projects__compute_embeddings: _
                     """,
                     (str(uuid.uuid4()), project_id, vector_str)
                 )
+                cur.execute("RELEASE SAVEPOINT store_embedding")
                 upserted_count += 1
                 
             except Exception as e:
+                cur.execute("ROLLBACK TO SAVEPOINT store_embedding")
                 context.log.error(f"Failed to upsert data for {repo_url}: {e}")
 
     context.log.info(f"out_project_embeddings: Upserted {upserted_count} embeddings.")

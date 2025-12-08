@@ -32,6 +32,8 @@ def raw_github__load_project(context, projects: _t.List[_t.Dict]):
                 # Generate a UUID for the ID since we are inserting raw SQL
                 project_json = json.dumps(project)
                 
+                # Use SAVEPOINT to allow partial failures without aborting the transaction
+                cur.execute("SAVEPOINT insert_project")
                 cur.execute(
                     """
                     INSERT INTO "analytics"."raw_github_project" ("id", "data", "createdAt", "updatedAt")
@@ -39,8 +41,11 @@ def raw_github__load_project(context, projects: _t.List[_t.Dict]):
                     """,
                     (str(uuid.uuid4()), project_json)
                 )
+                cur.execute("RELEASE SAVEPOINT insert_project")
                 count += 1
             except Exception as e:
+                # Rollback to savepoint to restore transaction state
+                cur.execute("ROLLBACK TO SAVEPOINT insert_project")
                 context.log.warning(f"Failed to insert project {project.get('name', 'unknown')}: {e}")
 
     context.log.info(f"raw_github__load_project: Loaded {count} projects.")
