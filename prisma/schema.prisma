@@ -10,26 +10,25 @@ generator client {
   previewFeatures = ["postgresqlExtensions"]
 }
 
-generator client_py {
-  provider             = "prisma-client-py"
-  interface            = "sync"
-  recursive_type_depth = 5
-}
-
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
+  schemas    = ["analytics", "public"]
   extensions = [uuidOssp(map: "uuid-ossp"), vector]
 }
 
 enum Provider {
   GITHUB
   GITLAB
+
+  @@schema("public")
 }
 
 enum TechStackType {
   TECH
   LANGUAGE
+
+  @@schema("public")
 }
 
 model Skeleton {
@@ -39,6 +38,8 @@ model Skeleton {
   myAttribute String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@schema("public")
 }
 
 model User {
@@ -71,9 +72,11 @@ model User {
   domain          UserDomains[]
   projectBookmark ProjectBookmark[]
   betaTester      Boolean           @default(false)
+  userEmbeddings  UserEmbedding[]
 
   @@unique([email])
   @@map("user")
+  @@schema("public")
 }
 
 model Session {
@@ -89,6 +92,7 @@ model Session {
 
   @@unique([token])
   @@map("session")
+  @@schema("public")
 }
 
 model Account {
@@ -108,6 +112,7 @@ model Account {
   updatedAt             DateTime  @updatedAt
 
   @@map("account")
+  @@schema("public")
 }
 
 model Verification {
@@ -118,7 +123,8 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
-  @@map("verification")
+  @@map("verification_token")
+  @@schema("public")
 }
 
 model TechStack {
@@ -132,6 +138,7 @@ model TechStack {
   ProjectTechStack ProjectTechStack[]
 
   @@map("tech_stack")
+  @@schema("public")
 }
 
 model UserTechStack {
@@ -144,6 +151,7 @@ model UserTechStack {
 
   @@unique([userId, techStackId])
   @@map("user_tech_stack")
+  @@schema("public")
 }
 
 model UserCategories {
@@ -156,6 +164,7 @@ model UserCategories {
 
   @@unique([userId, categoryId])
   @@map("user_categories")
+  @@schema("public")
 }
 
 model UserDomains {
@@ -168,6 +177,30 @@ model UserDomains {
 
   @@unique([userId, domainId])
   @@map("user_domain")
+  @@schema("public")
+}
+
+model UserEmbedding {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @db.Uuid
+  domainId  String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, domainId])
+  @@map("user_embedding")
+  @@schema("analytics")
+}
+
+model ProjectEmbedding {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String   @db.Uuid
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@map("project_embedding")
+  @@schema("public")
 }
 
 model ProjectTechStack {
@@ -180,6 +213,7 @@ model ProjectTechStack {
 
   @@unique([projectId, techStackId])
   @@map("project_tech_stack")
+  @@schema("public")
 }
 
 model Category {
@@ -189,6 +223,8 @@ model Category {
   updatedAt       DateTime          @updatedAt
   ProjectCategory ProjectCategory[]
   UserCategories  UserCategories[]
+
+  @@schema("public")
 }
 
 model ProjectCategory {
@@ -200,16 +236,20 @@ model ProjectCategory {
   createdAt  DateTime @default(now())
 
   @@unique([projectId, categoryId])
-  @@map("project_category")
+  @@map("authenticator")
+  @@schema("public")
 }
 
 model Domain {
-  id            String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name          String          @unique
-  createdAt     DateTime        @default(now())
-  updatedAt     DateTime        @updatedAt
-  ProjectDomain ProjectDomain[]
-  UserDomains   UserDomains[]
+  id             String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name           String          @unique
+  createdAt      DateTime        @default(now())
+  updatedAt      DateTime        @updatedAt
+  ProjectDomain  ProjectDomain[]
+  UserDomains    UserDomains[]
+  userEmbeddings UserEmbedding[]
+
+  @@schema("public")
 }
 
 model ProjectDomain {
@@ -222,32 +262,36 @@ model ProjectDomain {
 
   @@unique([projectId, domainId])
   @@map("project_domain")
+  @@schema("public")
 }
 
 model Project {
-  id              String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title           String
-  description     String?
-  repoUrl         String?            @unique
-  provider        Provider
-  githubUrl       String?
-  gitlabUrl       String?
-  twitterUrl      String?
-  linkedinUrl     String?
-  discordUrl      String?
-  websiteUrl      String?
-  published       Boolean            @default(false)
-  trending        Boolean            @default(false)
-  techStacks      ProjectTechStack[]
-  categories      ProjectCategory[]
-  domains         ProjectDomain[]
-  ownerId         String?            @db.Uuid
-  owner           User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  logoUrl         String?
-  imagesUrls      String[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
-  projectBookmark ProjectBookmark[]
+  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title             String
+  description       String?
+  repoUrl           String?            @unique
+  provider          Provider
+  githubUrl         String?
+  gitlabUrl         String?
+  twitterUrl        String?
+  linkedinUrl       String?
+  discordUrl        String?
+  websiteUrl        String?
+  published         Boolean            @default(false)
+  trending          Boolean            @default(false)
+  techStacks        ProjectTechStack[]
+  categories        ProjectCategory[]
+  domains           ProjectDomain[]
+  ownerId           String?            @db.Uuid
+  owner             User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  logoUrl           String?
+  imagesUrls        String[]
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @updatedAt
+  projectBookmark   ProjectBookmark[]
+  projectEmbeddings ProjectEmbedding[]
+
+  @@schema("public")
 }
 
 model ProjectBookmark {
@@ -260,6 +304,7 @@ model ProjectBookmark {
 
   @@unique([userId, projectId])
   @@map("project_bookmark")
+  @@schema("public")
 }
 
 model BetaSignup {
@@ -267,32 +312,36 @@ model BetaSignup {
   email String @unique
 
   @@map("beta_signup")
+  @@schema("public")
 }
 
 model RawGithubProject {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  id        String   @id @default(uuid()) @db.Uuid
   data      Json
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@map("raw_github_project")
+  @@schema("analytics")
 }
 
 model IntGithubProject {
-  id           String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId    String   @db.Uuid
-  enrichedData Json
+  id           String   @id @default(uuid())
+  projectId    String   @unique // Foreign key to Staging/Raw project ID
+  enrichedData Json // Stores readme, topics, etc.
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
   @@map("int_github_project")
+  @@schema("analytics")
 }
 
 model EmbdGithubProject {
-  id              String                     @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId       String                     @db.Uuid
-  embeddingVector Unsupported("vector(384)")
-  createdAt       DateTime                   @default(now())
+  id              String                 @id @default(uuid())
+  projectId       String                 @unique // Foreign key to Project
+  embeddingVector Unsupported("vector")?
+  createdAt       DateTime               @default(now())
 
   @@map("embd_github_project")
+  @@schema("analytics")
 }
