@@ -91,8 +91,12 @@ def core_github__fetch_readme(context, core_github__detect_languages: _t.List[_t
                 if not proj_id: continue
                 cur.execute(
                     """
-                    INSERT INTO "analytics"."raw_github_readme" ("project_id", "repo_url", "content", "created_at")
+                    INSERT INTO "github"."raw_github_readme" ("project_id", "repo_url", "content", "created_at")
                     VALUES (%s, %s, %s, NOW())
+                    ON CONFLICT ("project_id") DO UPDATE
+                    SET "content" = EXCLUDED."content",
+                        "repo_url" = EXCLUDED."repo_url",
+                        "created_at" = NOW()
                     """,
                     (proj_id, item["repoUrl"], item["readme"])
                 )

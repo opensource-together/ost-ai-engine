@@ -13,7 +13,7 @@ import uuid
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 @asset(
-    kinds={"python"},
+    kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     group_name="projects_embedding",
     description="Push project embeddings to the database.",
@@ -50,19 +50,18 @@ def out_projects__store_embeddings(context, core_projects__compute_embeddings: _
                     "repoUrl": repo_url
                 }
                 
-                # Delete old records to ensure idempotency
-                cur.execute('DELETE FROM "analytics"."int_github_project" WHERE "projectId" = %s', (project_id,))
-                
                 cur.execute(
                     """
-                    INSERT INTO "analytics"."int_github_project" ("id", "projectId", "enrichedData", "createdAt", "updatedAt")
+                    INSERT INTO "github"."int_github_project" ("id", "projectId", "enrichedData", "createdAt", "updatedAt")
                     VALUES (%s, %s, %s, NOW(), NOW())
+                    ON CONFLICT ("projectId") DO UPDATE
+                    SET "enrichedData" = EXCLUDED."enrichedData",
+                        "updatedAt" = NOW()
                     """,
                     (str(uuid.uuid4()), project_id, json.dumps(enriched_data))
                 )
 
                 # 2. Insert into embd_github_project (Embeddings)
-                cur.execute('DELETE FROM "analytics"."embd_github_project" WHERE "projectId" = %s', (project_id,))
                 
                 # Format vector for pgvector
                 # vector is likely a list of floats. pgvector expects '[1.0, 2.0, ...]' string or list adapter
@@ -74,8 +73,11 @@ def out_projects__store_embeddings(context, core_projects__compute_embeddings: _
 
                 cur.execute(
                     """
-                    INSERT INTO "analytics"."embd_github_project" ("id", "projectId", "embeddingVector", "createdAt")
+                    INSERT INTO "github"."embd_github_project" ("id", "projectId", "embeddingVector", "createdAt")
                     VALUES (%s, %s, %s, NOW())
+                    ON CONFLICT ("projectId") DO UPDATE
+                    SET "embeddingVector" = EXCLUDED."embeddingVector",
+                        "createdAt" = NOW()
                     """,
                     (str(uuid.uuid4()), project_id, vector_str)
                 )

@@ -83,8 +83,12 @@ def core_github__fetch_repo_languages(context, core_github__detect_languages: _t
                 if not proj_id: continue
                 cur.execute(
                     """
-                    INSERT INTO "analytics"."raw_github_languages" ("project_id", "repo_url", "languages", "created_at")
+                    INSERT INTO "github"."raw_github_languages" ("project_id", "repo_url", "languages", "created_at")
                     VALUES (%s, %s, %s, NOW())
+                    ON CONFLICT ("project_id") DO UPDATE
+                    SET "languages" = EXCLUDED."languages",
+                        "repo_url" = EXCLUDED."repo_url",
+                        "created_at" = NOW()
                     """,
                     (proj_id, item["repoUrl"], json.dumps(item["languages"]))
                 )

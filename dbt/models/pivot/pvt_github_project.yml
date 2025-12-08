@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: pivot_github_project
+  - name: pvt_github_project
     description: "Pivot model joining staging data with enriched metadata (TechStacks, Readmes)."
     columns:
       - name: id
@@ -20,11 +20,19 @@ models:
       - name: forks
         description: "Number of forks."
       - name: language
-        description: "Primary language of the repository."
-      - name: stg_topics
-        description: "Topics from the staging layer."
-      - name: enrichedData
-        description: "JSON object containing enriched metadata (readme, tech_stack_ids, etc.)."
+        description: "Primary language of the repository (coalesced from source and detection)."
+      - name: readme_content
+        description: "Raw content of the README."
+      - name: fetched_topics
+        description: "Topics fetched from GitHub."
+      - name: fetched_languages
+        description: "Languages fetched from GitHub."
+      - name: language_detected
+        description: "Language detected by the scraper."
+      - name: language_confidence
+        description: "Confidence score of the language detection."
+      - name: context
+        description: "Cleaned and formatted context string for embedding (Title + Description + Topics + Readme)."
       - name: created_at
         description: "Timestamp when the record was created."
       - name: updated_at

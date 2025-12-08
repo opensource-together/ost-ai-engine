@@ -21,10 +21,11 @@ models:
     # Config for all models
     staging:
       +materialized: table
-      +schema: analytics
+      +schema: github
     prod:
       +materialized: table
-      +schema: analytics
+      +schema: github
     pivot:
       +materialized: table
-      +schema: analytics
+      +schema: github
+    

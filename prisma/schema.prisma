@@ -13,7 +13,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  schemas    = ["analytics", "public"]
+  schemas    = ["github", "public"]
   extensions = [uuidOssp(map: "uuid-ossp"), vector]
 }
 
@@ -190,7 +190,7 @@ model UserEmbedding {
 
   @@unique([userId, domainId])
   @@map("user_embedding")
-  @@schema("analytics")
+  @@schema("github")
 }
 
 model ProjectEmbedding {
@@ -322,7 +322,7 @@ model RawGithubProject {
   updatedAt DateTime @updatedAt
 
   @@map("raw_github_project")
-  @@schema("analytics")
+  @@schema("github")
 }
 
 model IntGithubProject {
@@ -333,7 +333,7 @@ model IntGithubProject {
   updatedAt    DateTime @updatedAt
 
   @@map("int_github_project")
-  @@schema("analytics")
+  @@schema("github")
 }
 
 model EmbdGithubProject {
@@ -343,5 +343,5 @@ model EmbdGithubProject {
   createdAt       DateTime               @default(now())
 
   @@map("embd_github_project")
-  @@schema("analytics")
+  @@schema("github")
 }

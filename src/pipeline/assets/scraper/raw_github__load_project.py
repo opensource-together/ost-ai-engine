@@ -21,7 +21,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 )
 def raw_github__load_project(context, projects: _t.List[_t.Dict]):
     """
-    Inserts raw project data (JSON) into the `analytics.raw_github_project` table.
+    Inserts raw project data (JSON) into the `github.raw_github_project` table.
     """
     context.log.info(f"raw_github__load_project: Loading {len(projects)} projects to Postgres...")
     
@@ -29,17 +29,27 @@ def raw_github__load_project(context, projects: _t.List[_t.Dict]):
     with get_db_cursor(commit=True) as cur:
         for project in projects:
             try:
-                # Generate a UUID for the ID since we are inserting raw SQL
+                # Generate a deterministic UUID (v5) based on the URL to ensure idempotency
+                # We use the DNS namespace as a base, but you could use a custom one
+                url = project.get("html_url") or project.get("url")
+                if not url:
+                    context.log.warning(f"Skipping project {project.get('name')} without URL")
+                    continue
+                    
+                project_id = str(uuid.uuid5(uuid.NAMESPACE_URL, url))
                 project_json = json.dumps(project)
                 
                 # Use SAVEPOINT to allow partial failures without aborting the transaction
                 cur.execute("SAVEPOINT insert_project")
                 cur.execute(
                     """
-                    INSERT INTO "analytics"."raw_github_project" ("id", "data", "createdAt", "updatedAt")
+                    INSERT INTO "github"."raw_github_project" ("id", "data", "createdAt", "updatedAt")
                     VALUES (%s, %s, NOW(), NOW())
+                    ON CONFLICT ("id") DO UPDATE 
+                    SET "data" = EXCLUDED."data",
+                        "updatedAt" = NOW()
                     """,
-                    (str(uuid.uuid4()), project_json)
+                    (project_id, project_json)
                 )
                 cur.execute("RELEASE SAVEPOINT insert_project")
                 count += 1

@@ -2,7 +2,7 @@ version: 2
 
 sources:
   - name: ost
-    schema: analytics
+    schema: github
     tables:
       - name: raw_github_project
         description: "Raw GitHub project data ingested by Go scraper"

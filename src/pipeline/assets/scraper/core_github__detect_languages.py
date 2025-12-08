@@ -15,7 +15,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     # Read from dbt staging model
-    deps=[AssetKey(["analytics", "stg_github_project"])],
+    deps=[AssetKey(["github", "stg_github_project"])],
     group_name="github_projects_scraper",
     key=AssetKey(["ost", "raw_github_detection"]), # Matches dbt source
     required_resource_keys={"config", "fasttext_model"},
@@ -45,7 +45,7 @@ def core_github__detect_languages(context):
         with get_db_cursor() as cur:
             # Read from staging table
             # We select relevant columns. Note: stg_github_project.sql selects individual columns: id, name, description, url, language, topics...
-            cur.execute('SELECT * FROM "analytics"."stg_github_project"')
+            cur.execute('SELECT * FROM "github"."stg_github_project"')
             projects = cur.fetchall()
             context.log.info(f"Fetched {len(projects)} projects from staging.")
     except Exception as e:
@@ -62,7 +62,7 @@ def core_github__detect_languages(context):
     # should exclude (Arabic, CJK, Japanese, Korean, many Indic languages...)
     NON_LATIN_LANGS = {
         "ar", "zh", "ja", "ko",
-        "hi", "bn", "ta", "te", "kn", "ml", "gu", "mr", "pa", "or", "si", "ne", "my",
+        "hi", "bn", "ta", "te", "kn", "ml", "gu", "mr", "pa", "or", "si", "ne", "my", "ru",
     }
 
     # Regex to detect non-Latin script characters directly in text (CJK, Arabic, Devanagari, Bengali, Tamil, Hangul, etc.)
@@ -170,8 +170,13 @@ def core_github__detect_languages(context):
             for repo in accepted:
                 cur.execute(
                     """
-                    INSERT INTO "analytics"."raw_github_detection" ("project_id", "repo_url", "language_detected", "language_confidence", "created_at")
+                    INSERT INTO "github"."raw_github_detection" ("project_id", "repo_url", "language_detected", "language_confidence", "created_at")
                     VALUES (%s, %s, %s, %s, NOW())
+                    ON CONFLICT ("project_id") DO UPDATE
+                    SET "language_detected" = EXCLUDED."language_detected",
+                        "language_confidence" = EXCLUDED."language_confidence",
+                        "repo_url" = EXCLUDED."repo_url",
+                        "created_at" = NOW()
                     """,
                     (repo.get("id"), repo.get("url"), repo.get("language_detected"), repo.get("language_confidence"))
                 )
