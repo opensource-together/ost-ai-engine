@@ -15,7 +15,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python"},
     owners=DEFAULT_OWNERS,
     # Read from dbt staging model
-    deps=[AssetKey(["staging", "stg_github_project"])],
+    deps=[AssetKey("stg_github_project")],
     group_name="github_projects_scraper",
     required_resource_keys={"config", "fasttext_model"},
 )
@@ -44,7 +44,7 @@ def core_github__detect_languages(context):
         with get_db_cursor() as cur:
             # Read from staging table
             # We select relevant columns. Note: stg_github_project.sql selects individual columns: id, name, description, url, language, topics...
-            cur.execute('SELECT * FROM "public_staging"."stg_github_project"')
+            cur.execute('SELECT * FROM "analytics"."stg_github_project"')
             projects = cur.fetchall()
             context.log.info(f"Fetched {len(projects)} projects from staging.")
     except Exception as e:

@@ -19,11 +19,11 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     group_name="github_projects_scraper",
     key=AssetKey(["ost", "raw_github_project"]), # Matches dbt source
 )
-def raw_github__load_to_postgres(context, projects: _t.List[_t.Dict]):
+def raw_github__load_project(context, projects: _t.List[_t.Dict]):
     """
     Inserts raw project data (JSON) into the `analytics.raw_github_project` table.
     """
-    context.log.info(f"raw_github__load_to_postgres: Loading {len(projects)} projects to Postgres...")
+    context.log.info(f"raw_github__load_project: Loading {len(projects)} projects to Postgres...")
     
     count = 0
     with get_db_cursor(commit=True) as cur:
@@ -43,5 +43,5 @@ def raw_github__load_to_postgres(context, projects: _t.List[_t.Dict]):
             except Exception as e:
                 context.log.warning(f"Failed to insert project {project.get('name', 'unknown')}: {e}")
 
-    context.log.info(f"raw_github__load_to_postgres: Loaded {count} projects.")
+    context.log.info(f"raw_github__load_project: Loaded {count} projects.")
     return Output(value=None, metadata={"loaded_count": MetadataValue.int(count)})
