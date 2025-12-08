@@ -17,7 +17,8 @@ def _extract_owner_repo(repo_url: str) -> _t.Optional[_t.Tuple[str, str]]:
 		parts = [seg for seg in p.path.split("/") if seg]
 		if len(parts) >= 2:
 			return parts[0], parts[1].replace('.git', '')
-	except Exception:
+	except Exception as e:
+		print(f"Error extracting owner/repo from {repo_url}: {e}")
 		pass
 	return None
 
@@ -34,7 +35,13 @@ def _fetch_repo_languages(owner: str, repo: str, headers: dict, session: request
 		r = session.get(lang_url, headers=headers, timeout=10)
 		if r.ok:
 			out = list(r.json().keys())
-	except Exception:
+		elif r.status_code == 403:
+			print(f"RATE LIMIT EXCEEDED (403) fetching languages for {owner}/{repo}")
+			# Optionally raise to fail the asset, or just log
+		else:
+			print(f"Failed to fetch languages for {owner}/{repo}: {r.status_code} - {r.text[:100]}")
+	except Exception as e:
+		print(f"Error fetching languages for {owner}/{repo}: {e}")
 		pass
 	return out
 
@@ -46,7 +53,12 @@ def _fetch_repo_topics(owner: str, repo: str, headers: dict, session: requests.S
 		if r.ok:
 			json_data = r.json()
 			out = json_data.get("names") or json_data.get("topics") or []
-	except Exception:
+		elif r.status_code == 403:
+			print(f"RATE LIMIT EXCEEDED (403) fetching topics for {owner}/{repo}")
+		else:
+			print(f"Failed to fetch topics for {owner}/{repo}: {r.status_code} - {r.text[:100]}")
+	except Exception as e:
+		print(f"Error fetching topics for {owner}/{repo}: {e}")
 		pass
 	return out
 
@@ -58,7 +70,10 @@ def _fetch_readme(owner: str, repo: str, headers: dict, session: requests.Sessio
 		r = session.get(readme_url, headers={**headers, "Accept": "application/vnd.github.v3.raw"}, timeout=10)
 		if r.ok:
 			out = r.text
+		elif r.status_code == 403:
+			print(f"RATE LIMIT EXCEEDED (403) fetching readme (raw) for {owner}/{repo}")
 		else:
+			print(f"Failed to fetch readme (raw) for {owner}/{repo}: {r.status_code}")
 			# fallback to JSON which may contain base64 encoded content
 			r2 = session.get(readme_url, headers=headers, timeout=10)
 			if r2.ok:
@@ -72,6 +87,11 @@ def _fetch_readme(owner: str, repo: str, headers: dict, session: requests.Sessio
 						out = base64.b64decode(content.encode("utf-8")).decode("utf-8", errors="ignore")
 				except Exception:
 					out = ""
-	except Exception:
+			elif r2.status_code == 403:
+				print(f"RATE LIMIT EXCEEDED (403) fetching readme (json) for {owner}/{repo}")
+			else:
+				print(f"Failed to fetch readme (json) for {owner}/{repo}: {r2.status_code} - {r2.text[:100]}")
+	except Exception as e:
+		print(f"Error fetching readme for {owner}/{repo}: {e}")
 		pass
 	return out

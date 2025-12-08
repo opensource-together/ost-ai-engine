@@ -20,13 +20,13 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"core_github__table_projects_mapped": AssetIn()},
+	ins={"core_github__detect_languages": AssetIn()},
 	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
-def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+def core_github__fetch_readme(context, core_github__detect_languages: _t.List[_t.Dict]):
 	"""
-	Fetch GitHub README for each project (parallel).
+	Fetch GitHub /readme for each project.
 
 	**Description:**
 	Retrieves the README content for each mapped project to be used for embedding generation.
@@ -39,8 +39,8 @@ def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.Li
 	**Output:**
 	List of dictionaries containing project metadata and README content.
 	"""
-	context.log.info(f"core_github__fetch_readme: Starting fetch for {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects")
-	if not core_github__table_projects_mapped:
+	context.log.info(f"core_github__fetch_readme: Starting fetch for {len(core_github__detect_languages) if core_github__detect_languages else 0} projects")
+	if not core_github__detect_languages:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
 
 	token = getattr(context.resources.config, "github_token", None) or os.environ.get("GITHUB_ACCESS_TOKEN")
@@ -55,11 +55,16 @@ def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.Li
 	# SQLite event log (concurrent thread logging can cause sqlite locking
 	# errors). Keep at least 1 worker but cap to a conservative value.
 	max_workers = max(1, min(max_workers, 4))
+
 	with ThreadPoolExecutor(max_workers=max_workers) as ex:
 		futures = {}
-		for proj in core_github__table_projects_mapped:
-			repo_url = proj.get("repoUrl")
+		for proj in core_github__detect_languages:
+			repo_url = proj.get("url") or proj.get("repoUrl")
+			if not repo_url:
+				context.log.warning(f"Project missing URL: {proj.keys()}")
 			owner_repo = _extract_owner_repo(repo_url) if repo_url else None
+			if not owner_repo and repo_url:
+				context.log.warning(f"Failed to extract owner/repo from: {repo_url}")
 			if owner_repo:
 				owner, repo = owner_repo
 				futures[ex.submit(_fetch_readme, owner, repo, headers, session)] = {"project": proj, "repoUrl": repo_url}
@@ -89,13 +94,13 @@ def core_github__fetch_readme(context, core_github__table_projects_mapped: _t.Li
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"core_github__table_projects_mapped": AssetIn()},
+	ins={"core_github__detect_languages": AssetIn()},
 	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
-def core_github__fetch_repo_languages(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+def core_github__fetch_repo_languages(context, core_github__detect_languages: _t.List[_t.Dict]):
 	"""
-	Fetch GitHub /languages for each project (parallel).
+	Fetch GitHub /languages for each project.
 
 	**Description:**
 	Retrieves the language breakdown for each project from GitHub API.
@@ -108,8 +113,8 @@ def core_github__fetch_repo_languages(context, core_github__table_projects_mappe
 	**Output:**
 	List of dictionaries containing project metadata and list of languages.
 	"""
-	context.log.info(f"core_github__fetch_repo_languages: Starting fetch for {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects")
-	if not core_github__table_projects_mapped:
+	context.log.info(f"core_github__fetch_repo_languages: Starting fetch for {len(core_github__detect_languages) if core_github__detect_languages else 0} projects")
+	if not core_github__detect_languages:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
 
 	token = getattr(context.resources.config, "github_token", None) or os.environ.get("GITHUB_ACCESS_TOKEN")
@@ -122,10 +127,11 @@ def core_github__fetch_repo_languages(context, core_github__table_projects_mappe
 	max_workers = int(getattr(context.resources.config, "github_fetch_workers", 8))
 	# Cap concurrency to avoid SQLite locking in Dagster's event log.
 	max_workers = max(1, min(max_workers, 4))
+
 	with ThreadPoolExecutor(max_workers=max_workers) as ex:
 		futures = {}
-		for proj in core_github__table_projects_mapped:
-			repo_url = proj.get("repoUrl")
+		for proj in core_github__detect_languages:
+			repo_url = proj.get("url") or proj.get("repoUrl")
 			owner_repo = _extract_owner_repo(repo_url) if repo_url else None
 			if owner_repo:
 				owner, repo = owner_repo
@@ -155,13 +161,13 @@ def core_github__fetch_repo_languages(context, core_github__table_projects_mappe
 @asset(
 	kinds={"python"},
 	owners=DEFAULT_OWNERS,
-	ins={"core_github__table_projects_mapped": AssetIn()},
+	ins={"core_github__detect_languages": AssetIn()},
 	group_name="fetch_projects_metadatas",
 	required_resource_keys={"config"},
 )
-def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: _t.List[_t.Dict]):
+def core_github__fetch_repo_topics(context, core_github__detect_languages: _t.List[_t.Dict]):
 	"""
-	Fetch GitHub /topics for each project (parallel).
+	Fetch GitHub /topics for each project.
 
 	**Description:**
 	Retrieves the repository topics (tags) for each project from GitHub API.
@@ -174,8 +180,8 @@ def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: 
 	**Output:**
 	List of dictionaries containing project metadata and list of topics.
 	"""
-	context.log.info(f"core_github__fetch_repo_topics: Starting fetch for {len(core_github__table_projects_mapped) if core_github__table_projects_mapped else 0} projects")
-	if not core_github__table_projects_mapped:
+	context.log.info(f"core_github__fetch_repo_topics: Starting fetch for {len(core_github__detect_languages) if core_github__detect_languages else 0} projects")
+	if not core_github__detect_languages:
 		return Output(value=[], metadata={"count": MetadataValue.int(0)})
 
 	token = getattr(context.resources.config, "github_token", None) or os.environ.get("GITHUB_ACCESS_TOKEN")
@@ -188,10 +194,11 @@ def core_github__fetch_repo_topics(context, core_github__table_projects_mapped: 
 	max_workers = int(getattr(context.resources.config, "github_fetch_workers", 8))
 	# Cap concurrency to avoid SQLite locking in Dagster's event log.
 	max_workers = max(1, min(max_workers, 4))
+
 	with ThreadPoolExecutor(max_workers=max_workers) as ex:
 		futures = {}
-		for proj in core_github__table_projects_mapped:
-			repo_url = proj.get("repoUrl")
+		for proj in core_github__detect_languages:
+			repo_url = proj.get("url") or proj.get("repoUrl")
 			owner_repo = _extract_owner_repo(repo_url) if repo_url else None
 			if owner_repo:
 				owner, repo = owner_repo
