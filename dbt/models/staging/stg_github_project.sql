@@ -21,6 +21,25 @@ renamed as (
         and length(trim(data->>'description')) > 0
         -- Filter out projects with no language (optional, but good practice if we filter by language later)
         and data->>'language' is not null
+),
+
+deduplicated as (
+    select
+        *,
+        row_number() over (partition by url order by created_at desc) as rn
+    from renamed
 )
 
-select * from renamed
+select
+    id,
+    name,
+    description,
+    url,
+    stars,
+    forks,
+    language,
+    topics,
+    created_at,
+    updated_at
+from deduplicated
+where rn = 1

@@ -25,3 +25,6 @@ models:
     prod:
       +materialized: table
       +schema: prod
+    pivot:
+      +materialized: table
+      +schema: pivot
