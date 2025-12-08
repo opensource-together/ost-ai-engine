@@ -7,7 +7,7 @@ import json
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 @asset(
-    kinds={"python"},
+    kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     group_name="projects_embedding",
     description="Format project data from enriched metadata into a context string for embedding.",
@@ -25,9 +25,8 @@ def raw_projects__prepare_context(context):
     try:
         with get_db_cursor() as cur:
             # Read from pivot_github_project table (created by dbt)
-            # This table contains joined data from staging and intermediate
-            # Note: Schema is 'analytics' due to dbt custom schema config
-            cur.execute('SELECT id as "projectId", "enrichedData", url as "repoUrl", description, name, topics as "stg_topics" FROM "analytics"."pivot_github_project"')
+            # This table now contains flat enriched columns
+            cur.execute('SELECT id as "projectId", url as "repoUrl", description, name, readme, topics FROM "analytics"."pivot_github_project"')
             records = cur.fetchall()
             context.log.info(f"Fetched {len(records)} projects from pivot_github_project.")
     except Exception as e:
@@ -36,33 +35,23 @@ def raw_projects__prepare_context(context):
 
     for record in records:
         project_id = record.get("projectId")
-        enriched_data = record.get("enrichedData")
-        
-        if isinstance(enriched_data, str):
-            try:
-                enriched_data = json.loads(enriched_data)
-            except Exception:
-                enriched_data = {}
-        elif not isinstance(enriched_data, dict):
-            enriched_data = {}
-
-        # Use data from pivot table directly if available, fallback to enrichedData
-        repo_url = record.get("repoUrl") or enriched_data.get("repoUrl")
+        repo_url = record.get("repoUrl")
         if not repo_url:
             continue
 
-        description = record.get("description") or enriched_data.get("description") or ""
+        description = record.get("description") or ""
         name = record.get("name") or (repo_url.split("/")[-1] if repo_url else "Unknown")
+        readme = record.get("readme") or ""
         
-        readme = enriched_data.get("readme") or ""
+        # Topics are already a JSON list from the view
+        topics = record.get("topics") or []
+        if isinstance(topics, str):
+            try:
+                topics = json.loads(topics)
+            except Exception:
+                topics = []
         
-        # Combine topics from stg and enriched
-        stg_topics = record.get("stg_topics") or []
-        enriched_topics = enriched_data.get("topics") or []
-        
-        # Merge unique topics
-        all_topics = list(set((stg_topics if isinstance(stg_topics, list) else []) + (enriched_topics if isinstance(enriched_topics, list) else [])))
-        topics_str = ", ".join(all_topics)
+        topics_str = ", ".join(topics) if isinstance(topics, list) else str(topics)
         
         context_str = f"""
 Title: {name}
