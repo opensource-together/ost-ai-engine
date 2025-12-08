@@ -1,5 +1,5 @@
 import typing as _t
-from dagster import asset, Output, MetadataValue, AssetIn
+from dagster import asset, Output, MetadataValue, AssetIn, AssetKey
 from src.services.python.prisma_client import prisma_client
 from src.pipeline.assets.scraper.core.utils import _find_model
 
@@ -10,71 +10,83 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     owners=DEFAULT_OWNERS,
     group_name="projects_embedding",
     description="Format project data from enriched metadata into a context string for embedding.",
-    ins={"core_github__enrich_project_data": AssetIn()},
+
+    deps=[AssetKey(["ost", "pivot_github_project"])],
 )
-def raw_projects__prepare_context(context, core_github__enrich_project_data: _t.List[_t.Dict]):
+def raw_projects__prepare_context(context):
     """
     Formats the data into a single context string for each project.
-    Uses enriched input data and resolves tech stack names from the DB.
+    Reads from `pivot_github_project` table.
     """
-    context.log.info(f"raw_project_data: Starting with {len(core_github__enrich_project_data) if core_github__enrich_project_data else 0} items...")
+    context.log.info("raw_projects__prepare_context: Reading from IntGithubProject...")
 
+    from src.services.python.prisma_client import prisma_client
+    import json
+
+    results = []
     with prisma_client() as prisma:
         if prisma is None:
             context.log.error("Failed to connect to Prisma.")
-            # We can't resolve tech stacks without DB, but maybe we can still proceed with empty stacks?
-            # Or just fail/return empty. Let's return empty to be safe.
             return Output(value=[], metadata={"error": MetadataValue.text("Prisma client unavailable")})
 
-        # Fetch all TechStacks to map IDs to Names
-        ts_map = {}
-        model_ts = _find_model(prisma, ["tech_stack", "TechStack", "techStack", "techstack"])
-        if model_ts:
-            try:
-                all_ts = model_ts.find_many()
-                for ts in all_ts:
-                    ts_map[ts.id] = ts.name
-            except Exception as e:
-                context.log.warning(f"Failed to fetch TechStacks: {e}")
+        try:
+            # Read from pivot_github_project table (created by dbt)
+            # This table contains joined data from staging and intermediate
+            # Note: Schema is likely 'public_pivot' due to dbt custom schema config
+            records = prisma.query_raw('SELECT id as "projectId", "enrichedData", url as "repoUrl", description, name, topics as "stg_topics" FROM "public_pivot"."pivot_github_project"')
+            context.log.info(f"Fetched {len(records)} projects from pivot_github_project.")
+        except Exception as e:
+            context.log.error(f"Failed to query IntGithubProject table: {e}")
+            return Output(value=[], metadata={"error": MetadataValue.text(str(e))})
 
-    results = []
-    for item in core_github__enrich_project_data or []:
-        project = item.get("project") or {}
-        repo_url = item.get("repoUrl")
+    for record in records:
+        project_id = record.get("projectId")
+        enriched_data = record.get("enrichedData")
         
+        if isinstance(enriched_data, str):
+            try:
+                enriched_data = json.loads(enriched_data)
+            except Exception:
+                enriched_data = {}
+        elif not isinstance(enriched_data, dict):
+            enriched_data = {}
+
+        # Use data from pivot table directly if available, fallback to enrichedData
+        repo_url = record.get("repoUrl") or enriched_data.get("repoUrl")
         if not repo_url:
             continue
 
-        # Resolve Tech Stack names
-        tech_stack_ids = item.get("tech_stack_ids") or []
-        tech_stack_names = []
-        for ts_id in tech_stack_ids:
-            name = ts_map.get(ts_id)
-            if name:
-                tech_stack_names.append(name)
+        description = record.get("description") or enriched_data.get("description") or ""
+        name = record.get("name") or (repo_url.split("/")[-1] if repo_url else "Unknown")
         
-        tech_stacks_str = ", ".join(tech_stack_names)
+        readme = enriched_data.get("readme") or ""
         
-        description = project.get("description") or ""
-        title = project.get("title") or project.get("name") or "" # Fallback to name if title missing
-        readme = item.get("readme") or ""
-        topics = item.get("topics") or []
-        topics_str = ", ".join(topics)
+        # Combine topics from stg and enriched
+        stg_topics = record.get("stg_topics") or []
+        enriched_topics = enriched_data.get("topics") or []
+        
+        # Merge unique topics
+        all_topics = list(set((stg_topics if isinstance(stg_topics, list) else []) + (enriched_topics if isinstance(enriched_topics, list) else [])))
+        topics_str = ", ".join(all_topics)
+        
+        # Tech stacks are IDs in enriched_data. We might want names.
+        # But for embedding, maybe topics/readme/description is enough?
         
         context_str = f"""
-Title: {title}
+Title: {name}
 Description: {description}
-Tech Stacks: {tech_stacks_str}
 Topics: {topics_str}
-Readme: {readme}
+Readme: {readme[:5000]} 
 """.strip()
+# Truncate readme to avoid huge context
 
         results.append({
             "repoUrl": repo_url,
-            "context": context_str
+            "context": context_str,
+            "project_id": project_id
         })
 
-    context.log.info(f"raw_project_data: Formatted {len(results)} project contexts.")
+    context.log.info(f"raw_projects__prepare_context: Formatted {len(results)} project contexts.")
 
     return Output(
         value=results,
