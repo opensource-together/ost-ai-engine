@@ -41,6 +41,7 @@ RUN poetry install --no-root --only main
 # Copy source and generate Prisma client
 # Generate Prisma client and prefetch binaries into /app/.cache/prisma
 COPY src/ src/
+COPY dbt/ dbt/
 COPY prisma/ prisma/
 # Generate Prisma client and prefetch binaries into /app/.cache/prisma
 RUN poetry run prisma generate
@@ -103,9 +104,9 @@ WORKDIR /app
 ENV PROJECT_ROOT=.
 ENV CFG_PATH=config/cfg.py
 ENV OST_CONFIG_PATH=/app/config/cfg.yaml
-ENV DAGSTER_HOME=/app/.dagster_home
-ENV DAGSTER_STORAGE_DIR=/app/.dagster_home/history
-ENV DAGSTER_LOGS_DIR=/app/.dagster_home/logs
+ENV DAGSTER_HOME=/app/dagster
+ENV DAGSTER_STORAGE_DIR=/app/dagster/history
+ENV DAGSTER_LOGS_DIR=/app/dagster/logs
 ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
 ENV XDG_CACHE_HOME=/app/.cache
 
@@ -131,6 +132,7 @@ COPY --from=builder --chown=app:app /app/.venv /app/.venv
 # Copy required artifacts from previous stages
 COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
 COPY --from=builder --chown=app:app /app/src src
+COPY --from=builder --chown=app:app /app/dbt dbt
 
 COPY --from=builder --chown=app:app /app/prisma prisma
 COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
@@ -147,8 +149,8 @@ RUN chmod +x /app/scripts/cfg_cron.py /app/scripts/docker-entrypoint.sh || true
 COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
 
 # Create cache dirs and set ownership to 'app'
-RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
-    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
+RUN mkdir -p /app/.cache/prisma /app/dagster /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
+    chown -R app:app /app/.cache /app/dagster /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
 
 # Create config dir and set owner
 RUN mkdir config/ && chown app:app config
