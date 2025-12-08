@@ -15,7 +15,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python"},
     owners=DEFAULT_OWNERS,
     # Read from dbt staging model
-    deps=[AssetKey("stg_github_project")],
+    deps=[AssetKey(["analytics", "stg_github_project"])],
     group_name="github_projects_scraper",
     required_resource_keys={"config", "fasttext_model"},
 )

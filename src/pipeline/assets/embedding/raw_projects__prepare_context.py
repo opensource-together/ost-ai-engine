@@ -12,7 +12,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     group_name="projects_embedding",
     description="Format project data from enriched metadata into a context string for embedding.",
 
-    deps=[AssetKey(["ost", "pivot_github_project"])],
+    deps=[AssetKey(["analytics", "pivot_github_project"])],
 )
 def raw_projects__prepare_context(context):
     """
