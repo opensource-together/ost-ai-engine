@@ -7,8 +7,8 @@ from dagster import (
     Output,
     asset,
 )
-from src.services.python.prisma_client import prisma_client
-from src.pipeline.assets.scraper.core.utils import _find_model
+from src.services.python.db import get_db_cursor
+import uuid
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -29,33 +29,8 @@ def out_projects__store_embeddings(context, core_projects__compute_embeddings: _
     if not core_projects__compute_embeddings:
         return Output(value=[], metadata={"count": MetadataValue.int(0)})
 
-    with prisma_client() as prisma:
-        if prisma is None:
-            context.log.error("Failed to connect to Prisma.")
-            return Output(value=[], metadata={"error": MetadataValue.text("Prisma client unavailable")})
-
-        project_model = _find_model(prisma, ["project", "Project"])
-        embedding_model = _find_model(prisma, ["project_embedding", "ProjectEmbedding", "projectEmbedding", "projectembedding"])
-        
-        if not project_model or not embedding_model:
-             context.log.error("Project or ProjectEmbedding model not found.")
-             return Output(value=[], metadata={"error": MetadataValue.text("Models not found")})
-
-        repo_urls = [item["repoUrl"] for item in core_projects__compute_embeddings]
-        
-        try:
-            projects = project_model.find_many(
-                where={
-                    "repoUrl": {"in": repo_urls}
-                }
-            )
-            repo_to_id = {p.repoUrl: p.id for p in projects}
-        except Exception as e:
-            context.log.error(f"Failed to fetch projects: {e}")
-            return Output(value=[], metadata={"error": MetadataValue.text(f"Fetch failed: {e}")})
-
-        upserted_count = 0
-        
+    upserted_count = 0
+    with get_db_cursor(commit=True) as cur:
         for item in core_projects__compute_embeddings:
             repo_url = item.get("repoUrl")
             vector = item.get("vector")
@@ -75,25 +50,33 @@ def out_projects__store_embeddings(context, core_projects__compute_embeddings: _
                 }
                 
                 # Delete old records to ensure idempotency
-                prisma.execute_raw('DELETE FROM "int_github_project" WHERE "projectId" = $1::uuid', project_id)
-                prisma.execute_raw(
+                cur.execute('DELETE FROM "analytics"."int_github_project" WHERE "projectId" = %s', (project_id,))
+                
+                cur.execute(
                     """
-                    INSERT INTO "int_github_project" ("id", "projectId", "enrichedData", "createdAt", "updatedAt")
-                    VALUES (uuid_generate_v4(), $1::uuid, $2::jsonb, NOW(), NOW());
+                    INSERT INTO "analytics"."int_github_project" ("id", "projectId", "enrichedData", "createdAt", "updatedAt")
+                    VALUES (%s, %s, %s, NOW(), NOW())
                     """,
-                    project_id,
-                    json.dumps(enriched_data)
+                    (str(uuid.uuid4()), project_id, json.dumps(enriched_data))
                 )
 
                 # 2. Insert into embd_github_project (Embeddings)
-                prisma.execute_raw('DELETE FROM "embd_github_project" WHERE "projectId" = $1::uuid', project_id)
-                prisma.execute_raw(
+                cur.execute('DELETE FROM "analytics"."embd_github_project" WHERE "projectId" = %s', (project_id,))
+                
+                # Format vector for pgvector
+                # vector is likely a list of floats. pgvector expects '[1.0, 2.0, ...]' string or list adapter
+                # psycopg2 with pgvector might handle list, but safe to cast to string representation if needed.
+                # Usually psycopg2 adapts lists to array, but pgvector needs specific format.
+                # Let's assume standard list adaptation works or cast to string.
+                # Better to use string format '[...]' for vector type.
+                vector_str = str(vector) if isinstance(vector, list) else vector
+
+                cur.execute(
                     """
-                    INSERT INTO "embd_github_project" ("id", "projectId", "embeddingVector", "createdAt")
-                    VALUES (uuid_generate_v4(), $1::uuid, $2::vector, NOW());
+                    INSERT INTO "analytics"."embd_github_project" ("id", "projectId", "embeddingVector", "createdAt")
+                    VALUES (%s, %s, %s, NOW())
                     """,
-                    project_id,
-                    vector
+                    (str(uuid.uuid4()), project_id, vector_str)
                 )
                 upserted_count += 1
                 

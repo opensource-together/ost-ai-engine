@@ -2,24 +2,14 @@ import os
 import json
 import subprocess
 import typing as _t
-from contextlib import contextmanager
-
 from dagster import (
     asset,
-    AssetIn,
-    AssetKey,
     MetadataValue,
     Output,
 )
-
-# Dagster resources
 from src.pipeline.resources.cfg_resource import build_scraper_env
-from src.pipeline.resources.map.mapping_map import (
-    GITLAB_TO_PROJECT_MAPPING,
-)
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
-
 
 @asset(
     kinds={"go", "github"},
@@ -39,7 +29,6 @@ def raw_github__extract_projects(context):
     with tempfile.NamedTemporaryFile(mode="w+", delete=True) as tmp_out:
         context.log.info(f"GITHUB_SCRAPING_QUERY to Go: '{env['GITHUB_SCRAPING_QUERY']}'")
         try:
-            # Redirect stdout to a temporary file to avoid OOM with large outputs
             # Redirect stdout to a temporary file to avoid OOM with large outputs
             scraper_path = os.environ.get("GO_SCRAPER_PATH", "/app/github-scraper")
             with open(tmp_out.name, "w") as f_out:
@@ -115,47 +104,3 @@ def raw_github__extract_projects(context):
         except Exception as e:
             context.log.exception("GitHub scraper error")
             return Output(value=[], metadata={"project_count": MetadataValue.int(0), "error": MetadataValue.text(str(e))})
-
-
-
-
-
-@asset(
-    kinds={"python", "postgres"},
-    owners=DEFAULT_OWNERS,
-    ins={"projects": AssetIn("raw_github__extract_projects")},
-    group_name="github_projects_scraper",
-    key=AssetKey(["ost", "raw_github_project"]), # Matches dbt source
-)
-def raw_github__load_to_postgres(context, projects: _t.List[_t.Dict]):
-    """
-    Load raw GitHub projects into Postgres for dbt processing.
-    """
-    context.log.info(f"raw_github__load_to_postgres: Loading {len(projects)} projects to Postgres...")
-    
-    # Import Prisma inside the asset to avoid top-level import issues if client isn't generated
-    try:
-        from prisma import Prisma
-    except ImportError:
-        context.log.error("Prisma client not found. Run 'prisma generate'.")
-        raise
-
-    db = Prisma()
-    db.connect()
-    
-    count = 0
-    try:
-        for project in projects:
-            try:
-                # Store the entire project dict as JSON
-                # Explicitly dump to string to avoid Prisma validation issues with complex dicts
-                db.rawgithubproject.create(data={"data": json.dumps(project)})
-                count += 1
-            except Exception as e:
-                context.log.warning(f"Failed to insert project {project.get('name', 'unknown')}: {e}")
-    finally:
-        if db.is_connected():
-            db.disconnect()
-
-    context.log.info(f"raw_github__load_to_postgres: Loaded {count} projects.")
-    return Output(value=None, metadata={"loaded_count": MetadataValue.int(count)})

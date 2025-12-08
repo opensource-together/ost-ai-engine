@@ -1,7 +1,8 @@
 import typing as _t
 from dagster import asset, Output, MetadataValue, AssetIn, AssetKey
-from src.services.python.prisma_client import prisma_client
-from src.pipeline.assets.scraper.core.utils import _find_model
+
+from src.services.python.db import get_db_cursor
+import json
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -20,24 +21,18 @@ def raw_projects__prepare_context(context):
     """
     context.log.info("raw_projects__prepare_context: Reading from IntGithubProject...")
 
-    from src.services.python.prisma_client import prisma_client
-    import json
-
     results = []
-    with prisma_client() as prisma:
-        if prisma is None:
-            context.log.error("Failed to connect to Prisma.")
-            return Output(value=[], metadata={"error": MetadataValue.text("Prisma client unavailable")})
-
-        try:
+    try:
+        with get_db_cursor() as cur:
             # Read from pivot_github_project table (created by dbt)
             # This table contains joined data from staging and intermediate
-            # Note: Schema is likely 'public_pivot' due to dbt custom schema config
-            records = prisma.query_raw('SELECT id as "projectId", "enrichedData", url as "repoUrl", description, name, topics as "stg_topics" FROM "public_pivot"."pivot_github_project"')
+            # Note: Schema is 'analytics' due to dbt custom schema config
+            cur.execute('SELECT id as "projectId", "enrichedData", url as "repoUrl", description, name, topics as "stg_topics" FROM "analytics"."pivot_github_project"')
+            records = cur.fetchall()
             context.log.info(f"Fetched {len(records)} projects from pivot_github_project.")
-        except Exception as e:
-            context.log.error(f"Failed to query IntGithubProject table: {e}")
-            return Output(value=[], metadata={"error": MetadataValue.text(str(e))})
+    except Exception as e:
+        context.log.error(f"Failed to query pivot_github_project table: {e}")
+        return Output(value=[], metadata={"error": MetadataValue.text(str(e))})
 
     for record in records:
         project_id = record.get("projectId")
@@ -68,9 +63,6 @@ def raw_projects__prepare_context(context):
         # Merge unique topics
         all_topics = list(set((stg_topics if isinstance(stg_topics, list) else []) + (enriched_topics if isinstance(enriched_topics, list) else [])))
         topics_str = ", ".join(all_topics)
-        
-        # Tech stacks are IDs in enriched_data. We might want names.
-        # But for embedding, maybe topics/readme/description is enough?
         
         context_str = f"""
 Title: {name}

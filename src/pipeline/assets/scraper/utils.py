@@ -2,15 +2,6 @@ import typing as _t
 import requests
 from urllib.parse import urlparse
 
-# Generic helper: resolve a model attribute on the Prisma client using common
-# candidate names (snake_case, camelCase, PascalCase). Returns the model
-# object or None.
-def _find_model(client_obj, candidates: list[str]):
-	for n in candidates:
-		if hasattr(client_obj, n):
-			return getattr(client_obj, n)
-	return None
-
 def _extract_owner_repo(repo_url: str) -> _t.Optional[_t.Tuple[str, str]]:
 	try:
 		p = urlparse(repo_url)
@@ -21,12 +12,6 @@ def _extract_owner_repo(repo_url: str) -> _t.Optional[_t.Tuple[str, str]]:
 		print(f"Error extracting owner/repo from {repo_url}: {e}")
 		pass
 	return None
-
-def _cosine_sim(a, b) -> float:
-	# Import numpy lazily to avoid loading its C extensions at module import
-	# time which can cause SIGBUS when using a multiprocess/fork executor.
-	import numpy as np
-	return float(np.dot(a, b))
 
 def _fetch_repo_languages(owner: str, repo: str, headers: dict, session: requests.Session) -> _t.List[str]:
 	out = []

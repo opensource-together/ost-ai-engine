@@ -35,25 +35,43 @@ from .schedules.github_scraper_schedule import make_github_scraper_schedule
 from .resources.cfg_resource import config_resource
 from .resources.fasttext_resource import FastTextModelResource
 from .resources.embedding_model_resource import EmbeddingModelResource
-from .assets.scraper.raw import github as raw_github
-from .assets.scraper.core import filtering, fetching, mapping, categorization
-from .assets.scraper.out import github as out_github
-from .assets.embedding.raw import projects as embedding_project
-from .assets.embedding.core import projects as embedding_core
-from .assets.embedding.out import projects as embedding_out
 
-raw_assets = load_assets_from_modules([raw_github])
-core_assets = load_assets_from_modules([
-    filtering,
-    fetching,
-    mapping,
-    categorization
+# Scraper Assets
+from .assets.scraper import (
+    raw_github__extract_projects,
+    raw_github__load_to_postgres,
+    core_github__detect_languages,
+    core_github__fetch_readme,
+    core_github__fetch_repo_languages,
+    core_github__fetch_repo_topics,
+    core_github__merge_repo_meta,
+    core_github__enrich_project_data,
+    out_github__table_projects_db,
+)
+
+# Embedding Assets
+from .assets.embedding import (
+    raw_projects__prepare_context,
+    core_projects__compute_embeddings,
+    out_projects__store_embeddings,
+)
+
+scraper_assets = load_assets_from_modules([
+    raw_github__extract_projects,
+    raw_github__load_to_postgres,
+    core_github__detect_languages,
+    core_github__fetch_readme,
+    core_github__fetch_repo_languages,
+    core_github__fetch_repo_topics,
+    core_github__merge_repo_meta,
+    core_github__enrich_project_data,
+    out_github__table_projects_db,
 ])
-out_assets = load_assets_from_modules([out_github])
+
 embedding_assets = load_assets_from_modules([
-    embedding_project,
-    embedding_core,
-    embedding_out
+    raw_projects__prepare_context,
+    core_projects__compute_embeddings,
+    out_projects__store_embeddings,
 ])
 
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
@@ -68,20 +86,9 @@ github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
 
 defs = Definitions(
     assets=[
-    # raw assets
-    *raw_assets,
-
-    # core assets
-    *core_assets,
-
-    # out assets
-    *out_assets,
-
-    # embedding assets
-    *embedding_assets,
-
-    # dbt assets
-    *dbt_assets_list,
+        *scraper_assets,
+        *embedding_assets,
+        *dbt_assets_list,
     ],
     resources={
         "config": config_resource,

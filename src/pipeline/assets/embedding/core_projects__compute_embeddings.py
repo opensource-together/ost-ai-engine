@@ -42,7 +42,9 @@ def core_projects__compute_embeddings(context: AssetExecutionContext, raw_projec
                 
             results.append({
                 "repoUrl": repo_url,
-                "vector": vector
+                "vector": vector,
+                "context": context_str,
+                "project_id": item.get("project_id")
             })
         except Exception as e:
             context.log.error(f"Failed to compute embedding for {repo_url}: {e}")
