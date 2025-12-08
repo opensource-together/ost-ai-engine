@@ -136,9 +136,23 @@ def core_github__detect_languages(context):
             if preds:
                 lang_code, confidence = preds[0]
             
-            blacklisted = any((c in NON_LATIN_LANGS) for c, _ in preds)
-            if blacklisted:
-                filtered_out_projects.append({"id": repo.get("id"), "name": repo.get("name"), "reason": "blacklisted_lang", "lang": lang_code})
+            # Check for blacklisted languages with significant confidence (> 30%)
+            blacklisted_found = None
+            for code, score in preds:
+                if code in NON_LATIN_LANGS and score >= 0.3:
+                    blacklisted_found = (code, score)
+                    break
+            
+            if blacklisted_found:
+                b_code, b_score = blacklisted_found
+                filtered_out_projects.append({
+                    "id": repo.get("id"), 
+                    "name": repo.get("name"), 
+                    "reason": "blacklisted_lang", 
+                    "lang": b_code,
+                    "score": b_score,
+                    "all_langs": preds
+                })
                 continue
         except Exception as e:
             context.log.warning(f"fastText prediction failed for repo index {i}: {e}")
