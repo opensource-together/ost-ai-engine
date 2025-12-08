@@ -15,10 +15,14 @@ final as (
         p.stars,
         p.forks,
         p.language,
-        p."enrichedData",
+        p.readme,
+        p.topics,
+        p.languages,
+        p.language_detected,
+        p.language_confidence,
         e."embeddingVector"
     from pivot p
-    left join embeddings e on p.id = e."projectId"
+    left join embeddings e on p.id = e."projectId"::uuid
 )
 
 select * from final
