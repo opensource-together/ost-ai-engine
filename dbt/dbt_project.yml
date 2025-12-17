@@ -3,7 +3,6 @@ version: '1.0.0'
 config-version: 2
 
 profile: 'ost_linker'
-
 model-paths: ["models"]
 analysis-paths: ["analyses"]
 test-paths: ["tests"]
@@ -11,21 +10,104 @@ seed-paths: ["seeds"]
 macro-paths: ["macros"]
 snapshot-paths: ["snapshots"]
 
-target-path: "target"  # directory which will store compiled SQL files
-clean-targets:         # directories to be removed by 'dbt clean'
+target-path: "target"
+clean-targets:
   - "target"
   - "dbt_packages"
 
 models:
   ost_linker:
-    # Config for all models
-    staging:
-      +materialized: table
-      +schema: github
-    prod:
-      +materialized: table
-      +schema: github
-    pivot:
-      +materialized: table
-      +schema: github
-    
+
+    users:
+      +enabled: true
+      
+      staging:
+        +materialized: table
+        +schema: ml
+        # public staging tables removed/truncated in DB cleanup, keeping config minimal or removing if models deleted. 
+        # Assuming we keep models file but they are empty or unused for now. 
+        # If models files deleted, remove this block. Keeping empty for safety.
+
+      pivot:
+        +materialized: table
+        +schema: ml
+        pvt_user_profile:
+          +enabled: true
+          +meta:
+            dagster:
+              group: embedding
+              
+      int:
+        +materialized: table
+        +schema: ml
+        int_user_profile:
+          +enabled: true
+          +meta:
+            dagster:
+              group: embedding
+        int_category_embedding:
+          +enabled: true
+          +meta:
+             dagster:
+               group: embedding
+        int_domain_embedding:
+          +enabled: true
+          +meta:
+             dagster:
+               group: embedding
+
+              
+    projects:
+      +enabled: true
+      
+      staging:
+        +materialized: table
+        +schema: github
+        stg_github_project:
+          +enabled: true
+          +meta:
+            dagster:
+              group: ingestion
+        stg_github_readme:
+          +enabled: true
+          +meta:
+            dagster:
+              group: ingestion
+        stg_github_topics:
+          +enabled: true
+          +meta:
+            dagster:
+              group: ingestion
+        stg_github_languages:
+          +enabled: true
+          +meta:
+            dagster:
+              group: ingestion
+        stg_github_detection:
+          +enabled: true
+          +meta:
+            dagster:
+              group: ingestion
+              
+      int:
+        +materialized: table
+        +schema: github
+        int_github_project:
+          +enabled: true
+          +meta:
+            dagster:
+              group: ingestion
+        int_github_embedding:
+          +enabled: true
+          +meta:
+            dagster:
+              group: embedding
+
+      pivot:
+        +materialized: table
+        pvt_github_project:
+          +enabled: true
+          +schema: github
+          +meta:
+            dagster:
+              group: ingestion
