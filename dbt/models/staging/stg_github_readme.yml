@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: stg_github_readme
+    description: "Staging model for GitHub readmes. Deduplicates raw readme content."
+    columns:
+      - name: id
+        description: "Unique identifier for the record."
+        tests:
+          - unique
+          - not_null
+      - name: project_id
+        description: "Foreign key to the project."
+      - name: repo_url
+        description: "URL of the repository."
+      - name: content
+        description: "Content of the README file."
+      - name: created_at
+        description: "Timestamp when the record was created."

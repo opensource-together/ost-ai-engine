@@ -1,0 +1,19 @@
+version: 2
+
+models:
+  - name: stg_github_languages
+    description: "Staging model for GitHub languages. Deduplicates raw language breakdown data."
+    columns:
+      - name: id
+        description: "Unique identifier for the record."
+        tests:
+          - unique
+          - not_null
+      - name: project_id
+        description: "Foreign key to the project."
+      - name: repo_url
+        description: "URL of the repository."
+      - name: languages
+        description: "JSON object mapping languages to bytes."
+      - name: created_at
+        description: "Timestamp when the record was created."

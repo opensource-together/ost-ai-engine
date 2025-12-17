@@ -177,8 +177,16 @@ uv.lock
 
 # Dagster
 .tmp*
-.dagster_home/*
-!.dagster_home/dagster.yaml
+dagster/
+!dagster/dagster.yml
 
 # Docker entrypoint scripts
 entrypoint.sh
+
+# Node
+package-lock.json
+package.json
+
+# dbt
+dbt/profiles.yml
+dbt/.user.yml

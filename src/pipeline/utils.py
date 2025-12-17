@@ -5,7 +5,6 @@ imports throughout the repo can import `prisma_client` from
 `src.pipeline.utils`.
 """
 
-from src.services.python.prisma_client import prisma_client
 from src.services.python.load_cfg import PipelineConfig
 
-__all__ = ["prisma_client", "PipelineConfig"]
+__all__ = ["PipelineConfig"]

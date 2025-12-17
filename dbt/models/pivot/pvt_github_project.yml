@@ -1,0 +1,39 @@
+version: 2
+
+models:
+  - name: pvt_github_project
+    description: "Pivot model joining staging data with enriched metadata (TechStacks, Readmes)."
+    columns:
+      - name: id
+        description: "Unique identifier for the project."
+        tests:
+          - unique
+          - not_null
+      - name: name
+        description: "Name of the repository."
+      - name: description
+        description: "Description of the repository."
+      - name: url
+        description: "URL of the repository."
+      - name: stars
+        description: "Number of stars."
+      - name: forks
+        description: "Number of forks."
+      - name: language
+        description: "Primary language of the repository (coalesced from source and detection)."
+      - name: readme_content
+        description: "Raw content of the README."
+      - name: fetched_topics
+        description: "Topics fetched from GitHub."
+      - name: fetched_languages
+        description: "Languages fetched from GitHub."
+      - name: language_detected
+        description: "Language detected by the scraper."
+      - name: language_confidence
+        description: "Confidence score of the language detection."
+      - name: context
+        description: "Cleaned and formatted context string for embedding (Title + Description + Topics + Readme)."
+      - name: created_at
+        description: "Timestamp when the record was created."
+      - name: updated_at
+        description: "Timestamp when the record was last updated."
