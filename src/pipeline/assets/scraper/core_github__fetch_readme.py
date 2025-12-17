@@ -1,5 +1,6 @@
 import typing as _t
 import os
+import uuid
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dagster import (
@@ -21,8 +22,9 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    ins={"core_github__detect_languages": AssetIn(key=AssetKey(["ost", "raw_github_detection"]))},
-    group_name="fetch_projects_metadatas",
+    # Depends on detection
+    ins={"core_github__detect_languages": AssetIn(key=AssetKey(["ost", "int_github_detection"]))},
+    group_name="ingestion",
     key=AssetKey(["ost", "raw_github_readme"]), # Matches dbt source
     required_resource_keys={"config"},
 )
@@ -89,16 +91,17 @@ def core_github__fetch_readme(context, core_github__detect_languages: _t.List[_t
             for item in results:
                 proj_id = item["project"].get("id")
                 if not proj_id: continue
+                # Delete existing record first to simulate upsert without unique constraint
+                cur.execute(
+                    'DELETE FROM "github"."raw_github_readme" WHERE "project_id" = %s',
+                    (proj_id,)
+                )
                 cur.execute(
                     """
-                    INSERT INTO "github"."raw_github_readme" ("project_id", "repo_url", "content", "created_at")
-                    VALUES (%s, %s, %s, NOW())
-                    ON CONFLICT ("project_id") DO UPDATE
-                    SET "content" = EXCLUDED."content",
-                        "repo_url" = EXCLUDED."repo_url",
-                        "created_at" = NOW()
+                    INSERT INTO "github"."raw_github_readme" ("id", "project_id", "repo_url", "content", "created_at")
+                    VALUES (%s, %s, %s, %s, NOW())
                     """,
-                    (proj_id, item["repoUrl"], item["readme"])
+                    (str(uuid.uuid4()), proj_id, item["repoUrl"], item["readme"])
                 )
             context.log.info(f"Inserted {len(results)} readme records into raw_github_readme.")
     except Exception as e:
