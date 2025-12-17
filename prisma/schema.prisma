@@ -13,7 +13,7 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  schemas    = ["github", "public"]
+  schemas    = ["github", "public", "ml", "match"]
   extensions = [uuidOssp(map: "uuid-ossp"), vector]
 }
 
@@ -217,12 +217,13 @@ model ProjectTechStack {
 }
 
 model Category {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name            String            @unique
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  ProjectCategory ProjectCategory[]
-  UserCategories  UserCategories[]
+  id                     String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                   String                  @unique
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  ProjectCategory        ProjectCategory[]
+  UserCategories         UserCategories[]
+  projectClassifications ProjectClassification[]
 
   @@schema("public")
 }
@@ -236,18 +237,19 @@ model ProjectCategory {
   createdAt  DateTime @default(now())
 
   @@unique([projectId, categoryId])
-  @@map("authenticator")
+  @@map("project_category")
   @@schema("public")
 }
 
 model Domain {
-  id             String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name           String          @unique
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @updatedAt
-  ProjectDomain  ProjectDomain[]
-  UserDomains    UserDomains[]
-  userEmbeddings UserEmbedding[]
+  id                     String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                   String                  @unique
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  ProjectDomain          ProjectDomain[]
+  UserDomains            UserDomains[]
+  userEmbeddings         UserEmbedding[]
+  projectClassifications ProjectClassification[]
 
   @@schema("public")
 }
@@ -265,31 +267,49 @@ model ProjectDomain {
   @@schema("public")
 }
 
+model ProjectClassification {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId          String    @unique @db.Uuid
+  categoryId         String?   @db.Uuid
+  domainId           String?   @db.Uuid
+  categoryConfidence Float?
+  domainConfidence   Float?
+  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  domain             Domain?   @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("project_classification")
+  @@schema("match")
+}
+
 model Project {
-  id                String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title             String
-  description       String?
-  repoUrl           String?            @unique
-  provider          Provider
-  githubUrl         String?
-  gitlabUrl         String?
-  twitterUrl        String?
-  linkedinUrl       String?
-  discordUrl        String?
-  websiteUrl        String?
-  published         Boolean            @default(false)
-  trending          Boolean            @default(false)
-  techStacks        ProjectTechStack[]
-  categories        ProjectCategory[]
-  domains           ProjectDomain[]
-  ownerId           String?            @db.Uuid
-  owner             User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  logoUrl           String?
-  imagesUrls        String[]
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  projectBookmark   ProjectBookmark[]
-  projectEmbeddings ProjectEmbedding[]
+  id                    String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title                 String
+  description           String?
+  repoUrl               String?                @unique
+  provider              Provider
+  githubUrl             String?
+  gitlabUrl             String?
+  twitterUrl            String?
+  linkedinUrl           String?
+  discordUrl            String?
+  websiteUrl            String?
+  published             Boolean                @default(false)
+  trending              Boolean                @default(false)
+  techStacks            ProjectTechStack[]
+  categories            ProjectCategory[]
+  domains               ProjectDomain[]
+  ownerId               String?                @db.Uuid
+  owner                 User?                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  logoUrl               String?
+  imagesUrls            String[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  projectBookmark       ProjectBookmark[]
+  projectEmbeddings     ProjectEmbedding[]
+  projectClassification ProjectClassification?
 
   @@schema("public")
 }
@@ -315,6 +335,39 @@ model BetaSignup {
   @@schema("public")
 }
 
+model RawGithubReadme {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String
+  repo_url   String?
+  content    String?
+  created_at DateTime @default(now())
+
+  @@map("raw_github_readme")
+  @@schema("github")
+}
+
+model RawGithubTopics {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String
+  repo_url   String?
+  topics     Json?
+  created_at DateTime @default(now())
+
+  @@map("raw_github_topics")
+  @@schema("github")
+}
+
+model RawGithubLanguages {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String
+  repo_url   String?
+  languages  Json?
+  created_at DateTime @default(now())
+
+  @@map("raw_github_languages")
+  @@schema("github")
+}
+
 model RawGithubProject {
   id        String   @id @default(uuid()) @db.Uuid
   data      Json
@@ -322,6 +375,18 @@ model RawGithubProject {
   updatedAt DateTime @updatedAt
 
   @@map("raw_github_project")
+  @@schema("github")
+}
+
+model IntGithubDetection {
+  id                  String   @id @default(uuid())
+  project_id          String   @unique
+  repo_url            String?
+  language_detected   String?
+  language_confidence Float?
+  created_at          DateTime @default(now())
+
+  @@map("int_github_detection")
   @@schema("github")
 }
 
@@ -343,5 +408,35 @@ model EmbdGithubProject {
   createdAt       DateTime               @default(now())
 
   @@map("embd_github_project")
-  @@schema("github")
+  @@schema("ml")
+}
+
+model EmbdUser {
+  id              String                 @id @default(uuid())
+  userId          String                 @unique // Foreign key to User
+  embeddingVector Unsupported("vector")?
+  createdAt       DateTime               @default(now())
+
+  @@map("embd_user")
+  @@schema("ml")
+}
+
+model EmbdCategory {
+  id              String                 @id @default(uuid())
+  categoryId      String                 @unique
+  embeddingVector Unsupported("vector")?
+  createdAt       DateTime               @default(now())
+
+  @@map("embd_category")
+  @@schema("ml")
+}
+
+model EmbdDomain {
+  id              String                 @id @default(uuid())
+  domainId        String                 @unique
+  embeddingVector Unsupported("vector")?
+  createdAt       DateTime               @default(now())
+
+  @@map("embd_domain")
+  @@schema("ml")
 }
