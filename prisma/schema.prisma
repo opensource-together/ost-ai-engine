@@ -390,17 +390,6 @@ model IntGithubDetection {
   @@schema("github")
 }
 
-model IntGithubProject {
-  id           String   @id @default(uuid())
-  projectId    String   @unique // Foreign key to Staging/Raw project ID
-  enrichedData Json // Stores readme, topics, etc.
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  @@map("int_github_project")
-  @@schema("github")
-}
-
 model EmbdGithubProject {
   id              String                 @id @default(uuid())
   projectId       String                 @unique // Foreign key to Project
