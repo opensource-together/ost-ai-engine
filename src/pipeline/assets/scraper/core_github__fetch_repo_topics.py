@@ -1,5 +1,6 @@
 import typing as _t
 import os
+import uuid
 import requests
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from dagster import (
@@ -22,8 +23,9 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    ins={"core_github__detect_languages": AssetIn(key=AssetKey(["ost", "raw_github_detection"]))},
-    group_name="fetch_projects_metadatas",
+    # Depends on detection (to filter topics)
+    ins={"core_github__detect_languages": AssetIn(key=AssetKey(["ost", "int_github_detection"]))},
+    group_name="ingestion",
     key=AssetKey(["ost", "raw_github_topics"]), # Matches dbt source
     required_resource_keys={"config"},
 )
@@ -81,21 +83,21 @@ def core_github__fetch_repo_topics(context, core_github__detect_languages: _t.Li
             for item in results:
                 proj_id = item["project"].get("id")
                 if not proj_id: continue
+                # Delete existing record first to simulate upsert without unique constraint
+                cur.execute(
+                    'DELETE FROM "github"."raw_github_topics" WHERE "project_id" = %s',
+                    (proj_id,)
+                )
                 cur.execute(
                     """
-                    INSERT INTO "github"."raw_github_topics" ("project_id", "repo_url", "topics", "created_at")
-                    VALUES (%s, %s, %s, NOW())
-                    ON CONFLICT ("project_id") DO UPDATE
-                    SET "topics" = EXCLUDED."topics",
-                        "repo_url" = EXCLUDED."repo_url",
-                        "created_at" = NOW()
+                    INSERT INTO "github"."raw_github_topics" ("id", "project_id", "repo_url", "topics", "created_at")
+                    VALUES (%s, %s, %s, %s, NOW())
                     """,
-                    (proj_id, item["repoUrl"], json.dumps(item["topics"]))
+                    (str(uuid.uuid4()), proj_id, item["repoUrl"], json.dumps(item["topics"]))
                 )
             context.log.info(f"Inserted {len(results)} topic records into raw_github_topics.")
     except Exception as e:
         context.log.error(f"Failed to insert topic records: {e}")
-    # include small samples in metadata for debugging
     sample = results[:3]
     sample_repo_urls = [r.get("repoUrl") for r in sample]
     sample_topics = [r.get("topics") for r in sample]
