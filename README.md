@@ -40,12 +40,12 @@ Dagster UI : http://localhost:3000
 
 ## Status
 Work in progress.  
-Build in public here : [@spideyX](https://x.com/spideyai_X)
+Build in public here : [@spideystreet](https://x.com/spideystreet)
 
 ---
 
 <div align="center">
 
-Made with love by [@spideyX](https://x.com/spideyai_X) & the [OST team](https://github.com/opensource-together) for the OSS community
+Made with love by [@spideystreet](https://x.com/spideystreet) & the [OST team](https://github.com/opensource-together) for the OSS community
 
 </div>
