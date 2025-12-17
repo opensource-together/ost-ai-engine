@@ -14,12 +14,12 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"go", "github"},
     owners=DEFAULT_OWNERS,
-    group_name="github_projects_scraper",
+    group_name="ingestion",
     required_resource_keys={"config"},
 )
 def raw_github__extract_projects(context):
     """
-    Run the GitHub Go scraper and return scraped projects.
+    Executes the external Go scraper to fetch GitHub project data.
     """
     context.log.info("raw_github__extract_projects: Starting GitHub scraper execution")
     cfg = context.resources.config
@@ -29,7 +29,7 @@ def raw_github__extract_projects(context):
     with tempfile.NamedTemporaryFile(mode="w+", delete=True) as tmp_out:
         context.log.info(f"GITHUB_SCRAPING_QUERY to Go: '{env['GITHUB_SCRAPING_QUERY']}'")
         try:
-            # Redirect stdout to a temporary file to avoid OOM with large outputs
+            # Redirect stdout to a temporary file
             scraper_path = os.environ.get("GO_SCRAPER_PATH", "/app/github-scraper")
             with open(tmp_out.name, "w") as f_out:
                 result = subprocess.run(
@@ -38,7 +38,7 @@ def raw_github__extract_projects(context):
                     stderr=subprocess.PIPE,
                     text=True,
                     env=env,
-                    cwd=os.getcwd(), # Use current working directory instead of hardcoded /app
+                    cwd=os.getcwd(),
                     timeout=120
                 )
             
@@ -49,7 +49,6 @@ def raw_github__extract_projects(context):
             if result.returncode != 0:
                 context.log.error(f"GitHub scraper exited with code {result.returncode}")
                 context.log.error(f"GitHub scraper stderr: {stderr}")
-                # Try to read a bit of the output to see if there's an error message
                 tmp_out.seek(0)
                 head = tmp_out.read(1000)
                 context.log.error(f"GitHub scraper stdout head: {head}")
@@ -73,29 +72,25 @@ def raw_github__extract_projects(context):
                 raise
 
             context.log.info(f"Parsed JSON type: {type(parsed)}")
+            projects = []
             if isinstance(parsed, dict):
-                context.log.info(f"Parsed JSON keys: {list(parsed.keys())}")
                 if "items" in parsed:
                     projects = parsed["items"]
                 else:
                     context.log.warning("JSON is a dict but missing 'items' key")
-                    projects = []
             elif isinstance(parsed, list):
-                context.log.info(f"Parsed JSON is a list of length {len(parsed)}")
                 projects = parsed
             else:
                 context.log.warning(f"Unexpected JSON structure: {type(parsed)}")
-                projects = []
             
             count = len(projects)
-            context.log.info(f"[DEBUG] github_scraper_asset: {count} projects scraped. Example: {projects[:1]}")
+            context.log.info(f"[DEBUG] github_scraper_asset: {count} projects scraped.")
             return Output(
                 value=projects,
                 metadata={
                     "project_count": MetadataValue.int(count),
                     "file_size_bytes": MetadataValue.int(file_size),
                     "query": MetadataValue.text(env.get("GITHUB_SCRAPING_QUERY", "unknown")),
-                    "preview": MetadataValue.json(projects[:1]) if projects else MetadataValue.null(),
                 },
             )
         except OSError as e:
