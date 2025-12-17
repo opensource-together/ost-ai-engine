@@ -3,7 +3,7 @@ with pivot as (
 ),
 
 embeddings as (
-    select * from {{ source('ost', 'embd_github_project') }}
+    select * from {{ source('ml', 'embd_github_project') }}
 ),
 
     final as (

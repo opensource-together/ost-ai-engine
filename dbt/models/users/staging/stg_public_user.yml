@@ -1,0 +1,27 @@
+
+version: 2
+
+models:
+  - name: stg_public_user
+    description: >
+      Staging model cleaning and renaming columns from the source `public.user` table.
+      Handles basic transformations like adhering to snake_case conventions for column names.
+    columns:
+      - name: id
+        description: Primary key
+      - name: name
+        description: User name
+      - name: email
+        description: User email
+      - name: bio
+        description: User biography
+      - name: job_title
+        description: User job title
+      - name: experiences
+        description: User experiences JSON
+      - name: github_username
+        description: GitHub username
+      - name: website_url
+        description: Personal website URL
+      - name: created_at
+        description: Timestamp of creation

@@ -1,0 +1,14 @@
+
+version: 2
+
+models:
+  - name: int_user_profile
+    description: >
+      Intermediate model preparing user profile data for vectorization.
+      Source: `pvt_user_profile` (Pivot Model).
+      Purpose: Exposes `id` and `context` for the `core_user__embed_users` Dagster asset to generate embeddings.
+    columns:
+      - name: id
+        description: User ID
+      - name: context
+        description: Final concatenated context string ready for fastText embedding.

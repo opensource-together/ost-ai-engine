@@ -1,0 +1,13 @@
+
+version: 2
+
+models:
+  - name: stg_public_user_categories
+    description: Staging model for the `public.user_categories` join table. Links Users to Categories.
+    columns:
+      - name: user_id
+        description: Foreign key to User
+      - name: category_id
+        description: Foreign key to Category
+      - name: created_at
+        description: Timestamp of creation

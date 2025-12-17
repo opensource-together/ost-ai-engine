@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: int_category_embedding
+    description: >
+      Intermediate model preparing category data for vectorization.
+      Source: `Category` (Public Schema).
+      Purpose: Inputs for `core_ref__embed_categories` asset.
+    columns:
+      - name: id
+        description: Category UUID
+      - name: name
+        description: Category Name to be vectorized

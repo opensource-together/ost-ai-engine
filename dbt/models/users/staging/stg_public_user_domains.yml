@@ -1,0 +1,13 @@
+
+version: 2
+
+models:
+  - name: stg_public_user_domains
+    description: Staging model for the `public.user_domain` join table. Links Users to Domains.
+    columns:
+      - name: user_id
+        description: Foreign key to User
+      - name: domain_id
+        description: Foreign key to Domain
+      - name: created_at
+        description: Timestamp of creation

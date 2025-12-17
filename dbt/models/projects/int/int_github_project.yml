@@ -1,0 +1,15 @@
+
+version: 2
+
+models:
+  - name: int_github_project
+    description: Intermediate model joining all GitHub project related data (metadata, readme, topics, languages, detection).
+    columns:
+      - name: id
+        description: Project ID
+      - name: name
+        description: Project Name
+      - name: language_detected
+        description: Detected language from core_github__detect_languages
+      - name: readme_content
+        description: Content of the README

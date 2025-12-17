@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: int_domain_embedding
+    description: >
+      Intermediate model preparing domain data for vectorization.
+      Source: `Domain` (Public Schema).
+      Purpose: Inputs for `core_ref__embed_domains` asset.
+    columns:
+      - name: id
+        description: Domain UUID
+      - name: name
+        description: Domain Name to be vectorized

@@ -1,0 +1,15 @@
+
+version: 2
+
+models:
+  - name: stg_public_tech_stack
+    description: Staging model for `public.tech_stack` reference data. Standardizes technology names and types (Language vs Tech).
+    columns:
+      - name: id
+        description: Primary key
+      - name: name
+        description: Tech stack name
+      - name: type
+        description: Type of tech stack (TECH or LANGUAGE)
+      - name: icon_url
+        description: URL to icon

@@ -1,0 +1,13 @@
+
+version: 2
+
+models:
+  - name: stg_public_domain
+    description: Staging model for `public.Domain` reference data. Used to categorize user industry focus (e.g., Fintech, Health).
+    columns:
+      - name: id
+        description: Primary key
+      - name: name
+        description: Domain name
+      - name: created_at
+        description: Timestamp of creation

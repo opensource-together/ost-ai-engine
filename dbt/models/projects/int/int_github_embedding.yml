@@ -1,0 +1,14 @@
+
+version: 2
+
+models:
+  - name: int_github_embedding
+    description: >
+      Intermediate model preparing project data for vectorization.
+      Source: `pvt_github_project` (Pivot Model).
+      Purpose: Exposes `id` and `context` for the `core_github__embed_projects` Dagster asset to generate embeddings.
+    columns:
+      - name: id
+        description: GitHub Project ID
+      - name: context
+        description: Final concatenated context string (including Name, Description, Topics, Languages, Readme) ready for fastText embedding.
