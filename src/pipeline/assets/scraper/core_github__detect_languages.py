@@ -1,5 +1,6 @@
 import typing as _t
 import re
+import uuid
 from dagster import (
     asset,
     AssetIn,
@@ -15,28 +16,16 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     # Read from dbt staging model
-    deps=[AssetKey(["github", "stg_github_project"])],
-    group_name="github_projects_scraper",
-    key=AssetKey(["ost", "raw_github_detection"]), # Matches dbt source
+    deps=[AssetKey(["stg_github_project"])],
+    group_name="ingestion",
+    key=AssetKey(["ost", "int_github_detection"]), # Matches dbt source
     required_resource_keys={"config", "fasttext_model"},
 )
 def core_github__detect_languages(context):
     """
     Detects and filters repositories based on language using fastText.
     Reads from dbt staging table `stg_github_project`.
-
-    **Description:**
-    Annotates repositories with `language` and `language_confidence`. Filters out repositories containing non-Latin scripts (e.g., CJK, Arabic) or where the detected language is not compatible.
-
-    **Logic:**
-    1. **Input**: Reads projects from `stg_github_project`.
-    2. **Text Extraction**: Combines `readme`, `description`, and `name`.
-    3. **Script Check**: Filters immediately if non-Latin characters are found.
-    4. **FastText Prediction**: Predicts top-k languages. Filters if any blacklisted language is detected.
-    5. **Annotation**: Adds `language` and `language_confidence` to the repo data.
-
-    **Output:**
-    List of repository dictionaries with added language metadata.
+    Output: List of repository dictionaries with added language metadata.
     """
     context.log.info("core_github__detect_languages: Starting language detection")
     
@@ -164,23 +153,23 @@ def core_github__detect_languages(context):
         
         accepted.append(repo)
 
-    # Insert detection results into raw_github_detection
+    # Insert detection results into int_github_detection
     try:
         with get_db_cursor(commit=True) as cur:
             for repo in accepted:
                 cur.execute(
                     """
-                    INSERT INTO "github"."raw_github_detection" ("project_id", "repo_url", "language_detected", "language_confidence", "created_at")
-                    VALUES (%s, %s, %s, %s, NOW())
+                    INSERT INTO "github"."int_github_detection" ("id", "project_id", "repo_url", "language_detected", "language_confidence", "created_at")
+                    VALUES (%s, %s, %s, %s, %s, NOW())
                     ON CONFLICT ("project_id") DO UPDATE
                     SET "language_detected" = EXCLUDED."language_detected",
                         "language_confidence" = EXCLUDED."language_confidence",
                         "repo_url" = EXCLUDED."repo_url",
                         "created_at" = NOW()
                     """,
-                    (repo.get("id"), repo.get("url"), repo.get("language_detected"), repo.get("language_confidence"))
+                    (str(uuid.uuid4()), repo.get("id"), repo.get("url"), repo.get("language_detected"), repo.get("language_confidence"))
                 )
-            context.log.info(f"Inserted {len(accepted)} detection records into raw_github_detection.")
+            context.log.info(f"Inserted {len(accepted)} detection records into int_github_detection.")
     except Exception as e:
         context.log.error(f"Failed to insert detection records: {e}")
 
