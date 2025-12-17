@@ -16,7 +16,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     ins={"projects": AssetIn("raw_github__extract_projects")},
-    group_name="github_projects_scraper",
+    group_name="ingestion",
     key=AssetKey(["ost", "raw_github_project"]), # Matches dbt source
 )
 def raw_github__load_project(context, projects: _t.List[_t.Dict]):
