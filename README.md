@@ -22,18 +22,43 @@ It automatically explores the GitHub ecosystem to:
 
 ## Quick Start
 
-1. Copy `.env.example` into `.env` and fill it.
-2. Copy `config/cfg_example.py` to `config/cfg.py` and adjust the config to your personal parameters.
-3. Generate prisma client, migrations & seed
-```bash
-make setup
-```
-4. Start Linker
-```bash
-make up
-```
+### Prerequisites
+- **Python 3.11+**
+- **Poetry**
+- **Docker**
+- **Node.js** (for Prisma)
 
-Dagster UI : http://localhost:3000
+### Installation
+
+1. **Setup Environment**
+   ```bash
+   cp .env.example .env
+   # Edit .env and set GITHUB_ACCESS_TOKEN
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   poetry install
+   ```
+
+3. **Start Database**
+   ```bash
+   docker-compose up -d
+   ```
+
+4. **Initialize Database**
+   ```bash
+   npx prisma generate
+   npx prisma db push
+   npx prisma db seed
+   ```
+
+5. **Run Pipeline**
+   ```bash
+   dagster dev
+   ```
+
+   Access the UI at [http://localhost:3000](http://localhost:3000)
 
 ## Status
 Work in progress.  
