@@ -13,7 +13,7 @@ Recommender-system of the [OpenSource Together](https://github.com/opensource-to
 
 ## What is it?
 
-**OST Linker** is the intelligence engine behind OpenSourceTogether. It helps you find your next open-source contribution in seconds, not hours.
+**OST Linker** is the intelligence engine behind [OpenSourceTogether](https://opensource-together.com/). It helps you find your next open-source contribution in seconds, not hours.
 
 It automatically explores the GitHub ecosystem to:
 - **Spot Hidden Gems**: Surfaces high-potential projects you might miss.
