@@ -13,15 +13,12 @@ Recommender-system of the [OpenSource Together](https://github.com/opensource-to
 
 ## What is it?
 
-An AI‑powered data pipeline that discovers, understands, and curates open‑source projects to power OST’s recommendation system and provide high-quality projects to contribute on.
+**OST Linker** is the intelligence engine behind OpenSourceTogether. It helps you find your next open-source contribution in seconds, not hours.
 
-What it does :
-- **Discover**: scan GitHub at scale with Golang scrapers
-- **Understand**: detect language and semantics (fastText + transformers)
-- **Assess**: score quality and relevance from activity and metadata signals
-- **Enrich**: normalize topics, tech stacks, and fields into a coherent schema
-
-**Deliver**: output a clean, queryable dataset (PostgreSQL via Prisma)
+It automatically explores the GitHub ecosystem to:
+- **Spot Hidden Gems**: Surfaces high-potential projects you might miss.
+- **Match Your Skills**: Understands tech stacks to recommend relevant issues.
+- **Save You Time**: Filters out noise so you can focus on coding.
 
 ## Quick Start
 
