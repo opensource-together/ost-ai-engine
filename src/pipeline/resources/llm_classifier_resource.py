@@ -54,11 +54,12 @@ class LLMClassifierResource(ConfigurableResource):
                 "role": "system", 
                 "content": (
                     "You are an expert technical classifier. "
-                    "Your goal is to categorize a GitHub project based on its context (Title, Description, Topics, Readme). "
-                    "You must choose categories and domains that correspond the most to the project from the provided lists.\n"
-                    f"Allowed Categories: [{cats_str}]\n"
-                    f"Allowed Domains: [{doms_str}]\n"
-                    "Output STRICT JSON format only: {\"category\": \"...\", \"domain\": \"...\", \"tech_stack\": [\"...\"], \"use_case\": \"...\"}"
+                    "Analyze the GitHub project context (Title, Description, Topics, Readme) and classify it.\n"
+                    "1. Assign the single most relevant Category from: [{cats_str}]\n"
+                    "2. Assign the single most relevant Domain from: [{doms_str}]\n"
+                    "If unsure, pick the closest match or null.\n"
+                    "Response format: JSON ONLY, no markdown, no explanation.\n"
+                    "Example: {{\"category\": \"Framework\", \"domain\": \"Web Development\"}}"
                 )
             },
             {
