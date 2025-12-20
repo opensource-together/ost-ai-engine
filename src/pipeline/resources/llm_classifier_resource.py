@@ -14,7 +14,7 @@ class LLMClassifierResource(ConfigurableResource):
         if self._pipeline is None:
             print(f"LLMResource: Loading model '{self.model_id}' on {self.device}...", flush=True)
             
-            # 1. Chargement du modèle et du tokenizer
+            # 1. Load model and tokenizer
             model = AutoModelForCausalLM.from_pretrained(
                 self.model_id, 
                 device_map=self.device, 
@@ -24,7 +24,7 @@ class LLMClassifierResource(ConfigurableResource):
                 self.model_id
             )
 
-            # 2. Création de la pipeline de génération de texte
+            # 2. Create text generation pipeline
             self._pipeline = pipeline(
                 "text-generation", 
                 model=model, 
@@ -36,13 +36,13 @@ class LLMClassifierResource(ConfigurableResource):
 
     def classify_project(self, title: str, project_context: str, categories: list[str], domains: list[str]) -> dict:
         """
-        Prend un projet (titre + contexte riche) et une liste de catégories/domaines valides.
-        Retourne un Dict (JSON parsé) avec la classification.
+        Takes a project (title + rich context) and a list of valid categories/domains.
+        Returns a Dict (parsed JSON) with the classification.
         """
         pipe = self.get_pipeline()
 
-        # Construction du Prompt formaté pour Phi-3
-        # On tronque à 6000 chars pour le contexte
+        # Construct prompt formatted for Phi-3
+        # Truncate context to 6000 chars
         truncated_context = (project_context or "")[:6000] 
         
         # Categories and Domains formatting
@@ -67,23 +67,23 @@ class LLMClassifierResource(ConfigurableResource):
             }
         ]
 
-        # Génération
+        # Generation
         outputs = pipe(
             messages, 
             max_new_tokens=500, 
             return_full_text=False,
-            do_sample=False, # Déterministe
+            do_sample=False, # Deterministic
             temperature=0.0
         )
         
         generated_text = outputs[0]['generated_text']
         
-        # Nettoyage pour récupérer uniquement le JSON
+        # Cleanup to retrieve only JSON
         clean_json = generated_text.replace("```json", "").replace("```", "").strip()
         
         try:
             return json.loads(clean_json)
         except json.JSONDecodeError:
-            print(f"Erreur de parsing JSON sur le projet {title}. JSON brut: {clean_json}")
+            print(f"JSON parsing error for project {title}. Raw JSON: {clean_json}")
             # Fallback trivial or return error
             return {"error": "parsing_failed", "raw": generated_text}
