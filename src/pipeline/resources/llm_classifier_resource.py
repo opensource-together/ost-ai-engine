@@ -55,8 +55,8 @@ class LLMClassifierResource(ConfigurableResource):
                 "content": (
                     "You are an expert technical classifier. "
                     "Analyze the GitHub project context (Title, Description, Topics, Readme) and classify it.\n"
-                    "1. Assign the single most relevant Category from: [{cats_str}]\n"
-                    "2. Assign the single most relevant Domain from: [{doms_str}]\n"
+                    f"1. Assign the single most relevant Category from: [{cats_str}]\n"
+                    f"2. Assign the single most relevant Domain from: [{doms_str}]\n"
                     "If unsure, pick the closest match or null.\n"
                     "Response format: JSON ONLY, no markdown, no explanation.\n"
                     "Example: {{\"category\": \"Framework\", \"domain\": \"Web Development\"}}"
