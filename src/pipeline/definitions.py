@@ -26,6 +26,7 @@ from .resources.cfg_resource import config_resource
 from .resources.fasttext_resource import FastTextModelResource
 
 from .resources.llm_classifier_resource import LLMClassifierResource
+from .resources.sentence_transformer_resource import SentenceTransformerResource
 
 # scraper Assets
 from .assets.scraper import (
@@ -56,12 +57,16 @@ from .assets.classification.core_match__classify_projects import core_match__cla
 from .assets.sync.core_public__sync_projects import core_public__sync_projects
 
 
+# ML Assets
+from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
+
 # schedule
 github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
 
 # jobs
 from .jobs.run_all_job import run_all_job
 from .jobs.project_classification_job import project_classification_job
+from .jobs.project_embedding_job import project_embedding_job
 
 from .sensors.classification_sensor import classification_sensor
 
@@ -71,17 +76,20 @@ defs = Definitions(
         *dbt_assets_list,
         core_match__classify_projects,
         core_public__sync_projects,
+        core_ml__embed_projects,
     ],
     resources={
         "config": config_resource,
         "fasttext_model": FastTextModelResource(),
         "llm_classifier": LLMClassifierResource(device="mps"), # Using MPS for Mac Silicon acceleration if available
+        "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps
         "dbt": dbt_resource,
     },
     jobs=[
         github_scraper_job,
         cleanup_dagster_history_job,
         project_classification_job,
+        project_embedding_job,
         run_all_job,
     ],
     schedules=[github_scraper_schedule, cleanup_dagster_history_schedule],
