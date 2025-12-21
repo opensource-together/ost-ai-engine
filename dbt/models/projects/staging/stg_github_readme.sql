@@ -1,5 +1,5 @@
 with source as (
-    select * from {{ source('ost', 'raw_github_readme') }}
+    select * from {{ source('github', 'raw_github_readme') }}
 ),
 
 cleaned as (

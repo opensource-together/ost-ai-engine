@@ -36,9 +36,9 @@ if not db_url:
 postgres_io_manager = PandasPostgresIOManager(db_url=db_url)
 
 # scraper Assets
+# scraper Assets
 from .assets.scraper import (
     raw_github__extract_projects,
-    raw_github__load_project,
     core_github__detect_languages,
     core_github__fetch_readme,
     core_github__fetch_repo_languages,
@@ -47,7 +47,6 @@ from .assets.scraper import (
 
 scraper_assets = load_assets_from_modules([
     raw_github__extract_projects,
-    raw_github__load_project,
     core_github__detect_languages,
     core_github__fetch_readme,
     core_github__fetch_repo_languages,

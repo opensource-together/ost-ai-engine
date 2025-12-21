@@ -19,7 +19,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     # Read from dbt staging model
     ins={"stg_df": AssetIn(key=AssetKey(["github", "stg_github_project"]))},
     group_name="ingestion",
-    key=AssetKey(["ost", "int_github_detection"]), # Matches dbt source
+    key=AssetKey(["github", "int_github_detection"]), # Matches dbt source
     required_resource_keys={"config", "fasttext_model"},
 )
 def core_github__detect_languages(context, stg_df: pd.DataFrame):

@@ -33,7 +33,7 @@ readmes as (
     select 
         repo_url,
         content
-    from {{ source('ost', 'raw_github_readme') }}
+    from {{ source('github', 'raw_github_readme') }}
 )
 
 select 

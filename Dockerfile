@@ -74,10 +74,10 @@ ENV GOARCH=amd64
 ENV GOTOOLCHAIN=auto
 
 # Copy sources
-COPY src/services/go/github/ /go/github/
+COPY src/services/go/scraper/ /go/scraper/
 
 # Build binaries (modules will be fetched automatically by go build)
-WORKDIR /go/github
+WORKDIR /go/scraper
 RUN go build -ldflags="-s -w" -o /go/github-scraper .
 
 # ==============================================================================

@@ -1,5 +1,5 @@
 with source as (
-    select * from {{ source('ost', 'raw_github_project') }}
+    select * from {{ source('github', 'raw_github_project') }}
 ),
 
 renamed as (

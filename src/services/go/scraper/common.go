@@ -3,14 +3,10 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"net/http"
 	"net/url"
-	"os"
 	"strconv"
 	"time"
-
-	"gopkg.in/yaml.v3"
 )
 
 type githubRepo struct {
@@ -80,81 +76,4 @@ func fetchGitHubRepos(client *http.Client, token string, apiURL string, query st
 		return result, err
 	}
 	return result, nil
-}
-
-func main() {
-	configPath := os.Getenv("OST_CONFIG_PATH")
-
-	// Load configuration from YAML file
-	configBytes, err := os.ReadFile(configPath)
-	if err != nil {
-		log.Fatalf("[ERROR] Config file could not be read: %v", err)
-	}
-	var config struct {
-		DatabaseURL         string `yaml:"DATABASE_URL"`
-		GitHubAccessToken   string `yaml:"GITHUB_ACCESS_TOKEN"`
-		GitHubScrapingQuery string `yaml:"GITHUB_SCRAPING_QUERY"`
-		GitHubTopN          int    `yaml:"GITHUB_TOP_N"`
-		GitHubApiUrl        string `yaml:"GITHUB_API_URL"`
-		GitHubPerPage       int    `yaml:"GITHUB_PER_PAGE"`
-	}
-	if err := yaml.Unmarshal(configBytes, &config); err != nil {
-		log.Fatalf("[ERROR] Config file could not be parsed: %v", err)
-	}
-
-	log.Println("[INFO] Loaded config from config/cfg.yaml.")
-	log.Printf("[INFO] Query: %s", config.GitHubScrapingQuery)
-
-	token := config.GitHubAccessToken
-	if token == "" {
-		log.Println("warning: GITHUB_ACCESS_TOKEN not set; may hit rate limits")
-	}
-	query := config.GitHubScrapingQuery
-	if query == "" {
-		log.Fatal("GITHUB_SCRAPING_QUERY is required")
-	}
-	apiURL := config.GitHubApiUrl
-	if apiURL == "" {
-		log.Fatal("GITHUB_API_URL is required")
-	}
-	maxRepos := config.GitHubTopN
-	if maxRepos <= 0 {
-		maxRepos = 1000 // Github API limit is 1000
-	}
-
-	client := newHTTPClient()
-	perPage := config.GitHubPerPage
-	if perPage <= 0 {
-		perPage = 100
-	}
-	if perPage > 100 {
-		perPage = 100 // GitHub API limit
-	}
-	collected := 0
-	var allRepos []githubRepo
-	for page := 1; collected < maxRepos; page++ {
-		res, err := fetchGitHubRepos(client, token, apiURL, query, perPage, page)
-		if err != nil {
-			log.Fatalf("github fetch: %v", err)
-		}
-		if len(res.Items) == 0 {
-			break
-		}
-		allRepos = append(allRepos, res.Items...)
-		collected += len(res.Items)
-	}
-
-	// Display results as JSON
-	output := struct {
-		Items []githubRepo `json:"items"`
-	}{
-		Items: allRepos,
-	}
-	if output.Items == nil {
-		output.Items = []githubRepo{}
-	}
-
-	if err := json.NewEncoder(os.Stdout).Encode(output); err != nil {
-		log.Fatalf("json encode: %v", err)
-	}
 }

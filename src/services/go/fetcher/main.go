@@ -1,0 +1,80 @@
+package main
+
+import (
+	"context"
+	"flag"
+	"log"
+	"os"
+	"time"
+
+	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/joho/godotenv"
+)
+
+type Config struct {
+	DatabaseURL string
+	GithubToken string
+}
+
+func loadConfig() *Config {
+	// Try loading .env file from project root (assuming binary runs from root or similar)
+	// We might need to look up directory tree
+	_ = godotenv.Load() // Ignore error if file not found, rely on env vars
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL is required")
+	}
+
+	return &Config{
+		DatabaseURL: dbURL,
+		GithubToken: os.Getenv("GITHUB_ACCESS_TOKEN"),
+	}
+}
+
+func main() {
+	mode := flag.String("mode", "", "Fetch mode: readme, languages, topics")
+	limit := flag.Int("limit", 0, "Limit number of projects to process (0 = no limit)")
+	concurrency := flag.Int("concurrency", 10, "Number of concurrent workers")
+	flag.Parse()
+
+	if *mode == "" {
+		log.Fatal("Please specify --mode (readme, languages, topics)")
+	}
+
+	cfg := loadConfig()
+
+	ctx := context.Background()
+	db, err := pgxpool.New(ctx, cfg.DatabaseURL)
+	if err != nil {
+		log.Fatalf("Unable to connect to database: %v", err)
+	}
+	defer db.Close()
+
+	log.Printf("Starting fetcher in mode: %s (concurrency: %d)", *mode, *concurrency)
+
+	fetcher := NewGitHubFetcher(db, cfg.GithubToken, *concurrency)
+
+	start := time.Now()
+	var count int
+	var errFetch error
+
+	switch *mode {
+	case "readme":
+		count, errFetch = fetcher.FetchReadmes(ctx, *limit)
+	case "languages":
+		count, errFetch = fetcher.FetchLanguages(ctx, *limit)
+	case "topics":
+		count, errFetch = fetcher.FetchTopics(ctx, *limit)
+	default:
+		log.Fatalf("Unknown mode: %s", *mode)
+	}
+
+	if errFetch != nil {
+		log.Printf("[ERROR] Job failed: %v", errFetch)
+		os.Exit(1)
+	}
+
+	duration := time.Since(start)
+	log.Printf("[SUCCESS] Processed %d items in %s", count, duration)
+}
