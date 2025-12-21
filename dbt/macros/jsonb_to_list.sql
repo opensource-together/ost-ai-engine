@@ -1,6 +1,6 @@
-{% macro json_array_to_string(column_name, separator=', ', normalize=true) %}
+{% macro jsonb_to_list(column_name, separator=', ', normalize=true) %}
     {#
-        Converts a JSONB array to a comma-separated string.
+        Converts a JSONB array to a comma-separated list string.
         
         Args:
             column_name: the JSONB column containing an array

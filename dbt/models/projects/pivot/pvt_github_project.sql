@@ -9,8 +9,8 @@ final as (
         {{ generate_project_context([
             ('Title', 'name'),
             ('Description', 'description'),
-            ('Topics', json_array_to_string('fetched_topics')),
-            ('Tech stacks', json_array_to_string('fetched_languages')),
+            ('Topics', jsonb_to_list('fetched_topics')),
+            ('Tech stacks', jsonb_to_list('fetched_languages')),
             ('Readme', clean_llm_context('readme_content'))
         ]) }} 
         as context
