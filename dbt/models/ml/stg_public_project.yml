@@ -2,14 +2,13 @@ version: 2
 
 models:
   - name: stg_public_project
-    description: "Staging model sourcing public projects with aggregated metadata."
+    description: "Final staging model for ML. Cleans the generated context from raw_public_project."
     columns:
       - name: id
         tests:
           - unique
           - not_null
-      - name: title
-      - name: categories
-      - name: domains
-      - name: tech_stack
-      - name: readme
+      - name: context
+        description: "Cleaned semantic context ready for embedding."
+        tests:
+          - not_null

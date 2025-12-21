@@ -11,17 +11,17 @@ from sqlalchemy import create_engine, text
 @asset(
     compute_kind="python",
     group_name="ml",
-    deps=[get_asset_key_for_model([dbt_project_assets], "raw_public_project")]
+    deps=[get_asset_key_for_model([dbt_project_assets], "stg_public_project")]
 )
 def core_ml__embed_projects(context: AssetExecutionContext, sentence_transformer: SentenceTransformerResource):
     """
-    Reads context from ml.raw_public_project, computes embeddings, and stores them in ml.embd_github_project.
+    Reads context from ml.stg_public_project, computes embeddings, and stores them in ml.embd_github_project.
     """
     db_url = os.getenv("DATABASE_URL")
     engine = create_engine(db_url)
 
     # 1. Fetch raw projects with context
-    query = "SELECT id, context FROM ml.raw_public_project"
+    query = "SELECT id, context FROM ml.stg_public_project"
     df = pd.read_sql(query, engine)
     
     context.log.info(f"Fetched {len(df)} projects to embed.")

@@ -1,0 +1,15 @@
+version: 2
+
+models:
+  - name: int_public_project
+    description: "Staging model sourcing public projects with aggregated metadata."
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+      - name: title
+      - name: categories
+      - name: domains
+      - name: tech_stack
+      - name: readme

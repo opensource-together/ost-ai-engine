@@ -72,7 +72,6 @@ model User {
   domain          UserDomains[]
   projectBookmark ProjectBookmark[]
   betaTester      Boolean           @default(false)
-  userEmbeddings  UserEmbedding[]
 
   @@unique([email])
   @@map("user")
@@ -180,19 +179,6 @@ model UserDomains {
   @@schema("public")
 }
 
-model UserEmbedding {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  userId    String   @db.Uuid
-  domainId  String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@unique([userId, domainId])
-  @@map("user_embedding")
-  @@schema("github")
-}
-
 model ProjectEmbedding {
   id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   projectId String   @db.Uuid
@@ -248,7 +234,6 @@ model Domain {
   updatedAt              DateTime                @updatedAt
   ProjectDomain          ProjectDomain[]
   UserDomains            UserDomains[]
-  userEmbeddings         UserEmbedding[]
   projectClassifications ProjectClassification[]
 
   @@schema("public")
@@ -388,44 +373,4 @@ model IntGithubDetection {
 
   @@map("int_github_detection")
   @@schema("github")
-}
-
-model EmbdGithubProject {
-  id              String                 @id @default(uuid())
-  projectId       String                 @unique // Foreign key to Project
-  embeddingVector Unsupported("vector")?
-  createdAt       DateTime               @default(now())
-
-  @@map("embd_github_project")
-  @@schema("ml")
-}
-
-model EmbdUser {
-  id              String                 @id @default(uuid())
-  userId          String                 @unique // Foreign key to User
-  embeddingVector Unsupported("vector")?
-  createdAt       DateTime               @default(now())
-
-  @@map("embd_user")
-  @@schema("ml")
-}
-
-model EmbdCategory {
-  id              String                 @id @default(uuid())
-  categoryId      String                 @unique
-  embeddingVector Unsupported("vector")?
-  createdAt       DateTime               @default(now())
-
-  @@map("embd_category")
-  @@schema("ml")
-}
-
-model EmbdDomain {
-  id              String                 @id @default(uuid())
-  domainId        String                 @unique
-  embeddingVector Unsupported("vector")?
-  createdAt       DateTime               @default(now())
-
-  @@map("embd_domain")
-  @@schema("ml")
 }
