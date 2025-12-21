@@ -53,3 +53,9 @@ sources:
       - name: Domain
       - name: user_categories
       - name: Category
+      - name: Project
+        description: "Public project table synced from scraper"
+      - name: project_category
+      - name: project_domain
+      - name: project_tech_stack
+      - name: TechStack
