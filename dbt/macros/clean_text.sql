@@ -1,4 +1,4 @@
-{% macro clean_llm_context(column_name, max_length=8000) %}
+{% macro clean_text(column_name, max_length=8000) %}
     {#
         Cleans text for optimal LLM context understanding.
         

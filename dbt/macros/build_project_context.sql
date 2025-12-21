@@ -1,4 +1,4 @@
-{% macro generate_project_context(fields, skip_empty=true) %}
+{% macro build_project_context(fields, skip_empty=true) %}
     {# 
         Generates a structured context string optimized for LLM understanding.
         

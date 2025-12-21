@@ -1,4 +1,4 @@
-{% macro generate_user_context(fields) %}
+{% macro build_user_context(fields) %}
     {# 
         Generates a concatenated context string from a list of (label, column) tuples.
         Args:

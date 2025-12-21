@@ -4,14 +4,14 @@ with public_projects as (
 
 select
     p.id,
-    {{ generate_ml_context(
-        'p.title',
-        'p.description',
-        'p.categories',
-        'p.domains',
-        'p.tech_stack',
-        'p.readme'
-    ) }} as context,
+    {{ build_project_context([
+        ('Title', 'p.title'),
+        ('Description', 'p.description'),
+        ('Categories', 'p.categories'),
+        ('Domains', 'p.domains'),
+        ('Tech Stack', 'p.tech_stack'),
+        ('Readme', clean_text('p.readme'))
+    ]) }} as context,
     now() as created_at
 from public_projects p
 where p.id is not null

@@ -6,12 +6,12 @@ final as (
     select
         *,
         -- Context generation
-        {{ generate_project_context([
+        {{ build_project_context([
             ('Title', 'name'),
             ('Description', 'description'),
             ('Topics', jsonb_to_list('fetched_topics')),
             ('Tech stacks', jsonb_to_list('fetched_languages')),
-            ('Readme', clean_llm_context('readme_content'))
+            ('Readme', clean_text('readme_content'))
         ]) }} 
         as context
     from source
