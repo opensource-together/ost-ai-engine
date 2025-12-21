@@ -27,9 +27,28 @@ tech_stacks as (
         pts."projectId",
         string_agg(ts.name, ', ') as tech_stack_list
     from {{ source('public', 'project_tech_stack') }} pts
-    join {{ source('public', 'TechStack') }} ts on pts."techStackId" = ts.id
+    join {{ source('public', 'tech_stack') }} ts on pts."techStackId" = ts.id
     group by pts."projectId"
+),
+
+    select 
+        repo_url,
+        content
+    from {{ source('ost', 'raw_github_readme') }}
 )
+
+/*
+    WHY RAW README?
+    
+    The `public.Project` table contains curated metadata (title, description, tags)
+    but intentionally does NOT store the heavy README content to keep the table light.
+    
+    However, for ML Embeddings (`generate_ml_context`), we absolutely need the full markdown 
+    content to generate high-quality semantic vectors.
+    
+    Therefore, we join `public.Project` (Meta) + `raw_github_readme` (Content) here.
+    Execution Order: Scraper -> Raw Tables -> Sync (Public Project) -> DBT (This Model).
+*/
 
 select 
     p.id,
@@ -39,12 +58,11 @@ select
     coalesce(c.categories_list, '') as categories,
     coalesce(d.domains_list, '') as domains,
     coalesce(t.tech_stack_list, '') as tech_stack,
-    -- We can fetch README via raw_github_readme later if needed, but the user asked for context here.
-    -- Assuming we might join raw_github_readme here or later. The user mentioned "sourcing public.Project".
-    -- Let's stick to public schema for this Staging.
+    coalesce(r.content, '') as readme,
     p."updatedAt"
 from projects p
 left join categories c on p.id = c."projectId"
 left join domains d on p.id = d."projectId"
 left join tech_stacks t on p.id = t."projectId"
+left join readmes r on p."repoUrl" = r.repo_url
 where p.published = true or p.trending = true
