@@ -21,6 +21,18 @@ models:
     ml:
       +materialized: table
       +schema: ml
+      raw:
+        +meta:
+          dagster:
+            group: ml_preparation
+      staging:
+        +meta:
+          dagster:
+            group: ml_preparation
+      pivot:
+        +meta:
+          dagster:
+            group: ml_preparation
 
     users:
       +enabled: true
