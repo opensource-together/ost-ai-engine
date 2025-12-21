@@ -18,6 +18,10 @@ clean-targets:
 models:
   ost_linker:
 
+    ml:
+      +materialized: table
+      +schema: ml
+
     users:
       +enabled: true
       

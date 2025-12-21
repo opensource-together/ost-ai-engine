@@ -1,4 +1,4 @@
-{{ config(materialized='view', schema='ml') }}
+
 
 with projects as (
     select * from {{ source('public', 'Project') }}
