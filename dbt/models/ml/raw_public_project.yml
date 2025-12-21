@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: raw_public_project
+    description: "ML model containing the generated context for embedding."
+    columns:
+      - name: id
+        tests:
+          - unique
+          - not_null
+      - name: context
+        description: "Concatenated rich text context."
+        tests:
+          - not_null
