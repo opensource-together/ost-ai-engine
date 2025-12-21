@@ -1,20 +1,20 @@
-from dagster import asset, AssetExecutionContext, AssetKey, Output, MetadataValue
+from dagster import asset, AssetExecutionContext, AssetKey, Output, MetadataValue, AssetIn
 from src.services.python.db import get_db_cursor
+import pandas as pd
 import json
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
-from dagster_dbt import get_asset_key_for_model
-from src.pipeline.definitions import dbt_project_assets
+
 
 @asset(
-    kinds={"python", "llm"},
+    kinds={"python"},
     owners=DEFAULT_OWNERS,
-    deps=[get_asset_key_for_model([dbt_project_assets], "pvt_github_project")],
+    ins={"projects_df": AssetIn(key=AssetKey(["github", "pvt_github_project"]))},
     group_name="matching",
     required_resource_keys={"llm_classifier"},
 )
-def core_match__classify_projects(context):
+def core_match__classify_projects(context, projects_df):
     """
     Step 1: Classification ONLY.
     
@@ -36,21 +36,14 @@ def core_match__classify_projects(context):
         cur.execute('SELECT "id", "name" FROM "public"."Domain"')
         domains_map = {row["name"]: row["id"] for row in cur.fetchall()}
         
-        # 2. Fetch Projects (Full Data needed for downstream Sync)
-        cur.execute("""
-            SELECT 
-                "id", 
-                "name" as title, 
-                "description",
-                "url",
-                "created_at",
-                "updated_at",
-                "context",
-                "languages", 
-                "topics"
-            FROM "github"."pvt_github_project"
-        """)
-        projects = cur.fetchall()
+        # 2. Use Projects from IO Manager
+        projects = projects_df.to_dict('records')
+        
+        # Adjust alias manually if dataframe has 'name' but code implies 'title'
+        for p in projects:
+            if 'name' in p and 'title' not in p:
+                p['title'] = p['name']
+
 
     context.log.info(f"Loaded {len(projects)} projects for classification.")
     

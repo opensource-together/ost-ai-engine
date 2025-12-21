@@ -9,6 +9,7 @@ from dagster import (
     Output,
 )
 from src.services.python.db import get_db_cursor
+import pandas as pd
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -16,12 +17,12 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     # Read from dbt staging model
-    deps=[AssetKey(["stg_github_project"])],
+    ins={"stg_df": AssetIn(key=AssetKey(["github", "stg_github_project"]))},
     group_name="ingestion",
     key=AssetKey(["ost", "int_github_detection"]), # Matches dbt source
     required_resource_keys={"config", "fasttext_model"},
 )
-def core_github__detect_languages(context):
+def core_github__detect_languages(context, stg_df: pd.DataFrame):
     """
     Detects and filters repositories based on language using fastText.
     Reads from dbt staging table `stg_github_project`.
@@ -29,17 +30,9 @@ def core_github__detect_languages(context):
     """
     context.log.info("core_github__detect_languages: Starting language detection")
     
-    projects = []
-    try:
-        with get_db_cursor() as cur:
-            # Read from staging table
-            # We select relevant columns. Note: stg_github_project.sql selects individual columns: id, name, description, url, language, topics...
-            cur.execute('SELECT * FROM "github"."stg_github_project"')
-            projects = cur.fetchall()
-            context.log.info(f"Fetched {len(projects)} projects from staging.")
-    except Exception as e:
-        context.log.error(f"Failed to query staging table: {e}")
-        return Output(value=[], metadata={"error": MetadataValue.text(str(e))})
+    # Use DataFrame from IO Manager
+    projects = stg_df.to_dict('records')
+    context.log.info(f"Fetched {len(projects)} projects from staging.")
 
     # Get the fastText model from Dagster resources (loaded once, reused across runs)
     context.log.info("core_github__detect_languages: Accessing fasttext model...")
@@ -182,8 +175,11 @@ def core_github__detect_languages(context):
     # Helper to serialize datetime objects for metadata
     def _make_serializable(obj):
         import datetime
+        import uuid
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
         if isinstance(obj, dict):
             return {k: _make_serializable(v) for k, v in obj.items()}
         if isinstance(obj, list):
@@ -205,14 +201,15 @@ def core_github__detect_languages(context):
         clean_sample.append(clean_item)
 
     sample = _make_serializable(clean_sample)
+    filtered = _make_serializable(filtered_out_projects)
     meta = {
         "input_count": MetadataValue.int(len(projects)),
         "output_count": MetadataValue.int(len(accepted)),
         "filtered_out_count": MetadataValue.int(len(filtered_out_projects)),
         "filtered_out_percent": MetadataValue.float(round(100 * len(filtered_out_projects) / len(projects), 2) if projects else 0.0),
-        "filtered_projects": MetadataValue.json(filtered_out_projects),
+        "filtered_projects": MetadataValue.json(filtered),
         "sample": MetadataValue.json(sample),
         "language_counts": MetadataValue.json(lang_counts),
     }
     context.log.info(f"core_github__detect_languages: kept {len(accepted)} / {len(projects)} projects")
-    return Output(value=accepted, metadata=meta)
+    return Output(value=None, metadata=meta)

@@ -1,7 +1,6 @@
 
-from dagster import asset, AssetExecutionContext, AssetIn
-from dagster_dbt import get_asset_key_for_model
-from src.pipeline.definitions import dbt_project_assets
+from dagster import asset, AssetExecutionContext, AssetIn, AssetKey
+
 from src.pipeline.resources.sentence_transformer_resource import SentenceTransformerResource
 import pandas as pd
 import os
@@ -11,9 +10,9 @@ from sqlalchemy import create_engine, text
 @asset(
     compute_kind="python",
     group_name="ml",
-    deps=[get_asset_key_for_model([dbt_project_assets], "stg_public_project")]
+    ins={"projects_df": AssetIn(key=AssetKey(["ml", "stg_public_project"]))},
 )
-def core_ml__embed_projects(context: AssetExecutionContext, sentence_transformer: SentenceTransformerResource):
+def core_ml__embed_projects(context: AssetExecutionContext, projects_df: pd.DataFrame, sentence_transformer: SentenceTransformerResource):
     """
     Reads context from ml.stg_public_project, computes embeddings, and stores them in ml.embd_github_project.
     """
@@ -21,8 +20,8 @@ def core_ml__embed_projects(context: AssetExecutionContext, sentence_transformer
     engine = create_engine(db_url)
 
     # 1. Fetch raw projects with context
-    query = "SELECT id, context FROM ml.stg_public_project"
-    df = pd.read_sql(query, engine)
+    df = projects_df
+
     
     context.log.info(f"Fetched {len(df)} projects to embed.")
 

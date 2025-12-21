@@ -15,7 +15,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    ins={"projects": AssetIn("raw_github__extract_projects")},
+    ins={"projects": AssetIn(key=AssetKey(["github", "raw_github_project_data"]), input_manager_key="fs_io_manager")},
     group_name="ingestion",
     key=AssetKey(["ost", "raw_github_project"]), # Matches dbt source
 )

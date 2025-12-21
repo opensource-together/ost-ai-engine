@@ -37,3 +37,5 @@ def get_db_cursor(commit=False):
     with get_db_connection() as conn:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             yield cur
+
+

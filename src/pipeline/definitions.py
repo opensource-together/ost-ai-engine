@@ -1,4 +1,4 @@
-from dagster import Definitions, load_assets_from_modules, AssetExecutionContext
+from dagster import Definitions, load_assets_from_modules, AssetExecutionContext, FilesystemIOManager
 from dagster_dbt import DbtCliResource, dbt_assets, DbtProject
 from pathlib import Path
 
@@ -27,6 +27,13 @@ from .resources.fasttext_resource import FastTextModelResource
 
 from .resources.llm_classifier_resource import LLMClassifierResource
 from .resources.sentence_transformer_resource import SentenceTransformerResource
+from .resources.io_manager import PandasPostgresIOManager
+
+db_url = os.getenv("DATABASE_URL")
+if not db_url:
+    raise ValueError("DATABASE_URL environment variable is not set")
+
+postgres_io_manager = PandasPostgresIOManager(db_url=db_url)
 
 # scraper Assets
 from .assets.scraper import (
@@ -84,6 +91,8 @@ defs = Definitions(
         "llm_classifier": LLMClassifierResource(device="mps"), # Using MPS for Mac Silicon acceleration if available
         "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps
         "dbt": dbt_resource,
+        "io_manager": postgres_io_manager,
+        "fs_io_manager": FilesystemIOManager(),
     },
     jobs=[
         github_scraper_job,

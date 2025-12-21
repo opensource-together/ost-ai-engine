@@ -40,7 +40,7 @@ type githubSearchResponse struct {
 }
 
 func newHTTPClient() *http.Client {
-	return &http.Client{Timeout: 30 * time.Second}
+	return &http.Client{Timeout: 120 * time.Second}
 }
 
 func fetchGitHubRepos(client *http.Client, token string, apiURL string, query string, perPage, page int) (githubSearchResponse, error) {

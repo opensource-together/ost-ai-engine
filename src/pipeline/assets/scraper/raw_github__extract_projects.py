@@ -6,6 +6,7 @@ from dagster import (
     asset,
     MetadataValue,
     Output,
+    AssetKey,
 )
 from src.pipeline.resources.cfg_resource import build_scraper_env
 
@@ -16,6 +17,8 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     owners=DEFAULT_OWNERS,
     group_name="ingestion",
     required_resource_keys={"config"},
+    key=AssetKey(["github", "raw_github_project_data"]),
+    io_manager_key="fs_io_manager",
 )
 def raw_github__extract_projects(context):
     """
@@ -39,7 +42,7 @@ def raw_github__extract_projects(context):
                     text=True,
                     env=env,
                     cwd=os.getcwd(),
-                    timeout=120
+                    timeout=150
                 )
             
             stderr = (result.stderr or "").strip()
