@@ -9,7 +9,7 @@ from sqlalchemy import create_engine, text
 
 @asset(
     compute_kind="python",
-    group_name="ml",
+    group_name="ml_preparation",
     ins={"projects_df": AssetIn(key=AssetKey(["ml", "pvt_public_project"]))},
 )
 def core_ml__embed_projects(context: AssetExecutionContext, projects_df: pd.DataFrame, sentence_transformer: SentenceTransformerResource):

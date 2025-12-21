@@ -56,7 +56,7 @@ scraper_assets = load_assets_from_modules([
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
-from .jobs.github_scraper_job import github_scraper_job
+from .jobs.project_scraper_job import project_scraper_job
 
 # classification Assets
 from .assets.classification.core_match__classify_projects import core_match__classify_projects
@@ -67,7 +67,7 @@ from .assets.sync.core_public__sync_projects import core_public__sync_projects
 from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 
 # schedule
-github_scraper_schedule = make_github_scraper_schedule(github_scraper_job)
+project_scraper_schedule = make_github_scraper_schedule(project_scraper_job)
 
 # jobs
 from .jobs.run_all_job import run_all_job
@@ -94,12 +94,12 @@ defs = Definitions(
         "fs_io_manager": FilesystemIOManager(),
     },
     jobs=[
-        github_scraper_job,
+        project_scraper_job,
         cleanup_dagster_history_job,
         project_classification_job,
         project_embedding_job,
         run_all_job,
     ],
-    schedules=[github_scraper_schedule, cleanup_dagster_history_schedule],
+    schedules=[project_scraper_schedule, cleanup_dagster_history_schedule],
     sensors=[classification_sensor],
 )

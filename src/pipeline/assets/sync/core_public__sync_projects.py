@@ -7,7 +7,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    group_name="matching",
+    group_name="classification",
     key=AssetKey(["public", "Project"]), # Explicitly match DBT Source
     required_resource_keys={"io_manager"},
 )

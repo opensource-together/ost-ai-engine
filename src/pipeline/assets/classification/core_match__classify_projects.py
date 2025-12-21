@@ -11,7 +11,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python"},
     owners=DEFAULT_OWNERS,
     ins={"projects_df": AssetIn(key=AssetKey(["github", "pvt_github_project"]))},
-    group_name="matching",
+    group_name="classification",
     required_resource_keys={"llm_classifier"},
 )
 def core_match__classify_projects(context, projects_df):
