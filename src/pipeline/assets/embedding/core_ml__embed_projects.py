@@ -10,11 +10,11 @@ from sqlalchemy import create_engine, text
 @asset(
     compute_kind="python",
     group_name="ml",
-    ins={"projects_df": AssetIn(key=AssetKey(["ml", "stg_public_project"]))},
+    ins={"projects_df": AssetIn(key=AssetKey(["ml", "pvt_public_project"]))},
 )
 def core_ml__embed_projects(context: AssetExecutionContext, projects_df: pd.DataFrame, sentence_transformer: SentenceTransformerResource):
     """
-    Reads context from ml.stg_public_project, computes embeddings, and stores them in ml.embd_github_project.
+    Reads context from ml.pvt_public_project, computes embeddings, and stores them in ml.embd_github_project.
     """
     db_url = os.getenv("DATABASE_URL")
     engine = create_engine(db_url)
