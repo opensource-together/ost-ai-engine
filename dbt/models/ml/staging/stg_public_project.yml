@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: raw_public_project
+  - name: stg_public_project
     description: Generates structured context for public projects using build_project_context.
     columns:
       - name: id

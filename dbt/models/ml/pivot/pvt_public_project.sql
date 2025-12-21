@@ -1,6 +1,6 @@
 
 with source as (
-    select * from {{ ref('raw_public_project') }}
+    select * from {{ ref('stg_public_project') }}
 )
 
 select

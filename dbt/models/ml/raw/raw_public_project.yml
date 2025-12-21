@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: int_public_project
+  - name: raw_public_project
     description: Aggregates public projects with categories, domains, tech stacks, and readme.
     columns:
       - name: id

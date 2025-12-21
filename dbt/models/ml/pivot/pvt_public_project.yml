@@ -1,7 +1,7 @@
 version: 2
 
 models:
-  - name: stg_public_project
+  - name: pvt_public_project
     description: Cleans context using clean_text macro for embedding ingestion.
     columns:
       - name: id
