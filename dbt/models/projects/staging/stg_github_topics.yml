@@ -11,6 +11,10 @@ models:
           - not_null
       - name: project_id
         description: "Foreign key to the project."
+        tests:
+          - relationships:
+              to: ref('stg_github_project')
+              field: id
       - name: repo_url
         description: "URL of the repository."
       - name: topics

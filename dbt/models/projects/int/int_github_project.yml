@@ -7,6 +7,9 @@ models:
     columns:
       - name: id
         description: Project ID
+        tests:
+          - unique
+          - not_null
       - name: name
         description: Project Name
       - name: language_detected
