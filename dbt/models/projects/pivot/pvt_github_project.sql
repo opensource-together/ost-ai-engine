@@ -1,4 +1,3 @@
-
 with source as (
     select * from {{ ref('int_github_project') }}
 ),

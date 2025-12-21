@@ -58,4 +58,3 @@ sources:
       - name: project_category
       - name: project_domain
       - name: project_tech_stack
-      - name: TechStack

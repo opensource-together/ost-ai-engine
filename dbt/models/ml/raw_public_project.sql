@@ -1,5 +1,3 @@
-
-
 with public_projects as (
     select * from {{ ref('stg_public_project') }}
 )

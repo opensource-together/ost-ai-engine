@@ -4,10 +4,13 @@ import json
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
+from dagster_dbt import get_asset_key_for_model
+from src.pipeline.definitions import dbt_project_assets
+
 @asset(
     kinds={"python", "llm"},
     owners=DEFAULT_OWNERS,
-    deps=[AssetKey(["ost", "pvt_github_project"])],
+    deps=[get_asset_key_for_model([dbt_project_assets], "pvt_github_project")],
     group_name="matching",
     required_resource_keys={"llm_classifier"},
 )

@@ -1,4 +1,3 @@
-
 with projects as (
     select * from {{ ref('stg_github_project') }}
 ),
