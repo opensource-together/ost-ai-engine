@@ -8,6 +8,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     group_name="matching",
+    key=AssetKey(["public", "Project"]), # Explicitly match DBT Source
     required_resource_keys={"io_manager"},
 )
 def core_public__sync_projects(context, core_match__classify_projects):
@@ -19,6 +20,9 @@ def core_public__sync_projects(context, core_match__classify_projects):
     1. Upsert `public.Project` (with trending=True).
     2. Upsert `match.ProjectClassification`.
     3. Upsert `public.authenticator` (Category) and `public.project_domain`.
+    
+    Output:
+    Yields AssetMaterialization to trigger downstream DBT models.
     """
     data = core_match__classify_projects
     
@@ -144,3 +148,4 @@ def core_public__sync_projects(context, core_match__classify_projects):
             context.log.error(f"Failed to sync '{p.get('title')}': {e}")
                 
     context.log.info(f"Sync Complete. Persisted {synced_count} projects, classifications, and tech stacks.")
+    return None # Return None as we used explicit key but yield nothing dynamic
