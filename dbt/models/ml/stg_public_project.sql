@@ -31,24 +31,12 @@ tech_stacks as (
     group by pts."projectId"
 ),
 
+readmes as (
     select 
         repo_url,
         content
     from {{ source('ost', 'raw_github_readme') }}
 )
-
-/*
-    WHY RAW README?
-    
-    The `public.Project` table contains curated metadata (title, description, tags)
-    but intentionally does NOT store the heavy README content to keep the table light.
-    
-    However, for ML Embeddings (`generate_ml_context`), we absolutely need the full markdown 
-    content to generate high-quality semantic vectors.
-    
-    Therefore, we join `public.Project` (Meta) + `raw_github_readme` (Content) here.
-    Execution Order: Scraper -> Raw Tables -> Sync (Public Project) -> DBT (This Model).
-*/
 
 select 
     p.id,
