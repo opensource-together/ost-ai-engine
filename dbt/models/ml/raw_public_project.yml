@@ -2,13 +2,13 @@ version: 2
 
 models:
   - name: raw_public_project
-    description: "ML model containing the generated context for embedding."
+    description: Generates structured context for public projects using build_project_context.
     columns:
       - name: id
-        tests:
-          - unique
-          - not_null
+        description: Project UUID
+        tests: [unique, not_null]
       - name: context
-        description: "Concatenated rich text context."
-        tests:
-          - not_null
+        description: Structured context (## sections for Title, Description, Categories, etc.)
+        tests: [not_null]
+      - name: created_at
+        description: Generation timestamp

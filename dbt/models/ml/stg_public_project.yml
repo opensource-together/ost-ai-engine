@@ -2,13 +2,13 @@ version: 2
 
 models:
   - name: stg_public_project
-    description: "Final staging model for ML. Cleans the generated context from raw_public_project."
+    description: Cleans context using clean_text macro for embedding ingestion.
     columns:
       - name: id
-        tests:
-          - unique
-          - not_null
+        description: Project UUID
+        tests: [unique, not_null]
       - name: context
-        description: "Cleaned semantic context ready for embedding."
-        tests:
-          - not_null
+        description: Cleaned context (no URLs, code blocks, emojis)
+        tests: [not_null]
+      - name: created_at
+        description: Timestamp

@@ -1,18 +1,27 @@
-
 version: 2
 
 models:
   - name: int_github_project
-    description: Intermediate model joining all GitHub project related data (metadata, readme, topics, languages, detection).
+    description: Joins all GitHub project data (metadata, readme, topics, languages, detection).
     columns:
       - name: id
-        description: Project ID
-        tests:
-          - unique
-          - not_null
+        description: Project UUID
+        tests: [unique, not_null]
       - name: name
-        description: Project Name
-      - name: language_detected
-        description: Detected language from core_github__detect_languages
+        description: Repository name
+      - name: description
+        description: Repository description
+      - name: url
+        description: GitHub URL
       - name: readme_content
-        description: Content of the README
+        description: Raw README content
+      - name: fetched_topics
+        description: JSONB array of topics
+      - name: fetched_languages
+        description: JSONB object {lang→bytes}
+      - name: language_detected
+        description: FastText detected language
+      - name: language_confidence
+        description: Detection confidence (0-1)
+      - name: primary_language
+        description: Coalesced primary language
