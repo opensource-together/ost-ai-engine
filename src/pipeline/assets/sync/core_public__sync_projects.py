@@ -41,8 +41,8 @@ def core_public__sync_projects(context, core_match__classify_projects):
         p = item["project"]
         classification = item["classification"]
         
-        cat_id = classification["categoryId"]
-        dom_id = classification["domainId"]
+        cat_id = str(classification["categoryId"]) if classification["categoryId"] else None
+        dom_id = str(classification["domainId"]) if classification["domainId"] else None
         
         # Combine languages (dict keys) and topics (list)
         # languages is typically JSON like {"Python": 1000, "Rust": 500}
@@ -102,17 +102,23 @@ def core_public__sync_projects(context, core_match__classify_projects):
                 
                 # B. Upsert match.project_classification
                 match_id = str(uuid.uuid4())
-                cur.execute("""
-                    INSERT INTO "match"."project_classification" (
-                        "id", "projectId", "categoryId", "domainId", 
-                        "createdAt", "updatedAt"
-                    )
-                    VALUES (%s, %s, %s, %s, NOW(), NOW())
-                    ON CONFLICT ("projectId") DO UPDATE SET
-                        "categoryId" = EXCLUDED."categoryId",
-                        "domainId" = EXCLUDED."domainId",
-                        "updatedAt" = NOW();
-                """, (match_id, p['id'], cat_id, dom_id))
+                context.log.info(f"Upserting project_classification for projectId={p['id']}, catId={cat_id}, domId={dom_id}")
+                try:
+                    cur.execute("""
+                        INSERT INTO "match"."project_classification" (
+                            "id", "projectId", "categoryId", "domainId", 
+                            "createdAt", "updatedAt"
+                        )
+                        VALUES (%s, %s, %s, %s, NOW(), NOW())
+                        ON CONFLICT ("projectId") DO UPDATE SET
+                            "categoryId" = EXCLUDED."categoryId",
+                            "domainId" = EXCLUDED."domainId",
+                            "updatedAt" = NOW();
+                    """, (match_id, p['id'], cat_id, dom_id))
+                    context.log.info(f"Successfully executed upsert for project_classification for projectId={p['id']}")
+                except Exception as db_err:
+                    context.log.error(f"DB Error upserting classification for {p['id']}: {db_err}")
+                    raise db_err
                 
                 # C. Relations
                 
