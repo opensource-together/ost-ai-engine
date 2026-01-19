@@ -8,6 +8,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     group_name="classification",
+    key=AssetKey(["public", "Project"]), # Explicitly match DBT Source
     required_resource_keys={"io_manager"},
 )
 def core_public__sync_projects(context, core_match__classify_projects):
