@@ -65,6 +65,7 @@ from .assets.sync.core_public__sync_projects import core_public__sync_projects
 
 # ML Assets
 from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
+from .assets.embedding.core_ml__embed_users import core_ml__embed_users
 
 # schedule
 project_scraper_schedule = make_github_scraper_schedule(project_scraper_job)
@@ -83,6 +84,7 @@ defs = Definitions(
         core_match__classify_projects,
         core_public__sync_projects,
         core_ml__embed_projects,
+        core_ml__embed_users,
     ],
     resources={
         "config": config_resource,
