@@ -8,7 +8,6 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     group_name="classification",
-    key=AssetKey(["public", "Project"]), # Explicitly match DBT Source
     required_resource_keys={"io_manager"},
 )
 def core_public__sync_projects(context, core_match__classify_projects):
@@ -92,7 +91,7 @@ def core_public__sync_projects(context, core_match__classify_projects):
                         "trending" = true,
                         "updatedAt" = NOW();
                 """, (
-                    p['id'],
+                    str(p['id']),
                     p['title'],
                     p['description'],
                     p['url'],
@@ -114,8 +113,8 @@ def core_public__sync_projects(context, core_match__classify_projects):
                             "categoryId" = EXCLUDED."categoryId",
                             "domainId" = EXCLUDED."domainId",
                             "updatedAt" = NOW();
-                    """, (match_id, p['id'], cat_id, dom_id))
-                    context.log.info(f"Successfully executed upsert for project_classification for projectId={p['id']}")
+                    """, (match_id, str(p['id']), cat_id, dom_id))
+                    context.log.info(f"Executed upsert for classification. Rows affected: {cur.rowcount}")
                 except Exception as db_err:
                     context.log.error(f"DB Error upserting classification for {p['id']}: {db_err}")
                     raise db_err
@@ -128,7 +127,7 @@ def core_public__sync_projects(context, core_match__classify_projects):
                         INSERT INTO "public"."project_category" ("id", "projectId", "categoryId", "createdAt")
                         VALUES (%s, %s, %s, NOW())
                         ON CONFLICT ("projectId", "categoryId") DO NOTHING;
-                    """, (str(uuid.uuid4()), p['id'], cat_id))
+                    """, (str(uuid.uuid4()), str(p['id']), cat_id))
                     
                 # 2. Domain -> public.project_domain
                 if dom_id:
@@ -136,7 +135,7 @@ def core_public__sync_projects(context, core_match__classify_projects):
                         INSERT INTO "public"."project_domain" ("id", "projectId", "domainId", "createdAt")
                         VALUES (%s, %s, %s, NOW())
                         ON CONFLICT ("projectId", "domainId") DO NOTHING;
-                    """, (str(uuid.uuid4()), p['id'], dom_id))
+                    """, (str(uuid.uuid4()), str(p['id']), dom_id))
                 
                 # 3. Tech Stacks -> public.project_tech_stack
                 for name in project_tech_names:
@@ -146,7 +145,7 @@ def core_public__sync_projects(context, core_match__classify_projects):
                             INSERT INTO "public"."project_tech_stack" ("id", "projectId", "techStackId", "createdAt")
                             VALUES (%s, %s, %s, NOW())
                             ON CONFLICT ("projectId", "techStackId") DO NOTHING;
-                        """, (str(uuid.uuid4()), p['id'], ts_id))
+                        """, (str(uuid.uuid4()), str(p['id']), str(ts_id)))
 
 
             synced_count += 1
