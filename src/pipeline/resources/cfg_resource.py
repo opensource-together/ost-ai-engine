@@ -14,14 +14,14 @@ load_dotenv()
 # Dynamic query building
 seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
 DEFAULT_GITHUB_QUERY = " ".join([
-    "stars:1000..1001",
+    "stars:2000..2500",
     "topics:>0",
     "forks:>0",
     f"pushed:>={seven_days_ago}",
     "is:public",
     "archived:false",
     "NOT download",
-    'NOT "curated list"',
+    "NOT curated list",
 ])
 
 
