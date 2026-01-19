@@ -41,16 +41,16 @@ def core_ml__embed_users(context, user_df):
     with get_db_cursor(commit=True) as cur:
         for i, user in enumerate(users):
             user_id = user['user_id']
-            vector = embeddings[i].tolist() # Convert to list for PGVector
+            vector = embeddings[i] # Already a list if model.encode returned list-of-lists
             
             try:
                 # Upsert into ml.embd_user
                 cur.execute("""
-                    INSERT INTO "ml"."embd_user" ("id", "user_id", "vector", "created_at")
-                    VALUES (uuid_generate_v4(), %s, %s, NOW())
-                    ON CONFLICT ("user_id") DO UPDATE SET
+                    INSERT INTO "ml"."embd_user" ("id", "userId", "vector", "createdAt", "updatedAt")
+                    VALUES (uuid_generate_v4(), %s, %s, NOW(), NOW())
+                    ON CONFLICT ("userId") DO UPDATE SET
                         "vector" = EXCLUDED."vector",
-                        "created_at" = NOW();
+                        "updatedAt" = NOW();
                 """, (str(user_id), str(vector)))
                 
                 synced_count += 1
