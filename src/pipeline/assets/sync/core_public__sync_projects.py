@@ -19,7 +19,7 @@ def core_public__sync_projects(context, core_match__classify_projects):
     Actions:
     1. Upsert `public.Project` (with trending=True).
     2. Upsert `match.ProjectClassification`.
-    3. Upsert `public.authenticator` (Category) and `public.project_domain`.
+    3. Upsert `public.project_category` (Category) and `public.project_domain`.
     
     Output:
     Yields AssetMaterialization to trigger downstream DBT models.
@@ -147,6 +147,7 @@ def core_public__sync_projects(context, core_match__classify_projects):
                             VALUES (%s, %s, %s, NOW())
                             ON CONFLICT ("projectId", "techStackId") DO NOTHING;
                         """, (str(uuid.uuid4()), p['id'], ts_id))
+
 
             synced_count += 1
             
