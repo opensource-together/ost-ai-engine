@@ -115,7 +115,7 @@ models:
               group: ingestion
 
     match:
-      +materialized: view
+      +materialized: table
       +schema: public
       +meta:
         dagster:
