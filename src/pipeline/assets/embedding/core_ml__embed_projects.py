@@ -9,7 +9,8 @@ from sqlalchemy import create_engine, text
 
 @asset(
     compute_kind="python",
-    group_name="ml",
+    group_name="embedding",
+    key=AssetKey(["ml", "embd_github_project"]), # Matches dbt source
     ins={"projects_df": AssetIn(key=AssetKey(["ml", "pvt_public_project"]))},
 )
 def core_ml__embed_projects(context: AssetExecutionContext, projects_df: pd.DataFrame, sentence_transformer: SentenceTransformerResource):
@@ -70,11 +71,11 @@ def core_ml__embed_projects(context: AssetExecutionContext, projects_df: pd.Data
                 vector_str = str(item['vector'])
                 
                 stmt = text("""
-                    INSERT INTO ml.embd_github_project ("id", "projectId", "embeddingVector", "createdAt")
+                    INSERT INTO ml.embd_github_project ("id", "projectId", "vector", "createdAt")
                     VALUES (:id, :projectId, :vector, NOW())
                     ON CONFLICT ("projectId") 
                     DO UPDATE SET 
-                        "embeddingVector" = EXCLUDED."embeddingVector",
+                        "vector" = EXCLUDED."vector",
                         "createdAt" = NOW();
                 """)
                 

@@ -8,8 +8,9 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"python", "pgvector"},
     owners=DEFAULT_OWNERS,
+    key=AssetKey(["ml", "embd_user"]), # Matches dbt source
     ins={"user_df": AssetIn(key=AssetKey(["ml", "pvt_public_user"]))}, # Matches dbt model
-    group_name="ml_preparation",
+    group_name="embedding",
     required_resource_keys={"sentence_transformer", "io_manager"},
 )
 def core_ml__embed_users(context, user_df):
