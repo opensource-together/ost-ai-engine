@@ -43,3 +43,5 @@ select
     updated_at
 from deduplicated
 where rn = 1
+order by stars desc
+limit 50
