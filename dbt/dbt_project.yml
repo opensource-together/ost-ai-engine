@@ -40,37 +40,23 @@ models:
       staging:
         +materialized: table
         +schema: ml
-        # public staging tables removed/truncated in DB cleanup, keeping config minimal or removing if models deleted. 
-        # Assuming we keep models file but they are empty or unused for now. 
-        # If models files deleted, remove this block. Keeping empty for safety.
+        +meta:
+          dagster:
+            group: ml_preparation
+
+      int:
+        +materialized: table
+        +schema: ml
+        +meta:
+          dagster:
+            group: ml_preparation
 
       pivot:
         +materialized: table
         +schema: ml
-        pvt_user_profile:
-          +enabled: true
-          +meta:
-            dagster:
-              group: embedding
-              
-      int:
-        +materialized: table
-        +schema: ml
-        int_user_profile:
-          +enabled: true
-          +meta:
-            dagster:
-              group: embedding
-        int_category_embedding:
-          +enabled: true
-          +meta:
-             dagster:
-               group: embedding
-        int_domain_embedding:
-          +enabled: true
-          +meta:
-             dagster:
-               group: embedding
+        +meta:
+          dagster:
+            group: ml_preparation # As requested by user
 
               
     projects:
@@ -127,3 +113,10 @@ models:
           +meta:
             dagster:
               group: ingestion
+
+    match:
+      +materialized: view
+      +schema: public
+      +meta:
+        dagster:
+          group: matching
