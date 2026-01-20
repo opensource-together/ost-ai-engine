@@ -12,17 +12,23 @@ from pydantic import Field
 load_dotenv()
 
 # Dynamic query building
-seven_days_ago = (date.today() - timedelta(days=7)).isoformat()
+seven_days_ago = (date.today() - timedelta(days=60)).isoformat()
+# Terms to exclude from search results to improve quality
+# NOTE: GitHub API has limits on query complexity (max ~5-10 logical operators).
+# Keep this list short and focused on high-imact noise.
+EXCLUDED_TERMS = [
+    "download",
+    "list",
+]
+
 DEFAULT_GITHUB_QUERY = " ".join([
-    "stars:2000..2500",
+    "stars:2500..4000",
     "topics:>0",
     "forks:>0",
     f"pushed:>={seven_days_ago}",
     "is:public",
     "archived:false",
-    "NOT download",
-    "NOT curated list",
-])
+] + [f'NOT "{term}"' for term in EXCLUDED_TERMS])
 
 
 class PipelineConfig(Config):
