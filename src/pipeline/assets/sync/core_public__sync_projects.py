@@ -102,7 +102,6 @@ def core_public__sync_projects(context, core_match__classify_projects):
                 
                 # B. Upsert match.project_classification
                 match_id = str(uuid.uuid4())
-                context.log.info(f"Upserting project_classification for projectId={p['id']}, catId={cat_id}, domId={dom_id}")
                 try:
                     cur.execute("""
                         INSERT INTO "match"."project_classification" (
@@ -115,7 +114,6 @@ def core_public__sync_projects(context, core_match__classify_projects):
                             "domainId" = EXCLUDED."domainId",
                             "updatedAt" = NOW();
                     """, (match_id, str(p['id']), cat_id, dom_id))
-                    context.log.info(f"Executed upsert for classification. Rows affected: {cur.rowcount}")
                 except Exception as db_err:
                     context.log.error(f"DB Error upserting classification for {p['id']}: {db_err}")
                     raise db_err
