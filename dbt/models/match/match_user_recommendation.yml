@@ -1,0 +1,11 @@
+version: 2
+
+models:
+  - name: match_user_recommendation
+    description: "Final model computing cosine similarity between users and projects"
+    columns:
+      - name: user_id
+      - name: project_id
+      - name: similarity_score
+        description: "Cosine similarity score (0-1)"
+      - name: calculated_at
