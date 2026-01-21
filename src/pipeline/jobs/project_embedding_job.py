@@ -6,6 +6,6 @@ from dagster import AssetSelection, define_asset_job
 
 project_embedding_job = define_asset_job(
     name="project_embedding_job",
-    selection=AssetSelection.groups("ml") | AssetSelection.groups("dbt_models"),
+    selection=AssetSelection.groups("ml") | AssetSelection.groups("ml_preparation"),
     description="Runs DBT models for ML context and computes project embeddings."
 )
