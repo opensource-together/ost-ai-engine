@@ -8,14 +8,14 @@ models:
       for each user.
     columns:
       - name: user_id
-        description: "Foreign key to the User table (public.User)"
+        description: "FK to the user table"
         tests:
           - not_null
       - name: project_id
-        description: "Foreign key to the Project table (public.Project)"
+        description: "FK to the project table"
         tests:
           - not_null
       - name: similarity_score
-        description: "Cosine similarity score between user and project embedding vectors (range -1 to 1, higher is better)"
+        description: "Cosine similarity score (range -1 to 1, higher is better)"
       - name: calculated_at
         description: "Timestamp when the recommendation was computed"

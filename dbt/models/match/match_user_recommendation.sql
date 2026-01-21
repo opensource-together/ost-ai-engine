@@ -34,3 +34,4 @@ select
     similarity_score,
     now() as calculated_at
 from recommendations
+where similarity_score > 0.30
