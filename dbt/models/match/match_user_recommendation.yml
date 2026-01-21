@@ -2,10 +2,20 @@ version: 2
 
 models:
   - name: match_user_recommendation
-    description: "Final model computing cosine similarity between users and projects"
+    description: >
+      Calculates personalized recommendations for users by computing cosine similarity
+      between user profile embeddings and project embeddings. Returns top 5 matches
+      for each user.
     columns:
       - name: user_id
+        description: "Foreign key to the User table (public.User)"
+        tests:
+          - not_null
       - name: project_id
+        description: "Foreign key to the Project table (public.Project)"
+        tests:
+          - not_null
       - name: similarity_score
-        description: "Cosine similarity score (0-1)"
+        description: "Cosine similarity score between user and project embedding vectors (range -1 to 1, higher is better)"
       - name: calculated_at
+        description: "Timestamp when the recommendation was computed"

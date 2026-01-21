@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: match_global_recommendation
+    description: >
+      Generates top 5 global project recommendations based on popularity and recency.
+      Filters for safe, published projects and ranks them by a combination of star
+      count and update freshness.
+    columns:
+      - name: project_id
+        description: "Unique identifier for the project"
+        tests:
+          - unique
+          - not_null
+      - name: stars
+        description: "Total GitHub star count, used as a primary ranking metric for popularity"
+      - name: last_synced_at
+        description: "Timestamp of the last synchronization, used to boost fresher content"
