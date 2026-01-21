@@ -33,6 +33,10 @@ models:
         +meta:
           dagster:
             group: ml_preparation
+      int:
+        +meta:
+          dagster:
+            group: ml_preparation
 
     users:
       +enabled: true
