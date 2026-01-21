@@ -8,8 +8,8 @@ renamed as (
         data->>'name' as name,
         data->>'description' as description,
         data->>'html_url' as url,
-        (data->>'stars')::int as stars,
-        (data->>'forks')::int as forks,
+        (data->>'stargazers_count')::int as stars,
+        (data->>'forks_count')::int as forks,
         data->>'language' as language,
         data->>'topics' as topics,
         "createdAt" as created_at,
@@ -43,5 +43,3 @@ select
     updated_at
 from deduplicated
 where rn = 1
-order by stars desc
-limit 50

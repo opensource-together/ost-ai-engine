@@ -2,30 +2,32 @@ version: 2
 
 models:
   - name: stg_github_project
-    description: "Staging model for GitHub projects. Cleans and deduplicates raw data from the scraper."
+    description: >
+      Staging model for core GitHub project metadata. Cleans and deduplicates raw scraper output,
+      ensuring one record per project URL.
     columns:
       - name: id
-        description: "Unique identifier for the project (UUID)."
+        description: "Unique identifier (UUID v5 derived from URL)"
         tests:
           - unique
           - not_null
       - name: name
-        description: "Name of the repository."
+        description: "Repository name"
       - name: description
-        description: "Description of the repository."
+        description: "Repository description"
       - name: url
-        description: "URL of the repository."
+        description: "GitHub URL (deduplication key)"
         tests:
           - not_null
       - name: stars
-        description: "Number of stars."
+        description: "Star count"
       - name: forks
-        description: "Number of forks."
+        description: "Fork count"
       - name: language
-        description: "Primary language of the repository."
+        description: "Primary language as reported by GitHub"
       - name: topics
-        description: "JSON list of topics associated with the repository."
+        description: "Raw JSON list of topics"
       - name: created_at
-        description: "Timestamp when the record was created."
+        description: "Record creation timestamp"
       - name: updated_at
-        description: "Timestamp when the record was last updated."
+        description: "Record update timestamp"

@@ -26,10 +26,7 @@ select
     forks,
     created_at,
     updated_at,
-    readme_content as readme,
-    fetched_topics as topics,
-    fetched_languages as languages,
-    language_detected,
+    -- Keep metadata for filtering, but remove blobs (readme, full lists) to save space
     language_confidence,
     primary_language as language,
     context

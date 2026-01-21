@@ -2,22 +2,23 @@ version: 2
 
 models:
   - name: stg_github_topics
-    description: "Staging model for GitHub topics. Deduplicates raw topics data."
+    description: >
+      Staging model for GitHub repository topics/tags.
     columns:
       - name: id
-        description: "Unique identifier for the record."
+        description: "Unique record identifier"
         tests:
           - unique
           - not_null
       - name: project_id
-        description: "Foreign key to the project."
+        description: "FK to stg_github_project"
         tests:
           - relationships:
               to: ref('stg_github_project')
               field: id
       - name: repo_url
-        description: "URL of the repository."
+        description: "Repository URL"
       - name: topics
-        description: "JSON list of topics."
+        description: "JSONB collection of topics"
       - name: created_at
-        description: "Timestamp when the record was created."
+        description: "Record creation timestamp"

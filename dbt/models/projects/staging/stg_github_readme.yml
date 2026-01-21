@@ -2,22 +2,23 @@ version: 2
 
 models:
   - name: stg_github_readme
-    description: "Staging model for GitHub readmes. Deduplicates raw readme content."
+    description: >
+      Staging model for GitHub READMEs. Contains the raw markdown content of project READMEs.
     columns:
       - name: id
-        description: "Unique identifier for the record."
+        description: "Unique record identifier"
         tests:
           - unique
           - not_null
       - name: project_id
-        description: "Foreign key to the project."
+        description: "FK to stg_github_project"
         tests:
           - relationships:
               to: ref('stg_github_project')
               field: id
       - name: repo_url
-        description: "URL of the repository."
+        description: "Repository URL"
       - name: content
-        description: "Content of the README file."
+        description: "Raw README markdown content"
       - name: created_at
-        description: "Timestamp when the record was created."
+        description: "Record creation timestamp"

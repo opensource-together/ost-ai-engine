@@ -2,20 +2,21 @@ version: 2
 
 models:
   - name: stg_github_detection
-    description: "Staging model for GitHub language detection. Deduplicates detection results."
+    description: >
+      Staging model for FastText language detection results.
     columns:
       - name: id
-        description: "Unique identifier for the record."
+        description: "Unique record identifier"
         tests:
           - unique
           - not_null
       - name: project_id
-        description: "Foreign key to the project."
+        description: "FK to stg_github_project"
       - name: repo_url
-        description: "URL of the repository."
+        description: "Repository URL"
       - name: language_detected
-        description: "Detected language code (e.g. 'en', 'fr')."
+        description: "Detected language code (e.g., 'en', 'python')"
       - name: language_confidence
-        description: "Confidence score of the detection (0.0 to 1.0)."
+        description: "Confidence score (0.0 - 1.0)"
       - name: created_at
-        description: "Timestamp when the record was created."
+        description: "Record creation timestamp"

@@ -2,36 +2,39 @@ version: 2
 
 models:
   - name: pvt_github_project
-    description: Pivot table with enriched GitHub projects and LLM-ready context.
+    description: >
+      Central pivot table aggregating all GitHub project data. This model serves as the primary
+      source for downstream ML and application layers, providing enriched metadata and
+      pre-computed LLM context.
     columns:
       - name: id
-        description: Project UUID
+        description: "Project UUID"
         tests: [unique, not_null]
       - name: name
-        description: Repository name
+        description: "Repository name"
       - name: description
-        description: Repository description
+        description: "Repository description"
       - name: url
-        description: GitHub URL
+        description: "GitHub URL"
       - name: stars
-        description: Star count
+        description: "Star count (popularity metric)"
       - name: forks
-        description: Fork count
+        description: "Fork count"
       - name: language
-        description: Primary language (coalesced)
+        description: "Primary language (coalesced from GitHub source and FastText detection)"
       - name: readme
-        description: Raw README content
+        description: "Raw README content"
       - name: topics
-        description: JSONB array of topics
+        description: "JSONB array of topics (tags)"
       - name: languages
-        description: JSONB object {lang→bytes}
+        description: "JSONB object mapping languages to byte counts"
       - name: language_detected
-        description: FastText detected language
+        description: "Language detected by FastText"
       - name: language_confidence
-        description: Detection confidence (0-1)
+        description: "Confidence score of the language detection (0-1)"
       - name: context
-        description: Structured context for embeddings (## Title, Description, Topics, Tech stacks, Readme)
+        description: "Structured markdown context for embeddings (## Title, Description, Topics, Tech stacks, Readme)"
       - name: created_at
-        description: Creation timestamp
+        description: "Creation timestamp"
       - name: updated_at
-        description: Last update timestamp
+        description: "Last update timestamp"
