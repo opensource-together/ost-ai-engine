@@ -1,8 +1,34 @@
-.git/
-.github/
-docs/
 
+# Valid directories to include
+!src/
+!dbt/
+!dagster/
+!prisma/
+!scripts/
+
+# Ignore everything else by default (allowlist pattern)
+# But Docker behaviors vary, so let's stick to blocklist for safety if file structure is complex
+# Reverting to standard blocklist pattern for stability:
+
+.git
+.github
+.venv
+.env
 .env*
-
-github-scraper
-gitlab-scraper
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.DS_Store
+.coverage
+htmlcov
+.pytest_cache
+.mypy_cache
+dist
+build
+*.egg-info
+node_modules
+target/
+dbt_packages/
+logs/
+tmp/
