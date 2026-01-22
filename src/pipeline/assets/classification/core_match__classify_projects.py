@@ -52,11 +52,16 @@ def core_match__classify_projects(context, projects_df):
     dom_names = list(domains_map.keys())
     
     results_payload = []
+    total = len(projects)
     
-    for p in projects:
-        if not p.get('title'): continue
+    for idx, p in enumerate(projects, start=1):
+        if not p.get('title'): 
+            context.log.debug(f"[{idx}/{total}] Skipping project without title.")
+            continue
 
         try:
+            context.log.info(f"[{idx}/{total}] Classifying: {p['title'][:60]}...")
+            
             # Call LLM
             result_json = llm.classify_project(
                 title=p['title'], 
@@ -83,12 +88,17 @@ def core_match__classify_projects(context, projects_df):
                     }
                 }
                 results_payload.append(payload)
+                context.log.info(f"[{idx}/{total}] Classified '{p['title'][:40]}' → Cat: {cat_name}, Dom: {dom_name}")
             else:
-                context.log.warning(f"LLM returned unknown labels for '{p['title']}': Cat='{cat_name}', Dom='{dom_name}'")
+                context.log.warning(f"[{idx}/{total}] Unknown labels for '{p['title']}': Cat='{cat_name}', Dom='{dom_name}'")
 
         except Exception as e:
-            context.log.error(f"Failed to classify '{p['title']}': {e}")
+            context.log.error(f"[{idx}/{total}] Failed to classify '{p['title']}': {e}")
             continue
+        
+        # Log progress every 10 projects
+        if idx % 10 == 0:
+            context.log.info(f"Progress: {idx}/{total} projects processed ({len(results_payload)} successfully classified)")
 
     context.log.info(f"Successfully classified {len(results_payload)} projects.")
     
