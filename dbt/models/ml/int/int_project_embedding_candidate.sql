@@ -44,4 +44,4 @@ select
     project_id,
     rich_context_string
 from enriched
-where rn <= 50 -- Top X limit of projects to embed
+where rn <= 50 -- Top X limit of projects to embed for recommendations
