@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: pvt_public_project
-    description: Cleans context using clean_text macro for embedding ingestion.
+    description: "Prepares clean, truncated text context for embedding generation by removing formatting artifacts."
     columns:
       - name: id
         description: Project UUID

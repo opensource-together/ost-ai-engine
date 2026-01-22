@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_public_project
-    description: Generates structured context for public projects using build_project_context.
+    description: "Aggregates project metadata (Title, Description, Topics) into a structured markdown-like text block."
     columns:
       - name: id
         description: Project UUID

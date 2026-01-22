@@ -4,7 +4,7 @@ with projects as (
 ),
 
 metadata as (
-    select * from {{ ref('int_github_project') }}
+    select * from {{ ref('pvt_github_project') }}
 ),
 
 final as (

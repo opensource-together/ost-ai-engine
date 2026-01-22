@@ -18,7 +18,7 @@ project_scraper_job = define_asset_job(
         backoff=Backoff.EXPONENTIAL,
         jitter=Jitter.FULL,
     ),
-    description="Scrape projects, classify them, and sync to public schema.",
+    description="Ingests raw GitHub data, detects languages, and executes initial classification pipeline.",
 )
 
 __all__ = ["project_scraper_job"]

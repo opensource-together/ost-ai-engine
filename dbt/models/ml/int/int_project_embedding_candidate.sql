@@ -16,7 +16,7 @@ domains as (
 ),
 
 original_context as (
-    select id, context from {{ ref('pvt_github_project') }}
+    select id, context from {{ ref('pvt_public_project') }}
 ),
 
 enriched as (
