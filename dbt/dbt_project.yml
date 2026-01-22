@@ -103,11 +103,7 @@ models:
           +meta:
             dagster:
               group: ingestion
-        int_github_embedding:
-          +enabled: true
-          +meta:
-            dagster:
-              group: embedding
+
 
       pivot:
         +materialized: table
