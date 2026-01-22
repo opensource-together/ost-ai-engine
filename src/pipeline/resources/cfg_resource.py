@@ -20,10 +20,6 @@ EXCLUDED_TERMS = [
     "download",
     "list",
     "awesome",
-    "course",
-    "tutorial",
-    "interview",
-    "book",
     "collection",
 ]
 
