@@ -19,10 +19,16 @@ seven_days_ago = (date.today() - timedelta(days=60)).isoformat()
 EXCLUDED_TERMS = [
     "download",
     "list",
+    "awesome",
+    "course",
+    "tutorial",
+    "interview",
+    "book",
+    "collection",
 ]
 
 DEFAULT_GITHUB_QUERY = " ".join([
-    "stars:2500..4000",
+    "stars:2500..2600",
     "topics:>0",
     "forks:>0",
     f"pushed:>={seven_days_ago}",
