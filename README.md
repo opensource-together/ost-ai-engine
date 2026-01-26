@@ -22,18 +22,27 @@ It automatically explores the GitHub ecosystem to:
 
 ## Quick Start
 
-1. Copy `.env.example` into `.env` and fill it.
-2. Copy `config/cfg_example.py` to `config/cfg.py` and adjust the config to your personal parameters.
-3. Generate prisma client, migrations & seed
-```bash
-make setup
-```
-4. Start Linker
-```bash
-make up
-```
+1. **Configuration**
+   Copy `.env.example` to `.env` and adjust values.
+   ```bash
+   cp .env.example .env
+   ```
 
-Dagster UI : http://localhost:3000
+2. **Start the Platform**
+   Launch all services :
+   ```bash
+   docker compose up --build -d
+   ```
+   
+   *Dagster UI will be available at [http://localhost:3000](http://localhost:3000).*
+
+3. **Initialize Database**
+   Apply the Schema and seed initial data (TechStacks, Categories, etc.):
+   ```bash
+   npx prisma db push
+   npx ts-node prisma/seed/seed.ts
+   ```
+   *(Ensure you have Node.js installed locally. The DB is exposed on port 5433 by default).*
 
 ## Status
 Work in progress.  
