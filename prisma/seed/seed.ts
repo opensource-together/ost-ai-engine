@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
-import { techStacksData } from './techstacks-data.ts';
-import { categoriesData } from './categories-data.ts';
-import { domainsData } from './domains-data.ts';
+import { techStacksData } from './techstacks-data';
+import { categoriesData } from './categories-data';
+import { domainsData } from './domains-data';
 
 const prisma = new PrismaClient();
 
