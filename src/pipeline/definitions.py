@@ -89,7 +89,7 @@ defs = Definitions(
     resources={
         "config": config_resource,
         "fasttext_model": FastTextModelResource(),
-        "llm_classifier": LLMClassifierResource(device="mps"), # Using MPS for Mac Silicon acceleration if available
+        "llm_classifier": LLMClassifierResource(device=os.getenv("DAGSTER_DEVICE", "cpu")), # Use CPU in Docker, MPS locally if set
         "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps
         "dbt": dbt_resource,
         "io_manager": postgres_io_manager,
