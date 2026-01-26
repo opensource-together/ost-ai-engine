@@ -12,22 +12,22 @@ from pydantic import Field
 load_dotenv()
 
 # Dynamic query building
-seven_days_ago = (date.today() - timedelta(days=60)).isoformat()
+one_day_ago = (date.today() - timedelta(days=1)).isoformat()
 # Terms to exclude from search results to improve quality
 # NOTE: GitHub API has limits on query complexity (max ~5-10 logical operators).
 # Keep this list short and focused on high-imact noise.
 EXCLUDED_TERMS = [
     "download",
-    "list",
-    "awesome",
-    "collection",
+    "list"
 ]
 
 DEFAULT_GITHUB_QUERY = " ".join([
-    "stars:2500..2503",
+    "stars:500..1000",
+    "good-first-issues:>5",
+    "help-wanted-issues:>1",
     "topics:>0",
     "forks:>0",
-    f"pushed:>={seven_days_ago}",
+    f"pushed:>={one_day_ago}",
     "is:public",
     "archived:false",
 ] + [f'NOT "{term}"' for term in EXCLUDED_TERMS])
