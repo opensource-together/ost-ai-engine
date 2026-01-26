@@ -12,15 +12,15 @@ WORKDIR /app
 COPY src/services/go/fetcher ./src/services/go/fetcher
 COPY src/services/go/scraper ./src/services/go/scraper
 
-# Build Fetcher
-WORKDIR /app/src/services/go/fetcher
-RUN go mod download
-RUN go build -o /app/bin/ost-fetcher .
-
 # Build Scraper
 WORKDIR /app/src/services/go/scraper
 RUN go mod download
 RUN go build -o /app/bin/ost-scraper .
+
+# Build Fetcher
+WORKDIR /app/src/services/go/fetcher
+RUN go mod download
+RUN go build -o /app/bin/ost-fetcher .
 
 # ==============================================================================
 # Stage 2: Python Builder

@@ -11,12 +11,19 @@ services:
     ports:
       - "3000:3000" # Dagster UI
     environment:
-      - DATABASE_URL=postgresql://postgres:password@db:5432/ost_db
+      - DATABASE_URL=${DATABASE_URL}
+      # Dagster home (Docker Path)
       - DAGSTER_HOME=/app/dagster_home
-      # GitHub Tokens for Scraper (Add to .env)
+      # GitHub Tokens for Scraper
       - GITHUB_ACCESS_TOKEN=${GITHUB_ACCESS_TOKEN}
-      # ML Config
-      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      # Go Binaries (Docker Path)
+      - GO_SCRAPER_PATH=/usr/local/bin/ost-scraper
+      - GO_FETCHER_PATH=/usr/local/bin/ost-fetcher
+      # DBT Config
+      - DBT_TARGET=docker
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
     volumes:
       - ./dagster_home:/app/dagster_home
       # Mount source code for simpler dev loops (optional, remove for prod)
@@ -35,15 +42,13 @@ services:
     container_name: ost-linker-db
     restart: always
     environment:
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: password
-      POSTGRES_DB: ost_db
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "5432:5432"
+      - "${POSTGRES_PORT:-5433}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      # Optional: Init scripts if needed
-      # - ./scripts/init_db:/docker-entrypoint-initdb.d
 
 volumes:
   postgres_data:
