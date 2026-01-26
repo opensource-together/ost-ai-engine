@@ -80,7 +80,7 @@ class LLMClassifierResource(ConfigurableResource):
         generated_text = outputs[0]['generated_text']
         
         # Cleanup to retrieve only JSON
-        clean_json = generated_text.replace("```json", "").replace("```", "").strip()
+        clean_json = generated_text.replace("```json", "").replace("```", "").replace("{{", "{").replace("}}", "}").strip()
         
         try:
             return json.loads(clean_json)
