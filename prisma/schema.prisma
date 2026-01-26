@@ -320,6 +320,9 @@ model BetaSignup {
   @@schema("public")
 }
 
+// ------ LINKER ------
+// Raw / Embedding tables, not managed by DBT
+
 model RawGithubReadme {
   id         String   @id @default(uuid()) @db.Uuid
   project_id String
@@ -373,4 +376,25 @@ model IntGithubDetection {
 
   @@map("int_github_detection")
   @@schema("github")
+}
+
+model EmbdGithubProject {
+  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String                 @unique @db.Uuid
+  vector    Unsupported("vector")?
+  createdAt DateTime               @default(now())
+
+  @@map("embd_github_project")
+  @@schema("ml")
+}
+
+model EmbdUser {
+  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String                 @unique @db.Uuid
+  vector    Unsupported("vector")?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@map("embd_user")
+  @@schema("ml")
 }
