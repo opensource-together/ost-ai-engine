@@ -69,6 +69,7 @@ from .assets.embedding.core_ml__embed_users import core_ml__embed_users
 
 # schedule
 project_scraper_schedule = make_github_scraper_schedule(project_scraper_job)
+from .schedules.run_all_schedule import run_all_schedule
 
 # jobs
 from .jobs.run_all_job import run_all_job
@@ -102,6 +103,6 @@ defs = Definitions(
         project_embedding_job,
         run_all_job,
     ],
-    schedules=[project_scraper_schedule, cleanup_dagster_history_schedule],
+    schedules=[project_scraper_schedule, cleanup_dagster_history_schedule, run_all_schedule],
     sensors=[classification_sensor],
 )
