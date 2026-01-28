@@ -11,7 +11,7 @@ services:
     ports:
       - "3000:3000" # Dagster UI
     environment:
-      - DATABASE_URL=${DATABASE_URL}
+      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
       # Dagster home (Docker Path)
       - DAGSTER_HOME=/app/dagster_home
       # GitHub Tokens for Scraper
@@ -29,10 +29,11 @@ services:
       # Mount source code for simpler dev loops (optional, remove for prod)
       - ./src:/app/src
       - ./dbt:/app/dbt
+      - ./scripts:/app/scripts
     depends_on:
       - db
     # Override command to ensure migrations or specific tailored startup if needed
-    command: [ "dagster", "dev", "-h", "0.0.0.0", "-p", "3000" ]
+    command: [ "./scripts/init.sh", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000" ]
 
   # ============================================================================
   # DATABASE (Postgres + PGVector)
