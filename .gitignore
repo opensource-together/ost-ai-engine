@@ -136,11 +136,11 @@ models/*.npy
 models/*.pkl
 src/models
 
-# Scripts (local-only for now)
-scripts/!cfg_cron.py
+# Scripts
 *.sh
-!docker-entrypoint.sh
+!scripts/init.sh
 *.old
+scripts/*.py
 
 # DB test
 *.db
@@ -177,9 +177,6 @@ uv.lock
 .tmp*
 dagster/
 !dagster/dagster.yml
-
-# Docker entrypoint scripts
-entrypoint.sh
 
 # Node
 package-lock.json
