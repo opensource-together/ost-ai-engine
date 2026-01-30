@@ -21,7 +21,7 @@ dbt_assets_list = [dbt_project_assets]
 for asset in dbt_assets_list:
     pass
 
-from .schedules.github_scraper_schedule import make_github_scraper_schedule
+
 from .resources.cfg_resource import config_resource
 from .resources.fasttext_resource import FastTextModelResource
 
@@ -68,7 +68,6 @@ from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 from .assets.embedding.core_ml__embed_users import core_ml__embed_users
 
 # schedule
-project_scraper_schedule = make_github_scraper_schedule(project_scraper_job)
 from .schedules.run_all_schedule import run_all_schedule
 
 # jobs
@@ -90,7 +89,7 @@ defs = Definitions(
     resources={
         "config": config_resource,
         "fasttext_model": FastTextModelResource(),
-        "llm_classifier": LLMClassifierResource(device=os.getenv("DAGSTER_DEVICE", "cpu")), # Use CPU in Docker, MPS locally if set
+        "llm_classifier": LLMClassifierResource(), # API based (OpenRouter)
         "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps
         "dbt": dbt_resource,
         "io_manager": postgres_io_manager,
@@ -103,6 +102,6 @@ defs = Definitions(
         project_embedding_job,
         run_all_job,
     ],
-    schedules=[project_scraper_schedule, cleanup_dagster_history_schedule, run_all_schedule],
+    schedules=[cleanup_dagster_history_schedule, run_all_schedule],
     sensors=[classification_sensor],
 )
