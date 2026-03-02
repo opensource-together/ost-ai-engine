@@ -7,8 +7,6 @@ from dagster import ConfigurableResource
 class LLMClassifierResource(ConfigurableResource):
     api_key: str = os.getenv("OPENROUTER_API_KEY", "")
     model_id: str = "mistralai/mistral-small-3.2-24b-instruct"
-    site_url: str = os.getenv("Unknown", "")
-    site_name: str = os.getenv("Unknown", "")
 
     def classify_project(self, title: str, project_context: str, categories: list[str], domains: list[str]) -> dict:
         """
@@ -44,10 +42,6 @@ class LLMClassifierResource(ConfigurableResource):
 
         try:
             completion = client.chat.completions.create(
-                # extra_headers={
-                #     "HTTP-Referer": self.site_url, 
-                #     "X-Title": self.site_name,
-                # },
                 model=self.model_id,
                 messages=[
                     {"role": "system", "content": system_prompt},
