@@ -9,16 +9,12 @@ from datetime import date, timedelta
 from dagster import ConfigurableResource
 
 # Terms to exclude from search results to filter out non-contributable repos.
-# NOTE: GitHub API has limits on query complexity (max ~5-10 NOT operators).
+# NOTE: GitHub Search API rejects queries with more than ~5 NOT operators.
 EXCLUDED_TERMS = [
     "awesome",
     "roadmap",
     "cheatsheet",
     "interview",
-    "resources",
-    "tutorial",
-    "course",
-    "exercises",
 ]
 
 # Star ranges for parallel multi-query scraping.
