@@ -8,8 +8,58 @@ on:
       - staging
 
 jobs:
-  publish:
+  quality:
     runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install poetry
+          poetry install
+
+      - name: Lint
+        run: poetry run ruff check src/
+
+      - name: Type check
+        run: poetry run mypy src/
+
+      - name: Unit tests
+        run: poetry run pytest -m unit
+
+  dbt-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dbt + sqlfluff
+        run: pip install sqlfluff sqlfluff-templater-dbt dbt-core dbt-postgres
+
+      - name: SQLFluff lint
+        run: sqlfluff lint dbt/models/
+
+      - name: dbt parse
+        run: |
+          cd dbt
+          dbt deps
+          dbt parse
+
+  build:
+    runs-on: ubuntu-latest
+    needs: [quality, dbt-check]
+    if: github.event_name == 'push'
     permissions:
       contents: read
       packages: write

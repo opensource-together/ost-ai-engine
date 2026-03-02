@@ -48,6 +48,8 @@ httpx = "^0.28.1"
 bandit = "^1.8.6"
 mypy = "^1.8.0"
 safety = "^2.3.0"
+sqlfluff = "^3.0"
+sqlfluff-templater-dbt = "^3.0"
 
 [build-system]
 requires = ["poetry-core"]
