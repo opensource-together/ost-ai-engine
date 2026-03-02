@@ -1,7 +1,8 @@
-import logging
 import json
+import logging
 
 from openai import OpenAI
+
 from dagster import ConfigurableResource
 
 

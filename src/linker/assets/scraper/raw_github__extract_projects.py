@@ -1,13 +1,14 @@
-import os
 import json
+import os
 import subprocess
-import typing as _t
+
 from dagster import (
-    asset,
+    AssetKey,
     MetadataValue,
     Output,
-    AssetKey,
+    asset,
 )
+
 from ...resources.cfg_resource import build_scraper_env
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]

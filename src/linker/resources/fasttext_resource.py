@@ -5,10 +5,12 @@ and reused across all assets.
 """
 
 import os
+from typing import Any
+
+from pydantic import PrivateAttr
 
 from dagster import ConfigurableResource
-from pydantic import PrivateAttr
-from typing import Any
+
 
 class FastTextModelResource(ConfigurableResource):
     """Wrapper for fastText language detection model.

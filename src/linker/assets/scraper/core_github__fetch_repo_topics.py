@@ -1,14 +1,14 @@
 import os
 import subprocess
 
+import pandas as pd
+
 from dagster import (
-    asset,
     AssetIn,
     AssetKey,
     Output,
+    asset,
 )
-
-import pandas as pd
 
 from ...resources.cfg_resource import build_fetcher_env
 
