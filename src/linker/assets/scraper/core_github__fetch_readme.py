@@ -1,5 +1,6 @@
 import os
 import subprocess
+
 from dagster import (
     asset,
     AssetIn,
@@ -8,6 +9,8 @@ from dagster import (
 )
 
 import pandas as pd
+
+from ...resources.cfg_resource import build_fetcher_env
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
@@ -34,23 +37,20 @@ def core_github__fetch_readme(context, core_github__detect_languages: pd.DataFra
     3. **Output**: Returns status metadata, data is written to DB.
     """
     context.log.info("core_github__fetch_readme: Starting Go fetcher...")
-    
+
     # Path to the compiled Go binary from config
     cfg = context.resources.config
     fetcher_bin = cfg.go_fetcher_path
-    
+
     if not fetcher_bin:
-        raise RuntimeError("GO_FETCHER_PATH not configured in cfg.yaml")
-    
+        raise RuntimeError("GO_FETCHER_PATH not configured")
+
     if not os.path.exists(fetcher_bin):
         raise RuntimeError(f"Go binary not found at {fetcher_bin}. Please run 'go build -o ost-fetcher .' in src/services/go/fetcher/")
 
-    # Environment with DATABASE_URL
     env = os.environ.copy()
-    db_url = env.get("DATABASE_URL")
-    if not db_url:
-        raise ValueError("DATABASE_URL is required for Go fetcher")
-        
+    env.update(build_fetcher_env(cfg))
+
     cmd = [fetcher_bin, "--mode", "readme", "--concurrency", "20"]
 
     context.log.info(f"Running command: {' '.join(cmd)}")
@@ -65,7 +65,7 @@ def core_github__fetch_readme(context, core_github__detect_languages: pd.DataFra
         context.log.info(f"Go fetcher stdout:\n{result.stdout}")
         if result.stderr:
             context.log.warning(f"Go fetcher stderr:\n{result.stderr}")
-            
+
     except subprocess.CalledProcessError as e:
         context.log.error(f"Go fetcher failed with code {e.returncode}")
         context.log.error(f"Stdout: {e.stdout}")

@@ -37,7 +37,7 @@ def raw_github__extract_projects(context):
     # Locate binary from config resource
     scraper_path = cfg.go_scraper_path
     if not scraper_path:
-        raise RuntimeError("GO_SCRAPER_PATH not configured in cfg.yaml")
+        raise RuntimeError("GO_SCRAPER_PATH not configured")
 
     if not os.path.exists(scraper_path):
         raise RuntimeError(f"Go scraper binary not found at {scraper_path}")
