@@ -1,24 +1,15 @@
-import typing as _t
 import os
 import subprocess
 from dagster import (
     asset,
     AssetIn,
     AssetKey,
-    MetadataValue,
     Output,
 )
-from .utils import (
-    _extract_owner_repo,
-    _fetch_repo_languages,
-    _make_serializable,
-)
-from src.services.python.db import get_db_cursor
-import json
-
-DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 import pandas as pd
+
+DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 @asset(
     kinds={"go", "postgres"},
