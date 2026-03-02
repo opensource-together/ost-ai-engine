@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"net/http"
@@ -31,15 +32,25 @@ type githubRepo struct {
 }
 
 type githubSearchResponse struct {
-	TotalCount int          `json:"total_count"`
-	Items      []githubRepo `json:"items"`
+	TotalCount        int          `json:"total_count"`
+	IncompleteResults bool         `json:"incomplete_results"`
+	Items             []githubRepo `json:"items"`
+}
+
+// rateLimitError is returned when GitHub responds with 403 due to rate limiting.
+type rateLimitError struct {
+	RetryAfter time.Duration
+}
+
+func (e *rateLimitError) Error() string {
+	return fmt.Sprintf("rate limited, retry after %s", e.RetryAfter)
 }
 
 func newHTTPClient() *http.Client {
-	return &http.Client{Timeout: 120 * time.Second}
+	return &http.Client{Timeout: 30 * time.Second}
 }
 
-func fetchGitHubRepos(client *http.Client, token string, apiURL string, query string, perPage, page int) (githubSearchResponse, error) {
+func fetchGitHubRepos(ctx context.Context, client *http.Client, token string, apiURL string, query string, perPage, page int) (githubSearchResponse, error) {
 	var result githubSearchResponse
 	if apiURL == "" {
 		return result, fmt.Errorf("GITHUB_API_URL is required but not set")
@@ -56,10 +67,13 @@ func fetchGitHubRepos(client *http.Client, token string, apiURL string, query st
 	q.Set("page", strconv.Itoa(page))
 	base.RawQuery = q.Encode()
 
-	req, _ := http.NewRequest("GET", base.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, "GET", base.String(), nil)
+	if err != nil {
+		return result, fmt.Errorf("creating request: %w", err)
+	}
 	req.Header.Set("Accept", "application/vnd.github+json")
 	req.Header.Set("User-Agent", "ost-linker-scraper")
-	req.Header.Set("X-GitHub-Api-Version", "2022-11-28") // Recommended version by Github
+	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	if token != "" {
 		req.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -69,6 +83,18 @@ func fetchGitHubRepos(client *http.Client, token string, apiURL string, query st
 		return result, err
 	}
 	defer resp.Body.Close()
+
+	if resp.StatusCode == 403 {
+		retryAfter := resp.Header.Get("Retry-After")
+		if retryAfter != "" {
+			seconds, parseErr := strconv.Atoi(retryAfter)
+			if parseErr == nil {
+				return result, &rateLimitError{RetryAfter: time.Duration(seconds) * time.Second}
+			}
+		}
+		return result, &rateLimitError{RetryAfter: 60 * time.Second}
+	}
+
 	if resp.StatusCode != 200 {
 		return result, fmt.Errorf("github api status %d", resp.StatusCode)
 	}

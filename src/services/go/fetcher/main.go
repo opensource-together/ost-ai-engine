@@ -17,9 +17,7 @@ type Config struct {
 }
 
 func loadConfig() *Config {
-	// Try loading .env file from project root (assuming binary runs from root or similar)
-	// We might need to look up directory tree
-	_ = godotenv.Load() // Ignore error if file not found, rely on env vars
+	_ = godotenv.Load()
 
 	dbURL := os.Getenv("DATABASE_URL")
 	if dbURL == "" {
@@ -38,8 +36,13 @@ func main() {
 	concurrency := flag.Int("concurrency", 10, "Number of concurrent workers")
 	flag.Parse()
 
+	// Validate mode before connecting to DB so log.Fatal doesn't skip defer db.Close()
+	validModes := map[string]bool{"readme": true, "languages": true, "topics": true}
 	if *mode == "" {
 		log.Fatal("Please specify --mode (readme, languages, topics)")
+	}
+	if !validModes[*mode] {
+		log.Fatalf("Unknown mode: %s (valid: readme, languages, topics)", *mode)
 	}
 
 	cfg := loadConfig()
@@ -66,8 +69,6 @@ func main() {
 		count, errFetch = fetcher.FetchLanguages(ctx, *limit)
 	case "topics":
 		count, errFetch = fetcher.FetchTopics(ctx, *limit)
-	default:
-		log.Fatalf("Unknown mode: %s", *mode)
 	}
 
 	if errFetch != nil {

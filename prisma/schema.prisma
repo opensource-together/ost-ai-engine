@@ -331,6 +331,7 @@ model RawGithubReadme {
   content    String?
   created_at DateTime @default(now())
 
+  @@unique([project_id])
   @@map("raw_github_readme")
   @@schema("github")
 }
@@ -342,6 +343,7 @@ model RawGithubTopics {
   topics     Json?
   created_at DateTime @default(now())
 
+  @@unique([project_id])
   @@map("raw_github_topics")
   @@schema("github")
 }
@@ -353,6 +355,7 @@ model RawGithubLanguages {
   languages  Json?
   created_at DateTime @default(now())
 
+  @@unique([project_id])
   @@map("raw_github_languages")
   @@schema("github")
 }
