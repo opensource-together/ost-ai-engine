@@ -1,10 +1,13 @@
+import json
 from datetime import date, timedelta
 
 import pytest
 
 from src.linker.resources.cfg_resource import (
     EXCLUDED_TERMS,
+    STAR_RANGES,
     PipelineConfig,
+    build_default_github_queries,
     build_default_github_query,
     build_fetcher_env,
     build_scraper_env,
@@ -37,6 +40,30 @@ class TestBuildDefaultGithubQuery:
         assert "archived:false" in query
 
 
+@pytest.mark.unit
+class TestBuildDefaultGithubQueries:
+    def test_returns_one_query_per_star_range(self):
+        queries = build_default_github_queries()
+        assert len(queries) == len(STAR_RANGES)
+
+    def test_each_query_has_correct_star_range(self):
+        queries = build_default_github_queries()
+        for query, (low, high) in zip(queries, STAR_RANGES):
+            assert f"stars:{low}..{high}" in query
+
+    def test_each_query_excludes_terms(self):
+        queries = build_default_github_queries()
+        for query in queries:
+            for term in EXCLUDED_TERMS:
+                assert f'NOT "{term}"' in query
+
+    def test_each_query_has_pushed_date(self):
+        queries = build_default_github_queries()
+        expected_date = (date.today() - timedelta(days=7)).isoformat()
+        for query in queries:
+            assert f"pushed:>={expected_date}" in query
+
+
 def _make_config(**overrides: str) -> PipelineConfig:
     """Build a PipelineConfig with sensible test defaults."""
     defaults = {
@@ -62,9 +89,11 @@ class TestBuildScraperEnv:
         assert env["GITHUB_SCRAPING_QUERY"] == "stars:>1000"
 
     def test_falls_back_to_default_query(self):
+        """When no explicit query, first query uses first STAR_RANGES entry."""
         cfg = _make_config(github_scraping_query="")
         env = build_scraper_env(cfg)
-        assert "stars:300..5000" in env["GITHUB_SCRAPING_QUERY"]
+        low, high = STAR_RANGES[0]
+        assert f"stars:{low}..{high}" in env["GITHUB_SCRAPING_QUERY"]
 
     def test_includes_github_token(self):
         cfg = _make_config(github_token="ghp_abc")
@@ -79,6 +108,28 @@ class TestBuildScraperEnv:
         env = build_scraper_env(cfg)
         assert env["GO_SCRAPER_PATH"] == "/bin/scraper"
         assert env["GO_FETCHER_PATH"] == "/bin/fetcher"
+
+    def test_sets_queries_json_array_when_no_explicit_query(self):
+        """GITHUB_SCRAPING_QUERIES is a JSON array with one entry per star range."""
+        cfg = _make_config(github_scraping_query="")
+        env = build_scraper_env(cfg)
+        queries = json.loads(env["GITHUB_SCRAPING_QUERIES"])
+        assert isinstance(queries, list)
+        assert len(queries) == len(STAR_RANGES)
+
+    def test_sets_single_query_in_array_when_explicit(self):
+        """Explicit query is wrapped in a single-element JSON array."""
+        cfg = _make_config(github_scraping_query="stars:>5000")
+        env = build_scraper_env(cfg)
+        queries = json.loads(env["GITHUB_SCRAPING_QUERIES"])
+        assert queries == ["stars:>5000"]
+
+    def test_legacy_var_set_for_backward_compat(self):
+        """GITHUB_SCRAPING_QUERY is always set to the first query for backward compat."""
+        cfg = _make_config(github_scraping_query="")
+        env = build_scraper_env(cfg)
+        queries = json.loads(env["GITHUB_SCRAPING_QUERIES"])
+        assert env["GITHUB_SCRAPING_QUERY"] == queries[0]
 
 
 @pytest.mark.unit
