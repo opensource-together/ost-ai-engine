@@ -22,7 +22,7 @@ for asset in dbt_assets_list:
     pass
 
 
-from .resources.cfg_resource import config_resource
+from .resources.cfg_resource import PipelineConfig
 from .resources.fasttext_resource import FastTextModelResource
 
 from .resources.llm_classifier_resource import LLMClassifierResource
@@ -87,7 +87,7 @@ defs = Definitions(
         core_ml__embed_users,
     ],
     resources={
-        "config": config_resource,
+        "config": PipelineConfig(),
         "fasttext_model": FastTextModelResource(),
         "llm_classifier": LLMClassifierResource(), # API based (OpenRouter)
         "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps

@@ -5,7 +5,7 @@ Consolidates all config into PipelineConfig which reads directly from environmen
 
 import os
 from datetime import date, timedelta
-from dagster import resource, Config
+from dagster import ConfigurableResource
 from pydantic import Field
 
 # Terms to exclude from search results to improve quality
@@ -32,7 +32,7 @@ def build_default_github_query() -> str:
     ] + [f'NOT "{term}"' for term in EXCLUDED_TERMS])
 
 
-class PipelineConfig(Config):
+class PipelineConfig(ConfigurableResource):
     """
     Central configuration for the Dagster pipeline.
     All config is loaded directly from environment variables.
@@ -93,11 +93,3 @@ def build_scraper_env(cfg: PipelineConfig) -> dict:
     if cfg.go_fetcher_path:
         env["GO_FETCHER_PATH"] = cfg.go_fetcher_path
     return env
-
-
-@resource
-def config_resource():
-    """Dagster resource providing a PipelineConfig instance.
-    Keeps configuration centralized and injectable into assets/jobs.
-    """
-    return PipelineConfig()
