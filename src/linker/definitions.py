@@ -18,9 +18,6 @@ def dbt_project_assets(context: AssetExecutionContext, dbt: DbtCliResource):
 dbt_resource = DbtCliResource(project_dir=DBT_PROJECT_DIR)
 
 dbt_assets_list = [dbt_project_assets]
-for asset in dbt_assets_list:
-    pass
-
 
 from .resources.cfg_resource import PipelineConfig
 from .resources.fasttext_resource import FastTextModelResource
@@ -35,7 +32,6 @@ if not db_url:
 
 postgres_io_manager = PandasPostgresIOManager(db_url=db_url)
 
-# scraper Assets
 # scraper Assets
 from .assets.scraper import (
     raw_github__extract_projects,
