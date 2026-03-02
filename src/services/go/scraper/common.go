@@ -76,7 +76,7 @@ func fetchGitHubRepos(ctx context.Context, client *http.Client, token string, ap
 	req.Header.Set("User-Agent", "ost-linker-scraper")
 	req.Header.Set("X-GitHub-Api-Version", "2022-11-28")
 	if token != "" {
-		req.Header.Set("Authorization", "Bearer "+token)
+		req.Header.Set("Authorization", "token "+token)
 	}
 
 	resp, err := client.Do(req)
