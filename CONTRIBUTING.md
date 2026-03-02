@@ -112,6 +112,5 @@ PR titles follow the same `<type>(<scope>): <summary>` format as commits.
 
 ## Getting Help
 
-- [Discord](https://discord.com/invite/4ZDhm3dQAC) — fastest way to get unblocked
 - [GitHub Issues](https://github.com/opensource-together/ost-linker/issues) — bug reports and feature requests
 - [@spideystreet](https://x.com/spideystreet) — project updates
