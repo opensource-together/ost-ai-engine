@@ -37,27 +37,18 @@ def core_ml__embed_projects(context: AssetExecutionContext, projects_df: pd.Data
     if df.empty:
         return
 
-    # 2. Compute embeddings
-    embeddings = []
-    
-    # Process in batches if necessary, but for now simple loop
-    for index, row in df.iterrows():
-        # Adapter to int_project_embedding_candidate columns
-        project_id = row['project_id']
-        context_text = row['rich_context_string']
-        
-        if not context_text:
-            continue
-            
-        vector = sentence_transformer.encode(context_text)
-        embeddings.append({
-            "id": str(uuid.uuid4()),
-            "projectId": project_id,
-            "vector": vector 
-        })
-        
-        if len(embeddings) % 100 == 0:
-             context.log.info(f"Computed {len(embeddings)} embeddings...")
+    # 2. Compute embeddings (batch)
+    valid_rows = df[df['rich_context_string'].astype(bool)]
+    texts = valid_rows['rich_context_string'].tolist()
+    project_ids = valid_rows['project_id'].tolist()
+
+    vectors = sentence_transformer.encode_batch(texts) if texts else []
+    context.log.info(f"Computed {len(vectors)} embeddings.")
+
+    embeddings = [
+        {"id": str(uuid.uuid4()), "projectId": pid, "vector": vec}
+        for pid, vec in zip(project_ids, vectors)
+    ]
 
     context.log.info(f"Total embeddings computed: {len(embeddings)}")
 
