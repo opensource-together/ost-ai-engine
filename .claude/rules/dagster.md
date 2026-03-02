@@ -24,11 +24,16 @@
 
 ## Asset Naming Convention
 
-Assets follow a `<layer>_<source>__<description>` pattern:
+**Python Dagster assets** follow a `<layer>_<source>__<description>` pattern:
 - `raw_github__*` — raw ingestion
 - `core_github__*` — enriched GitHub data
 - `core_match__*` — matching/classification
 - `core_ml__*` — ML/embedding assets
 - `core_public__*` — public-facing sync
 
-dbt models in Dagster use their schema + model name as `AssetKey`, e.g., `AssetKey(["github", "pvt_github_project"])`.
+**dbt models** follow a flat layer-first layout (`models/staging/`, `models/intermediate/`, `models/marts/`):
+- Staging: `stg_<source>__<entity>` (double underscore)
+- Intermediate: `int_<entity>_<verb/description>`
+- Marts: `fct_<entity>`, `dim_<entity>`, or `<entity>`
+
+dbt models in Dagster use their schema + model name as `AssetKey`, e.g., `AssetKey(["github", "stg_github__project"])`.

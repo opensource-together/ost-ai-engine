@@ -1,0 +1,14 @@
+version: 2
+
+models:
+  - name: int_project_contextualized
+    description: "Builds structured markdown context from project metadata and cleans it for embedding generation."
+    columns:
+      - name: id
+        description: Project UUID
+        tests: [unique, not_null]
+      - name: context
+        description: Cleaned context (no URLs, code blocks, emojis)
+        tests: [not_null]
+      - name: created_at
+        description: Generation timestamp

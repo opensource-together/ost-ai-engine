@@ -1,0 +1,12 @@
+version: 2
+
+models:
+  - name: fct_public_user
+    description: "Mart model formatting user data into a single context string for embedding"
+    columns:
+      - name: user_id
+        tests:
+          - unique
+          - not_null
+      - name: user_context
+        description: "Enriched text representation of the user profile"

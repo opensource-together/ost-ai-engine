@@ -11,7 +11,7 @@ sources:
           dagster:
             group: ingestion
       - name: raw_github_readme
-        description: "Raw README markdown content fetched by Python asset."
+        description: "Raw README markdown content fetched by Go fetcher binary."
         meta:
           dagster:
             group: ingestion

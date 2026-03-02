@@ -1,0 +1,33 @@
+version: 2
+
+models:
+  - name: int_project_enriched
+    description: >
+      Intermediate join model that unifies disparate GitHub data sources (metadata, readme, topics,
+      languages, detection) into a single wide table before final transformation.
+    columns:
+      - name: id
+        description: "Project UUID"
+        tests: [unique, not_null]
+      - name: name
+        description: "Repository name"
+      - name: description
+        description: "Repository description"
+      - name: url
+        description: "GitHub URL"
+      - name: readme_content
+        description: "Raw README content"
+      - name: fetched_topics
+        description: "JSONB array of topics fetched from GitHub API"
+      - name: fetched_languages
+        description: "JSONB object of language statistics"
+      - name: language_detected
+        description: "FastText detected language code"
+      - name: language_confidence
+        description: "FastText detection confidence"
+      - name: open_issues_count
+        description: "Number of open issues at scrape time"
+      - name: pushed_at
+        description: "Timestamp of the most recent push to the repository"
+      - name: primary_language
+        description: "Coalesced primary language (prioritizes detection, falls back to source)"
