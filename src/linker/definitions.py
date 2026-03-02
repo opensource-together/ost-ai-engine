@@ -1,4 +1,4 @@
-from dagster import Definitions, load_assets_from_modules, AssetExecutionContext, FilesystemIOManager
+from dagster import Definitions, EnvVar, load_assets_from_modules, AssetExecutionContext, FilesystemIOManager
 from dagster_dbt import DbtCliResource, dbt_assets, DbtProject
 from pathlib import Path
 
@@ -83,7 +83,12 @@ defs = Definitions(
         core_ml__embed_users,
     ],
     resources={
-        "config": PipelineConfig(),
+        "config": PipelineConfig(
+            db_url=EnvVar("DATABASE_URL"),
+            github_token=EnvVar("GITHUB_ACCESS_TOKEN"),
+            go_scraper_path=EnvVar("GO_SCRAPER_PATH"),
+            go_fetcher_path=EnvVar("GO_FETCHER_PATH"),
+        ),
         "fasttext_model": FastTextModelResource(),
         "llm_classifier": LLMClassifierResource(), # API based (OpenRouter)
         "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps
