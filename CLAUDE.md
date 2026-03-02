@@ -22,7 +22,7 @@ npx ts-node prisma/seed/seed.ts           # Seed TechStacks, Categories, etc.
 
 ### Python / Dagster
 ```bash
-poetry install                            # Install Python dependencies
+uv sync                                   # Install Python dependencies
 dagster dev -h 0.0.0.0 -p 3000           # Run Dagster locally (outside Docker)
 ```
 

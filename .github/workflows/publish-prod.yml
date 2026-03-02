@@ -11,24 +11,25 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
       - name: Install dependencies
-        run: |
-          pip install poetry
-          poetry install
+        run: uv sync --frozen
 
       - name: Lint
-        run: poetry run ruff check src/
+        run: uv run ruff check src/
 
       - name: Type check
-        run: poetry run mypy src/
+        run: uv run mypy src/
 
       - name: Unit tests
-        run: poetry run pytest -m unit
+        run: uv run pytest -m unit
 
   dbt-check:
     runs-on: ubuntu-latest

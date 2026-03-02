@@ -19,7 +19,7 @@
 # 3. Allow specific configuration files
 # ==============================================================================
 !pyproject.toml
-!poetry.lock
+!uv.lock
 !Dockerfile
 !docker-compose.yml
 !.env.example

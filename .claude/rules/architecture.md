@@ -38,7 +38,7 @@ Both are invoked as subprocesses by Dagster assets via `subprocess.run()`.
 
 3-stage Dockerfile:
 1. **Go Builder** (`golang:1.24-alpine`) — compiles both Go binaries to `/app/bin/`
-2. **Python Builder** (`python:3.11-slim`) — exports Poetry deps to `requirements.txt`
+2. **Python Builder** (`python:3.11-slim`) — exports deps via uv to `requirements.txt`
 3. **Runtime** (`python:3.11-slim`) — installs deps, copies Go binaries to `/usr/local/bin/`, runs Dagster
 
 `docker-compose.yml` runs two services: `ost-linker` (app) and `db` (PostgreSQL with pgvector via `ankane/pgvector:v0.4.1`). DB is exposed on port 5433 by default.

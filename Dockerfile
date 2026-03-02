@@ -24,20 +24,17 @@ RUN go build -o /app/bin/ost-fetcher .
 
 # ==============================================================================
 # Stage 2: Python Builder
-# Installs Poetry and exports requirements
+# Exports requirements via uv
 # ==============================================================================
 FROM python:3.11-slim AS python-builder
 
 WORKDIR /app
 
-# Install poetry
-RUN pip install poetry==1.8.2
+COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Copy configuration
-COPY pyproject.toml poetry.lock ./
+COPY pyproject.toml uv.lock ./
 
-# Export dependencies to requirements.txt (avoids installing poetry in final image)
-RUN poetry export -f requirements.txt --output requirements.txt --without-hashes
+RUN uv export --frozen --no-dev --no-hashes --output-file requirements.txt
 
 # ==============================================================================
 # Stage 3: Runtime

@@ -169,7 +169,7 @@ models/mlruns/
 .actrc
 
 # Lock files
-uv.lock
+poetry.lock
 
 # Dagster
 .tmp*
