@@ -1,0 +1,24 @@
+ost_linker:
+  target: local # Default target
+  outputs:
+    # Local
+    local:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
+      user: "{{ env_var('POSTGRES_USER') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD') }}"
+      port: "{{ env_var('POSTGRES_PORT', 5433) | int }}"
+      dbname: "{{ env_var('POSTGRES_DB') }}"
+      schema: public
+      threads: 4
+
+    # Docker
+    docker:
+      type: postgres
+      host: "{{ env_var('POSTGRES_HOST', 'db') }}"
+      user: "{{ env_var('POSTGRES_USER', '') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', '') }}"
+      port: "{{ env_var('POSTGRES_PORT', 5432) | int }}"
+      dbname: "{{ env_var('POSTGRES_DB', '') }}"
+      schema: public
+      threads: 4
