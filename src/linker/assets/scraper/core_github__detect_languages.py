@@ -17,7 +17,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
     # Read from dbt staging model
-    ins={"stg_df": AssetIn(key=AssetKey(["github", "stg_github_project"]))},
+    ins={"stg_df": AssetIn(key=AssetKey(["github", "stg_github__project"]))},
     group_name="ingestion",
     key=AssetKey(["github", "int_github_detection"]), # Matches dbt source
     required_resource_keys={"config", "fasttext_model"},
@@ -25,7 +25,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 def core_github__detect_languages(context, stg_df: pd.DataFrame):
     """
     Detects and filters repositories based on language using fastText.
-    Reads from dbt staging table `stg_github_project`.
+    Reads from dbt staging table `stg_github__project`.
     Output: List of repository dictionaries with added language metadata.
     """
     context.log.info("core_github__detect_languages: Starting language detection")

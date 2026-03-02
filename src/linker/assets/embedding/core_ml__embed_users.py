@@ -9,7 +9,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     kinds={"python", "pgvector"},
     owners=DEFAULT_OWNERS,
     key=AssetKey(["ml", "embd_user"]), # Matches dbt source
-    ins={"user_df": AssetIn(key=AssetKey(["ml", "pvt_public_user"]))}, # Matches dbt model
+    ins={"user_df": AssetIn(key=AssetKey(["ml", "fct_public_user"]))}, # Matches dbt model
     group_name="ml",
     required_resource_keys={"sentence_transformer", "io_manager"},
 )
@@ -17,7 +17,7 @@ def core_ml__embed_users(context, user_df):
     """
     Step 3: User Embedding.
     
-    1. Reads user context from `ml.pvt_public_user`.
+    1. Reads user context from `ml.fct_public_user`.
     2. Generates embeddings using SentenceTransformer.
     3. Writes to `ml.embd_user` (or `public.user_embedding`).
     """

@@ -10,7 +10,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 @asset(
     kinds={"python"},
     owners=DEFAULT_OWNERS,
-    ins={"projects_df": AssetIn(key=AssetKey(["github", "pvt_github_project"]))},
+    ins={"projects_df": AssetIn(key=AssetKey(["github", "fct_github_project"]))},
     group_name="classification",
     required_resource_keys={"llm_classifier"},
     io_manager_key="fs_io_manager",
@@ -18,7 +18,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 def core_match__classify_projects(context, projects_df):
     """
     Classifies GitHub projects into standardized Categories and Domains using LLM.
-    Reads from `github.pvt_github_project` and outputs classification metadata.
+    Reads from `github.fct_github_project` and outputs classification metadata.
     """
     llm = context.resources.llm_classifier
     
