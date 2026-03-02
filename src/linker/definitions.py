@@ -13,7 +13,7 @@ dbt_project.prepare_if_dev()
 
 @dbt_assets(manifest=dbt_project.manifest_path, name="dbt_models")
 def dbt_project_assets(context: AssetExecutionContext, dbt: DbtCliResource):
-    yield from dbt.cli(["build"], context=context).stream()
+    yield from dbt.cli(["build", "--indirect-selection", "cautious"], context=context).stream()
 
 dbt_resource = DbtCliResource(project_dir=DBT_PROJECT_DIR)
 
