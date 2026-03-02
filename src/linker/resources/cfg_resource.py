@@ -5,32 +5,31 @@ Consolidates all config into PipelineConfig which reads directly from environmen
 
 import os
 from datetime import date, timedelta
-from dotenv import load_dotenv
 from dagster import resource, Config
 from pydantic import Field
 
-load_dotenv()
-
-# Dynamic query building
-one_day_ago = (date.today() - timedelta(days=1)).isoformat()
 # Terms to exclude from search results to improve quality
 # NOTE: GitHub API has limits on query complexity (max ~5-10 logical operators).
-# Keep this list short and focused on high-imact noise.
+# Keep this list short and focused on high-impact noise.
 EXCLUDED_TERMS = [
     "download",
-    "list"
+    "list",
 ]
 
-DEFAULT_GITHUB_QUERY = " ".join([
-    "stars:500..1000",
-    "good-first-issues:>5",
-    "help-wanted-issues:>1",
-    "topics:>0",
-    "forks:>0",
-    f"pushed:>={one_day_ago}",
-    "is:public",
-    "archived:false",
-] + [f'NOT "{term}"' for term in EXCLUDED_TERMS])
+
+def build_default_github_query() -> str:
+    """Build GitHub search query with a fresh date each time it is called."""
+    one_day_ago = (date.today() - timedelta(days=1)).isoformat()
+    return " ".join([
+        "stars:500..1000",
+        "good-first-issues:>5",
+        "help-wanted-issues:>1",
+        "topics:>0",
+        "forks:>0",
+        f"pushed:>={one_day_ago}",
+        "is:public",
+        "archived:false",
+    ] + [f'NOT "{term}"' for term in EXCLUDED_TERMS])
 
 
 class PipelineConfig(Config):
@@ -57,7 +56,7 @@ class PipelineConfig(Config):
         description="GitHub API access token"
     )
     github_scraping_query: str = Field(
-        default=os.getenv("GITHUB_SCRAPING_QUERY", DEFAULT_GITHUB_QUERY),
+        default=os.getenv("GITHUB_SCRAPING_QUERY", ""),
         description="GitHub scraper parameter query"
     )
     github_api_url: str = Field(
@@ -81,9 +80,9 @@ def build_scraper_env(cfg: PipelineConfig) -> dict:
     Keep it scoped to only needed keys (no os.environ copy) to avoid leaks.
     """
     env: dict[str, str] = {}
-    # GitHub
-    if cfg.github_scraping_query:
-        env["GITHUB_SCRAPING_QUERY"] = cfg.github_scraping_query
+    # GitHub – fall back to a freshly-computed query when no explicit one is set
+    query = cfg.github_scraping_query or build_default_github_query()
+    env["GITHUB_SCRAPING_QUERY"] = query
     if cfg.github_token:
         env["GITHUB_ACCESS_TOKEN"] = cfg.github_token
     if cfg.github_api_url:
