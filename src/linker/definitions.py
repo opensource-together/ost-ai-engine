@@ -83,8 +83,12 @@ defs = Definitions(
             go_scraper_path=EnvVar("GO_SCRAPER_PATH"),
             go_fetcher_path=EnvVar("GO_FETCHER_PATH"),
         ),
-        "fasttext_model": FastTextModelResource(),
-        "llm_classifier": LLMClassifierResource(), # API based (OpenRouter)
+        "fasttext_model": FastTextModelResource(
+            model_path=EnvVar("FASTTEXT_MODEL_PATH"),
+        ),
+        "llm_classifier": LLMClassifierResource(
+            api_key=EnvVar("OPENROUTER_API_KEY"),
+        ),
         "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps
         "dbt": dbt_resource,
         "io_manager": PandasPostgresIOManager(db_url=EnvVar("DATABASE_URL")),

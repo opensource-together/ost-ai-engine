@@ -1,11 +1,12 @@
 import logging
 import json
-import os
+
 from openai import OpenAI
 from dagster import ConfigurableResource
 
+
 class LLMClassifierResource(ConfigurableResource):
-    api_key: str = os.getenv("OPENROUTER_API_KEY", "")
+    api_key: str
     model_id: str = "mistralai/mistral-small-3.2-24b-instruct"
 
     def classify_project(self, title: str, project_context: str, categories: list[str], domains: list[str]) -> dict:

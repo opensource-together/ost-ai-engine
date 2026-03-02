@@ -3,7 +3,9 @@
 Provides a singleton fastText language detection model that is loaded once
 and reused across all assets.
 """
+
 import os
+
 from dagster import ConfigurableResource
 from pydantic import PrivateAttr
 from typing import Any
@@ -14,8 +16,7 @@ class FastTextModelResource(ConfigurableResource):
     Loads the model once during initialization and provides it to all assets
     that require language detection functionality.
     """
-    # Default to local path relative to project root, or Docker path
-    model_path: str = os.getenv("FASTTEXT_MODEL_PATH", "models/lid.176.ftz")
+    model_path: str = "models/lid.176.ftz"
     _model: Any = PrivateAttr(default=None)
     
     @property
