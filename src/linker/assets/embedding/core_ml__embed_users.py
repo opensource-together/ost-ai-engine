@@ -33,7 +33,7 @@ def core_ml__embed_users(context, user_df):
     
     # 1. Embed
     texts = [u['user_context'] for u in users]
-    embeddings = model.encode(texts) # Returns numpy array
+    embeddings = model.encode_batch(texts)
     
     context.log.info(f"Generated embeddings for {len(embeddings)} users.")
 

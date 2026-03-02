@@ -1,9 +1,7 @@
-
 from dagster import asset, AssetExecutionContext, AssetIn, AssetKey
 
 from ...resources.sentence_transformer_resource import SentenceTransformerResource
 import pandas as pd
-import os
 import uuid
 from sqlalchemy import create_engine, text
 
@@ -22,12 +20,13 @@ UPSERT_EMBEDDING_QUERY = text("""
     group_name="ml",
     key=AssetKey(["ml", "embd_github_project"]), # Matches dbt source
     ins={"projects_df": AssetIn(key=AssetKey(["ml", "int_project_embedding_candidate"]))},
+    required_resource_keys={"config"},
 )
 def core_ml__embed_projects(context: AssetExecutionContext, projects_df: pd.DataFrame, sentence_transformer: SentenceTransformerResource):
     """
     Reads rich context from ml.int_project_embedding_candidate, computes embeddings, and stores them in ml.embd_github_project.
     """
-    db_url = os.getenv("DATABASE_URL")
+    db_url = context.resources.config.db_url
     engine = create_engine(db_url)
 
     # 1. Fetch raw projects with context

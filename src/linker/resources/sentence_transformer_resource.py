@@ -28,3 +28,11 @@ class SentenceTransformerResource(ConfigurableResource):
         # normalize_embeddings=True is good for cosine similarity
         embedding = model.encode(text, normalize_embeddings=True)
         return embedding.tolist()
+
+    def encode_batch(self, texts: list[str]) -> list[list[float]]:
+        """
+        Encodes a list of strings into vectors.
+        """
+        model = self.get_model()
+        embeddings = model.encode(texts, normalize_embeddings=True)
+        return [vec.tolist() for vec in embeddings]
