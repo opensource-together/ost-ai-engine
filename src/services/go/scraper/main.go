@@ -5,149 +5,83 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"net/http"
 	"os"
+	"sync"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"gopkg.in/yaml.v3"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-type scraperConfig struct {
-	DatabaseURL         string `yaml:"DATABASE_URL"`
-	GitHubAccessToken   string `yaml:"GITHUB_ACCESS_TOKEN"`
-	GitHubScrapingQuery string `yaml:"GITHUB_SCRAPING_QUERY"`
-	GitHubTopN          int    `yaml:"GITHUB_TOP_N"`
-	GitHubApiUrl        string `yaml:"GITHUB_API_URL"`
-	GitHubPerPage       int    `yaml:"GITHUB_PER_PAGE"`
+type queryResult struct {
+	Query          string `json:"query"`
+	CollectedCount int    `json:"collected_count"`
+	UpsertedCount  int    `json:"upserted_count"`
+	FailedUpserts  int    `json:"failed_upserts"`
 }
 
-func main() {
-	configPath := os.Getenv("OST_CONFIG_PATH")
-	if configPath == "" {
-		log.Println("[WARN] OST_CONFIG_PATH not set, using default config/cfg.yaml logic or env vars might be needed.")
-	}
+type scrapeSummary struct {
+	Queries         []queryResult `json:"queries"`
+	TotalCollected  int           `json:"total_collected"`
+	TotalUpserted   int           `json:"total_upserted"`
+	TotalFailed     int           `json:"total_failed"`
+	Status          string        `json:"status"`
+	DurationSeconds float64       `json:"duration_seconds"`
+}
 
-	var config scraperConfig
+// scrapeQuery runs the paginated scrape+upsert loop for a single GitHub search query.
+func scrapeQuery(ctx context.Context, pool *pgxpool.Pool, client *http.Client,
+	token, apiURL, query string, maxRepos, perPage int) queryResult {
 
-	if configPath != "" {
-		configBytes, err := os.ReadFile(configPath)
-		if err == nil {
-			if err := yaml.Unmarshal(configBytes, &config); err != nil {
-				log.Printf("[WARN] Config file parse error: %v", err)
-			} else {
-				log.Println("[INFO] Loaded config from file.")
-			}
-		}
-	}
-
-	if dbURL := os.Getenv("DATABASE_URL"); dbURL != "" {
-		config.DatabaseURL = dbURL
-	}
-	if token := os.Getenv("GITHUB_ACCESS_TOKEN"); token != "" {
-		config.GitHubAccessToken = token
-	}
-	if query := os.Getenv("GITHUB_SCRAPING_QUERY"); query != "" {
-		config.GitHubScrapingQuery = query
-	}
-
-	log.Printf("[INFO] Query: %s", config.GitHubScrapingQuery)
-
-	token := config.GitHubAccessToken
-	if token == "" {
-		log.Println("warning: GITHUB_ACCESS_TOKEN not set; may hit rate limits")
-	}
-	query := config.GitHubScrapingQuery
-	if query == "" {
-		log.Fatal("GITHUB_SCRAPING_QUERY is required")
-	}
-	apiURL := config.GitHubApiUrl
-	if apiURL == "" {
-		apiURL = "https://api.github.com/search/repositories"
-	}
-
-	maxRepos := config.GitHubTopN
-	if maxRepos <= 0 {
-		maxRepos = 1000
-	}
-	if maxRepos > 1000 {
-		maxRepos = 1000 // GitHub Search API hard limit
-	}
-
-	if config.DatabaseURL == "" {
-		log.Fatal("DATABASE_URL is required")
-	}
-
-	// Top-level context with 4min timeout (Python subprocess timeout is 5min)
-	ctx, cancel := context.WithTimeout(context.Background(), 4*time.Minute)
-	defer cancel()
-
-	conn, err := pgx.Connect(ctx, config.DatabaseURL)
-	if err != nil {
-		log.Fatalf("Unable to connect to database: %v", err)
-	}
-	defer conn.Close(context.Background())
-
-	client := newHTTPClient()
-	perPage := config.GitHubPerPage
-	if perPage <= 0 {
-		perPage = 100
-	}
-	if perPage > 100 {
-		perPage = 100 // GitHub API limit
-	}
-
-	collected := 0
-	upserted := 0
-	failedUpserts := 0
-	start := time.Now()
-
-	log.Println("[INFO] Starting scrape loop...")
-
+	res := queryResult{Query: query}
 	const maxRetries = 3
 
-	for page := 1; collected < maxRepos; page++ {
-		var res githubSearchResponse
+	for page := 1; res.CollectedCount < maxRepos; page++ {
+		var ghRes githubSearchResponse
 		var fetchErr error
 		for attempt := 1; attempt <= maxRetries; attempt++ {
-			res, fetchErr = fetchGitHubRepos(ctx, client, token, apiURL, query, perPage, page)
+			ghRes, fetchErr = fetchGitHubRepos(ctx, client, token, apiURL, query, perPage, page)
 			if fetchErr == nil {
 				break
 			}
 
 			var rlErr *rateLimitError
 			if errors.As(fetchErr, &rlErr) {
-				log.Printf("[WARN] Rate limited, sleeping %s before retry", rlErr.RetryAfter)
+				log.Printf("[WARN] [%s] Rate limited, sleeping %s before retry", query, rlErr.RetryAfter)
 				time.Sleep(rlErr.RetryAfter)
 				continue
 			}
 
 			if attempt < maxRetries {
 				backoff := time.Duration(attempt) * 2 * time.Second
-				log.Printf("[WARN] GitHub fetch attempt %d/%d failed: %v, retrying in %s", attempt, maxRetries, fetchErr, backoff)
+				log.Printf("[WARN] [%s] GitHub fetch attempt %d/%d failed: %v, retrying in %s",
+					query, attempt, maxRetries, fetchErr, backoff)
 				time.Sleep(backoff)
 			}
 		}
 		if fetchErr != nil {
-			log.Printf("[ERROR] GitHub fetch failed after %d retries: %v, stopping with partial results", maxRetries, fetchErr)
+			log.Printf("[ERROR] [%s] GitHub fetch failed after %d retries: %v, stopping with partial results",
+				query, maxRetries, fetchErr)
 			break
 		}
 
-		if len(res.Items) == 0 {
+		if len(ghRes.Items) == 0 {
 			break
 		}
 
-		if res.IncompleteResults {
-			log.Printf("[WARN] GitHub returned incomplete results for page %d", page)
+		if ghRes.IncompleteResults {
+			log.Printf("[WARN] [%s] GitHub returned incomplete results for page %d", query, page)
 		}
 
 		// Batch upsert via SendBatch
 		batch := &pgx.Batch{}
-		for _, repo := range res.Items {
+		for _, repo := range ghRes.Items {
 			repoData, err := json.Marshal(repo)
 			if err != nil {
-				log.Printf("Error marshaling repo %s: %v", repo.Name, err)
-				failedUpserts++
+				log.Printf("[ERROR] [%s] Error marshaling repo %s: %v", query, repo.Name, err)
+				res.FailedUpserts++
 				continue
 			}
 
@@ -169,36 +103,114 @@ func main() {
 
 		if batch.Len() > 0 {
 			dbCtx, dbCancel := context.WithTimeout(ctx, 30*time.Second)
-			br := conn.SendBatch(dbCtx, batch)
+			br := pool.SendBatch(dbCtx, batch)
 			for i := 0; i < batch.Len(); i++ {
 				_, err := br.Exec()
 				if err != nil {
-					log.Printf("Failed to upsert repo (batch item %d): %v", i, err)
-					failedUpserts++
+					log.Printf("[ERROR] [%s] Failed to upsert repo (batch item %d): %v", query, i, err)
+					res.FailedUpserts++
 				} else {
-					upserted++
+					res.UpsertedCount++
 				}
 			}
 			br.Close()
 			dbCancel()
 		}
 
-		collected += len(res.Items)
-		log.Printf("[INFO] Collected %d / %d", collected, maxRepos)
+		res.CollectedCount += len(ghRes.Items)
+		log.Printf("[INFO] [%s] Collected %d / %d", query, res.CollectedCount, maxRepos)
 	}
 
-	status := "success"
-	if failedUpserts > 0 {
-		status = "partial"
+	return res
+}
+
+// parseQueries resolves the list of queries from env vars.
+// Priority: GITHUB_SCRAPING_QUERIES (JSON array) > GITHUB_SCRAPING_QUERY (single string).
+func parseQueries() []string {
+	if raw := os.Getenv("GITHUB_SCRAPING_QUERIES"); raw != "" {
+		var queries []string
+		if err := json.Unmarshal([]byte(raw), &queries); err != nil {
+			log.Fatalf("Failed to parse GITHUB_SCRAPING_QUERIES as JSON array: %v", err)
+		}
+		if len(queries) == 0 {
+			log.Fatal("GITHUB_SCRAPING_QUERIES is an empty array")
+		}
+		return queries
+	}
+	if q := os.Getenv("GITHUB_SCRAPING_QUERY"); q != "" {
+		return []string{q}
+	}
+	log.Fatal("Either GITHUB_SCRAPING_QUERIES or GITHUB_SCRAPING_QUERY must be set")
+	return nil
+}
+
+func main() {
+	queries := parseQueries()
+	log.Printf("[INFO] Running %d queries", len(queries))
+	for i, q := range queries {
+		log.Printf("[INFO]   query[%d]: %s", i, q)
 	}
 
-	summary := map[string]interface{}{
-		"collected_count":  collected,
-		"upserted_count":   upserted,
-		"failed_upserts":   failedUpserts,
-		"status":           status,
-		"duration_seconds": time.Since(start).Seconds(),
+	token := os.Getenv("GITHUB_ACCESS_TOKEN")
+	if token == "" {
+		log.Println("[WARN] GITHUB_ACCESS_TOKEN not set; may hit rate limits")
 	}
+
+	apiURL := os.Getenv("GITHUB_API_URL")
+	if apiURL == "" {
+		apiURL = "https://api.github.com/search/repositories"
+	}
+
+	dbURL := os.Getenv("DATABASE_URL")
+	if dbURL == "" {
+		log.Fatal("DATABASE_URL is required")
+	}
+
+	maxRepos := 1000 // GitHub Search API hard limit per query
+	perPage := 100   // GitHub API per_page limit
+
+	// Top-level context — generous timeout for parallel queries
+	ctx, cancel := context.WithTimeout(context.Background(), 8*time.Minute)
+	defer cancel()
+
+	pool, err := pgxpool.New(ctx, dbURL)
+	if err != nil {
+		log.Fatalf("Unable to create connection pool: %v", err)
+	}
+	defer pool.Close()
+
+	client := newHTTPClient()
+	start := time.Now()
+
+	results := make([]queryResult, len(queries))
+	var wg sync.WaitGroup
+
+	for idx, q := range queries {
+		wg.Add(1)
+		go func(i int, query string) {
+			defer wg.Done()
+			results[i] = scrapeQuery(ctx, pool, client, token, apiURL, query, maxRepos, perPage)
+		}(idx, q)
+	}
+
+	wg.Wait()
+
+	// Aggregate
+	summary := scrapeSummary{
+		Queries:         results,
+		DurationSeconds: time.Since(start).Seconds(),
+	}
+	for _, r := range results {
+		summary.TotalCollected += r.CollectedCount
+		summary.TotalUpserted += r.UpsertedCount
+		summary.TotalFailed += r.FailedUpserts
+	}
+
+	summary.Status = "success"
+	if summary.TotalFailed > 0 {
+		summary.Status = "partial"
+	}
+
 	if err := json.NewEncoder(os.Stdout).Encode(summary); err != nil {
 		log.Fatalf("json encode: %v", err)
 	}
