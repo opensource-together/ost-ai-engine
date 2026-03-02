@@ -145,8 +145,6 @@ scripts/*.py
 # DB test
 *.db
 
-# Claude
-CLAUDE.md
 
 # Turbo
 node_modules/
