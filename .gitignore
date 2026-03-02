@@ -173,8 +173,7 @@ uv.lock
 
 # Dagster
 .tmp*
-dagster/
-!dagster/dagster.yml
+dagster_home/
 
 # Node
 package-lock.json

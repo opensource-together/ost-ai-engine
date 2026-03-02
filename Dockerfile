@@ -75,8 +75,9 @@ ENV DBT_PROJECT_DIR=/app/dbt
 # Initialize dbt
 RUN if [ -d "dbt" ]; then cd dbt && dbt deps; fi
 
-# Create Dagster home
+# Create Dagster home and copy config
 RUN mkdir -p $DAGSTER_HOME
+COPY dagster.yaml $DAGSTER_HOME/dagster.yaml
 
 # Expose Dagster webserver port
 EXPOSE 3000
