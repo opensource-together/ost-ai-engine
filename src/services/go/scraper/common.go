@@ -18,6 +18,7 @@ type githubRepo struct {
 	Description *string `json:"description"`
 	Stargazers  int     `json:"stargazers_count"`
 	Forks       int     `json:"forks_count"`
+	OpenIssues  int     `json:"open_issues_count"`
 	Language    *string `json:"language"`
 	Homepage    *string `json:"homepage"`
 	DefaultBr   *string `json:"default_branch"`
