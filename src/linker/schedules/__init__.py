@@ -1,7 +1,7 @@
-"""Schedules package for src.pipeline.
+"""Schedules package for src.linker.
 
 This module exposes schedule factory functions so callers can import
-from `src.pipeline.schedules` directly. Keeping a small __init__ helps
+from `src.linker.schedules` directly. Keeping a small __init__ helps
 tools and improves import ergonomics.
 """
 

@@ -8,7 +8,7 @@ from dagster import (
     Output,
     AssetKey,
 )
-from src.pipeline.resources.cfg_resource import build_scraper_env
+from ...resources.cfg_resource import build_scraper_env
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 

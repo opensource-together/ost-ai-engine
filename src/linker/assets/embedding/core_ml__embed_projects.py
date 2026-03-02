@@ -1,7 +1,7 @@
 
 from dagster import asset, AssetExecutionContext, AssetIn, AssetKey
 
-from src.pipeline.resources.sentence_transformer_resource import SentenceTransformerResource
+from ...resources.sentence_transformer_resource import SentenceTransformerResource
 import pandas as pd
 import os
 import uuid

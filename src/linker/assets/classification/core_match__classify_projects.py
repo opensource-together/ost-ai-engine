@@ -17,7 +17,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 )
 def core_match__classify_projects(context, projects_df):
     """
-    Classifies GitHub projects into standardized Categories and Domains using an LLM (Phi-3.5).
+    Classifies GitHub projects into standardized Categories and Domains using LLM.
     Reads from `github.pvt_github_project` and outputs classification metadata.
     """
     llm = context.resources.llm_classifier

@@ -36,7 +36,7 @@ dbt-postgres = "^1.8.0"
 
 
 [tool.dagster]
-module_name = "src.pipeline.definitions"
+module_name = "src.linker.definitions"
 
 [tool.poetry.group.dev.dependencies]
 ruff = "^0.12.0"
