@@ -8,6 +8,13 @@ requires-python = ">=3.11,<3.12"
 authors = [
     {name = "spideyai_X", email = "dhicham.pro@gmail.com"},
 ]
+license = {text = "CC-BY-NC-4.0"}
+keywords = ["open-source", "recommendation-engine", "dagster", "dbt", "pgvector", "llm"]
+
+[project.urls]
+Homepage = "https://opensource-together.com/"
+Repository = "https://github.com/opensource-together/ost-linker"
+Issues = "https://github.com/opensource-together/ost-linker/issues"
 dependencies = [
     "sqlalchemy>=2.0.41,<3",
     "psycopg2-binary>=2.9.10,<3",
