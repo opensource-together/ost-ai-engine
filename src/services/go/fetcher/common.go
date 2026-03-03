@@ -93,6 +93,44 @@ func extractOwnerRepo(rawURL string) (string, string) {
 	return parts[0], parts[1]
 }
 
+// getNewProjects fetches only projects not yet present in targetTable (incremental fetch).
+func (f *GitHubFetcher) getNewProjects(ctx context.Context, limit int, targetTable string) ([]Project, error) {
+	query := fmt.Sprintf(`
+		SELECT d.project_id, d.repo_url
+		FROM github.int_github_detection d
+		LEFT JOIN %s t ON t.project_id = d.project_id
+		WHERE d.repo_url IS NOT NULL AND d.repo_url != ''
+		  AND t.project_id IS NULL
+	`, targetTable)
+	if limit > 0 {
+		query += fmt.Sprintf(" LIMIT %d", limit)
+	}
+
+	rows, err := f.db.Query(ctx, query)
+	if err != nil {
+		return nil, fmt.Errorf("query new projects: %w", err)
+	}
+	defer rows.Close()
+
+	var projects []Project
+	for rows.Next() {
+		var p Project
+		if err := rows.Scan(&p.ID, &p.RepoURL); err != nil {
+			continue
+		}
+		owner, repo := extractOwnerRepo(p.RepoURL)
+		if owner != "" && repo != "" {
+			p.Owner = owner
+			p.Repo = repo
+			projects = append(projects, p)
+		}
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("iterating projects: %w", err)
+	}
+	return projects, nil
+}
+
 // getProjects fetches projects from int_github_detection.
 func (f *GitHubFetcher) getProjects(ctx context.Context, limit int) ([]Project, error) {
 	query := `

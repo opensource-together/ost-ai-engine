@@ -58,7 +58,7 @@ func (f *GitHubFetcher) fetchReadmeContent(ctx context.Context, owner, repo stri
 }
 
 func (f *GitHubFetcher) FetchReadmes(ctx context.Context, limit int) (int, error) {
-	projects, err := f.getProjects(ctx, limit)
+	projects, err := f.getNewProjects(ctx, limit, "github.raw_github_readme")
 	if err != nil {
 		return 0, err
 	}
