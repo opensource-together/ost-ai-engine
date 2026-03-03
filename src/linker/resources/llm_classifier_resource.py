@@ -1,9 +1,13 @@
 import json
 import logging
+import threading
 
+import httpx
 from openai import OpenAI
 
 from dagster import ConfigurableResource
+
+_LLM_CALL_TIMEOUT_SECONDS = 45
 
 
 class LLMClassifierResource(ConfigurableResource):
@@ -22,10 +26,12 @@ class LLMClassifierResource(ConfigurableResource):
         client = OpenAI(
             base_url="https://openrouter.ai/api/v1",
             api_key=self.api_key,
+            timeout=httpx.Timeout(30.0, connect=10.0, read=20.0, write=10.0),
+            max_retries=1,
         )
-        
+
         # Truncate context to keep it snappy and cheap
-        truncated_context = (project_context or "")[:8000] 
+        truncated_context = (project_context or "")[:8000]
 
         cats_str = ", ".join(categories)
         doms_str = ", ".join(domains)
@@ -42,24 +48,39 @@ class LLMClassifierResource(ConfigurableResource):
 
         user_content = f"Title: {title}\n\nProject Context:\n{truncated_context}"
 
-        try:
-            completion = client.chat.completions.create(
-                model=self.model_id,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": user_content}
-                ],
-                temperature=0.0,
-                response_format={"type": "json_object"}
-            )
-            
-            content = completion.choices[0].message.content
-            
-            # Clean up potential markdown code blocks 
-            clean_json = content.replace("```json", "").replace("```", "").strip()
-            
-            return json.loads(clean_json)
+        result_container = [None]
+        error_container = [None]
 
-        except Exception as e:
-            logging.error(f"OpenRouter API Error for {title}: {e}")
-            return {"error": "api_error", "details": str(e)}
+        def _call_api():
+            try:
+                completion = client.chat.completions.create(
+                    model=self.model_id,
+                    messages=[
+                        {"role": "system", "content": system_prompt},
+                        {"role": "user", "content": user_content}
+                    ],
+                    temperature=0.0,
+                    response_format={"type": "json_object"}
+                )
+                content = completion.choices[0].message.content
+                clean_json = content.replace("```json", "").replace("```", "").strip()
+                result_container[0] = json.loads(clean_json)
+            except Exception as e:
+                error_container[0] = e
+
+        thread = threading.Thread(target=_call_api, daemon=True)
+        thread.start()
+        thread.join(timeout=_LLM_CALL_TIMEOUT_SECONDS)
+
+        if thread.is_alive():
+            logging.error(f"OpenRouter API hard timeout ({_LLM_CALL_TIMEOUT_SECONDS}s) for {title}")
+            return {"error": "timeout", "details": f"Hard timeout after {_LLM_CALL_TIMEOUT_SECONDS}s"}
+
+        if error_container[0] is not None:
+            logging.error(f"OpenRouter API Error for {title}: {error_container[0]}")
+            return {"error": "api_error", "details": str(error_container[0])}
+
+        if result_container[0] is not None:
+            return result_container[0]
+
+        return {"error": "unknown", "details": "No result and no error"}
