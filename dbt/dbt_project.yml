@@ -12,9 +12,16 @@ snapshot-paths: ["snapshots"]
 
 vars:
   global_reco_top_n: 20
-  w_similarity: 0.6
-  w_freshness: 0.2
-  w_popularity: 0.2
+  # Blend weights (sum to 1.0)
+  w_similarity: 0.40
+  w_preference: 0.35
+  w_freshness: 0.15
+  w_popularity: 0.10
+  # Preference sub-weights (sum to 1.0)
+  w_pref_tech: 0.30
+  w_pref_category: 0.45
+  w_pref_domain: 0.25
+  # Thresholds
   similarity_threshold: 0.25
   reco_top_n: 30
   freshness_decay_days: 90
