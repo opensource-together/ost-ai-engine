@@ -3,7 +3,7 @@
 ## Setup — install Python deps and compile Go binaries
 setup:
 	uv sync
-	bash scripts/go_binary_gen.sh
+	$(MAKE) build-go
 
 ## Dev — run Dagster dev server locally
 dev:
