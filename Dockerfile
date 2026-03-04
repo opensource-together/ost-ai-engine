@@ -43,16 +43,20 @@ FROM python:3.11-slim
 WORKDIR /app
 
 # Install system dependencies
-# libpq-dev is needed for psycopg2, git is needed for dbt deps, curl for healthcheck
+# libpq-dev: psycopg2, git: dbt deps, curl: healthcheck, g++: fasttext C++ extension
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libpq-dev \
     git \
     curl \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
+# Strip the `-e .` editable self-install line — the project is COPY'd later and
+# discovered via PYTHONPATH, so there's no need for an editable install.
 COPY --from=python-builder /app/requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+RUN sed -i '/^-e \./d' requirements.txt \
+    && pip install --no-cache-dir -r requirements.txt
 
 # Copy Go binaries from Stage 1
 COPY --from=go-builder /app/bin/ost-fetcher /usr/local/bin/ost-fetcher
