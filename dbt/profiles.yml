@@ -6,7 +6,7 @@ ost_linker:
       type: postgres
       host: "{{ env_var('POSTGRES_HOST', 'localhost') }}"
       user: "{{ env_var('POSTGRES_USER', 'postgres') }}"
-      password: "{{ env_var('POSTGRES_PASSWORD', 'password') }}"
+      password: "{{ env_var('POSTGRES_PASSWORD', 'postgres') }}"
       port: "{{ env_var('POSTGRES_PORT', 5433) | int }}"
       dbname: "{{ env_var('POSTGRES_DB', 'ost_db') }}"
       schema: public
