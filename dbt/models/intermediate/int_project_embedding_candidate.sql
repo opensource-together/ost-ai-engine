@@ -1,41 +1,43 @@
-
-with projects as (
-    select * from {{ source('public', 'Project') }}
+WITH projects AS (
+    SELECT * FROM {{ source('public', 'Project') }}
 ),
 
-classifications as (
-    select * from {{ source('match', 'project_classification') }}
+classifications AS (
+    SELECT * FROM {{ source('match', 'project_classification') }}
 ),
 
-categories as (
-    select * from {{ source('public', 'Category') }}
+categories AS (
+    SELECT * FROM {{ source('public', 'Category') }}
 ),
 
-domains as (
-    select * from {{ source('public', 'Domain') }}
+domains AS (
+    SELECT * FROM {{ source('public', 'Domain') }}
 ),
 
-original_context as (
-    select id, context from {{ ref('int_project_contextualized') }}
+original_context AS (
+    SELECT
+        id,
+        context
+    FROM {{ ref('int_project_contextualized') }}
 ),
 
-enriched as (
-    select
-        p.id as project_id,
+enriched AS (
+    SELECT
+        p.id AS project_id,
         concat(
             coalesce(oc.context, ''),
             ' | Category: ', coalesce(c.name, 'Uncategorized'),
             ' | Domain: ', coalesce(d.name, 'General')
-        ) as rich_context_string
-    from projects p
-    left join classifications cl on p.id = cl."projectId"
-    left join categories c on cl."categoryId" = c.id
-    left join domains d on cl."domainId" = d.id
-    left join original_context oc on p.id::uuid = oc.id
-    where p.published = true or p.trending = true
+        ) AS rich_context_string
+    FROM projects AS p
+    LEFT JOIN classifications AS cl ON p.id = cl."projectId"
+    LEFT JOIN categories AS c ON cl."categoryId" = c.id
+    LEFT JOIN domains AS d ON cl."domainId" = d.id
+    LEFT JOIN original_context AS oc ON p.id::uuid = oc.id
+    WHERE p.published = true OR p.trending = true
 )
 
-select
+SELECT
     project_id,
     rich_context_string
-from enriched
+FROM enriched

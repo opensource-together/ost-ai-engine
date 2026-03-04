@@ -1,54 +1,54 @@
-with projects as (
-    select * from {{ source('public', 'Project') }}
+WITH projects AS (
+    SELECT * FROM {{ source('public', 'Project') }}
 ),
 
-categories as (
-    select
+categories AS (
+    SELECT
         pc."projectId",
-        string_agg(c.name, ', ') as categories_list
-    from {{ source('public', 'project_category') }} pc
-    join {{ source('public', 'Category') }} c on pc."categoryId" = c.id
-    group by pc."projectId"
+        string_agg(c.name, ', ') AS categories_list
+    FROM {{ source('public', 'project_category') }} AS pc
+    INNER JOIN {{ source('public', 'Category') }} AS c ON pc."categoryId" = c.id
+    GROUP BY pc."projectId"
 ),
 
-domains as (
-    select
+domains AS (
+    SELECT
         pd."projectId",
-        string_agg(d.name, ', ') as domains_list
-    from {{ source('public', 'project_domain') }} pd
-    join {{ source('public', 'Domain') }} d on pd."domainId" = d.id
-    group by pd."projectId"
+        string_agg(d.name, ', ') AS domains_list
+    FROM {{ source('public', 'project_domain') }} AS pd
+    INNER JOIN {{ source('public', 'Domain') }} AS d ON pd."domainId" = d.id
+    GROUP BY pd."projectId"
 ),
 
-tech_stacks as (
-    select
+tech_stacks AS (
+    SELECT
         pts."projectId",
-        string_agg(ts.name, ', ') as tech_stack_list
-    from {{ source('public', 'project_tech_stack') }} pts
-    join {{ source('public', 'tech_stack') }} ts on pts."techStackId" = ts.id
-    group by pts."projectId"
+        string_agg(ts.name, ', ') AS tech_stack_list
+    FROM {{ source('public', 'project_tech_stack') }} AS pts
+    INNER JOIN {{ source('public', 'tech_stack') }} AS ts ON pts."techStackId" = ts.id
+    GROUP BY pts."projectId"
 ),
 
-readmes as (
-    select
+readmes AS (
+    SELECT
         project_id,
         content
-    from {{ ref('stg_github__readme') }}
+    FROM {{ ref('stg_github__readme') }}
 )
 
-select
+SELECT
     p.id,
     p.title,
     p.description,
     p."repoUrl",
-    coalesce(c.categories_list, '') as categories,
-    coalesce(d.domains_list, '') as domains,
-    coalesce(t.tech_stack_list, '') as tech_stack,
-    coalesce(r.content, '') as readme,
-    p."updatedAt"
-from projects p
-left join categories c on p.id = c."projectId"
-left join domains d on p.id = d."projectId"
-left join tech_stacks t on p.id = t."projectId"
-left join readmes r on p.id::uuid = r.project_id
-where p.published = true or p.trending = true
+    p."updatedAt",
+    coalesce(c.categories_list, '') AS categories,
+    coalesce(d.domains_list, '') AS domains,
+    coalesce(t.tech_stack_list, '') AS tech_stack,
+    coalesce(r.content, '') AS readme
+FROM projects AS p
+LEFT JOIN categories AS c ON p.id = c."projectId"
+LEFT JOIN domains AS d ON p.id = d."projectId"
+LEFT JOIN tech_stacks AS t ON p.id = t."projectId"
+LEFT JOIN readmes AS r ON p.id::uuid = r.project_id
+WHERE p.published = true OR p.trending = true

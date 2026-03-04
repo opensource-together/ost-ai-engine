@@ -1,8 +1,8 @@
-with raw_user as (
-    select * from {{ ref('int_user_enriched') }}
+WITH raw_user AS (
+    SELECT * FROM {{ ref('int_user_enriched') }}
 )
 
-select
+SELECT
     user_id,
     {{ build_user_context([
         ('Full Name', 'name'),
@@ -12,5 +12,5 @@ select
         ('Domains', 'domains'),
         ('Interests', 'categories'),
         ('Experience', 'experiences::text')
-    ]) }} as user_context
-from raw_user
+    ]) }} AS user_context
+FROM raw_user

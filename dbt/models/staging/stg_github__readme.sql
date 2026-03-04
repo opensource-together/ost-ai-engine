@@ -1,21 +1,27 @@
-with source as (
-    select * from {{ source('github', 'raw_github_readme') }}
+WITH source AS (
+    SELECT * FROM {{ source('github', 'raw_github_readme') }}
 ),
 
-cleaned as (
-    select
+cleaned AS (
+    SELECT
         s.id,
-        s.project_id::uuid as project_id,
+        s.project_id::uuid AS project_id,
         s.repo_url,
         s.content,
         s.created_at
-    from source s
-    inner join {{ ref('stg_github__project') }} p on s.project_id::uuid = p.id
-    where s.content is not null
+    FROM source AS s
+    INNER JOIN {{ ref('stg_github__project') }} AS p ON s.project_id::uuid = p.id
+    WHERE s.content IS NOT null
 ),
 
-deduped as (
+deduped AS (
     {{ deduplicate('cleaned', 'project_id', 'created_at desc') }}
 )
 
-select id, project_id, repo_url, content, created_at from deduped
+SELECT
+    id,
+    project_id,
+    repo_url,
+    content,
+    created_at
+FROM deduped

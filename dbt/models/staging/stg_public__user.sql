@@ -1,8 +1,8 @@
-select
-    id as user_id,
+SELECT
+    id AS user_id,
     name,
     bio,
-    "jobTitle" as job_title,
+    "jobTitle" AS job_title,
     experiences,
-    "createdAt" as created_at
-from {{ source('public', 'user') }}
+    "createdAt" AS created_at
+FROM {{ source('public', 'user') }}

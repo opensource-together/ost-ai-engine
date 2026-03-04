@@ -1,9 +1,9 @@
-with source as (
-    select * from {{ ref('int_project_enriched') }}
+WITH source AS (
+    SELECT * FROM {{ ref('int_project_enriched') }}
 ),
 
-final as (
-    select
+final AS (
+    SELECT
         *,
         -- Context generation
         {{ build_project_context([
@@ -12,12 +12,12 @@ final as (
             ('Topics', jsonb_to_list('fetched_topics')),
             ('Tech stacks', jsonb_to_list('fetched_languages')),
             ('Readme', clean_text('readme_content'))
-        ]) }} 
-        as context
-    from source
+        ]) }}
+            AS context
+    FROM source
 )
 
-select
+SELECT
     id,
     name,
     description,
@@ -30,6 +30,6 @@ select
     updated_at,
     -- Keep metadata for filtering, but remove blobs (readme, full lists) to save space
     language_confidence,
-    primary_language as language,
+    primary_language AS language,
     context
-from final
+FROM final

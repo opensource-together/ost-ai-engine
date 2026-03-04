@@ -1,44 +1,44 @@
-with user_base as (
-    select * from {{ ref('stg_public__user') }}
+WITH user_base AS (
+    SELECT * FROM {{ ref('stg_public__user') }}
 ),
 
-tech_stacks as (
-    select 
-        uts."userId" as user_id,
-        string_agg(ts.name, ', ') as tech_stack_list
-    from {{ source('public', 'user_tech_stack') }} uts
-    join {{ source('public', 'tech_stack') }} ts on uts."techStackId" = ts.id
-    group by uts."userId"
+tech_stacks AS (
+    SELECT
+        uts."userId" AS user_id,
+        string_agg(ts.name, ', ') AS tech_stack_list
+    FROM {{ source('public', 'user_tech_stack') }} AS uts
+    INNER JOIN {{ source('public', 'tech_stack') }} AS ts ON uts."techStackId" = ts.id
+    GROUP BY uts."userId"
 ),
 
-domains as (
-    select 
-        ud."userId" as user_id,
-        string_agg(d.name, ', ') as domain_list
-    from {{ source('public', 'user_domain') }} ud
-    join {{ source('public', 'Domain') }} d on ud."domainId" = d.id
-    group by ud."userId"
+domains AS (
+    SELECT
+        ud."userId" AS user_id,
+        string_agg(d.name, ', ') AS domain_list
+    FROM {{ source('public', 'user_domain') }} AS ud
+    INNER JOIN {{ source('public', 'Domain') }} AS d ON ud."domainId" = d.id
+    GROUP BY ud."userId"
 ),
 
-categories as (
-    select 
-        uc."userId" as user_id,
-        string_agg(c.name, ', ') as category_list
-    from {{ source('public', 'user_categories') }} uc
-    join {{ source('public', 'Category') }} c on uc."categoryId" = c.id
-    group by uc."userId"
+categories AS (
+    SELECT
+        uc."userId" AS user_id,
+        string_agg(c.name, ', ') AS category_list
+    FROM {{ source('public', 'user_categories') }} AS uc
+    INNER JOIN {{ source('public', 'Category') }} AS c ON uc."categoryId" = c.id
+    GROUP BY uc."userId"
 )
 
-select
+SELECT
     u.user_id,
     u.name,
     u.bio,
     u.job_title,
     u.experiences,
-    coalesce(t.tech_stack_list, '') as tech_stacks,
-    coalesce(d.domain_list, '') as domains,
-    coalesce(c.category_list, '') as categories
-from user_base u
-left join tech_stacks t on u.user_id = t.user_id
-left join domains d on u.user_id = d.user_id
-left join categories c on u.user_id = c.user_id
+    coalesce(t.tech_stack_list, '') AS tech_stacks,
+    coalesce(d.domain_list, '') AS domains,
+    coalesce(c.category_list, '') AS categories
+FROM user_base AS u
+LEFT JOIN tech_stacks AS t ON u.user_id = t.user_id
+LEFT JOIN domains AS d ON u.user_id = d.user_id
+LEFT JOIN categories AS c ON u.user_id = c.user_id

@@ -24,3 +24,7 @@ capitalisation_policy = upper
 
 [sqlfluff:rules:capitalisation.identifiers]
 capitalisation_policy = lower
+
+[sqlfluff:rules:references.keywords]
+# Column names like 'language', 'name', 'description' come from the DB schema
+ignore_words = name,language,description

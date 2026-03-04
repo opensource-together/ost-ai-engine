@@ -1,9 +1,9 @@
-with public_projects as (
-    select * from {{ ref('stg_public__project') }}
+WITH public_projects AS (
+    SELECT * FROM {{ ref('stg_public__project') }}
 ),
 
-contextualized as (
-    select
+contextualized AS (
+    SELECT
         p.id,
         {{ build_project_context([
             ('Title', 'p.title'),
@@ -12,16 +12,17 @@ contextualized as (
             ('Domains', 'p.domains'),
             ('Tech Stack', 'p.tech_stack'),
             ('Readme', clean_text('p.readme'))
-        ]) }} as raw_context,
-        now() as created_at
-    from public_projects p
-    where p.id is not null
+        ]) }} AS raw_context,
+        now() AS created_at
+    FROM public_projects AS p
+    WHERE p.id IS NOT null
 )
 
-select
+SELECT
     id,
-    {{ clean_text('raw_context') }} as context,
+    {{ clean_text('raw_context') }} AS context,
     created_at
-from contextualized
-where raw_context is not null
-and length(trim(raw_context)) > 10
+FROM contextualized
+WHERE
+    raw_context IS NOT null
+    AND length(trim(raw_context)) > 10
