@@ -1,0 +1,23 @@
+storage:
+  postgres:
+    postgres_url:
+      env: DAGSTER_PG_URL
+
+compute_logs:
+  module: dagster.core.storage.local_compute_log_manager
+  class: LocalComputeLogManager
+  config:
+    base_dir:
+      env: DAGSTER_LOGS_DIR
+
+run_coordinator:
+  module: dagster.core.run_coordinator
+  class: QueuedRunCoordinator
+  config:
+    max_concurrent_runs: 2
+
+run_monitoring:
+  enabled: true
+
+telemetry:
+  enabled: false

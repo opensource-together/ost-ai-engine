@@ -23,6 +23,8 @@
 !docker-compose.yml
 !.env.example
 !dagster.yaml
+!dagster.prod.yaml
+!workspace.yaml
 !README.md
 !LICENSE
 
