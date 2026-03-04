@@ -4,17 +4,16 @@ set -e
 echo "Starting initialization..."
 
 # Wait for Postgres
-echo "⏳ Waiting for Postgres to be ready..."
-# Use Python to check connection using standard environment variables or default values.
+echo "Waiting for Postgres to be ready..."
+# Use Python to check connection using standard environment variables.
 # This avoids needing 'postgresql-client' and hardcoded hostnames.
 until python3 -c "
-import sys, os, time, psycopg2
-from urllib.parse import urlparse
+import sys, os, psycopg2
 
 url = os.getenv('DATABASE_URL')
-user = os.getenv('POSTGRES_USER', 'postgres')
-password = os.getenv('POSTGRES_PASSWORD', 'password')
-db = os.getenv('POSTGRES_DB', 'ost_db')
+user = os.getenv('POSTGRES_USER', '')
+password = os.getenv('POSTGRES_PASSWORD', '')
+db = os.getenv('POSTGRES_DB', '')
 host = os.getenv('POSTGRES_HOST', 'db')
 port = os.getenv('POSTGRES_PORT', '5432')
 
@@ -29,19 +28,24 @@ except Exception as e:
     print(f'Waiting for DB... {e}')
     sys.exit(1)
 "; do
-  echo "Sleeping 2s..."
   sleep 2
 done
-echo "✅ Postgres is ready."
+echo "Postgres is ready."
 
 # DBT
 if [ -d "dbt" ]; then
-    echo "Installing dbt dependencies..."
     cd dbt
-    dbt deps
-    
+
+    if [ -f "packages.yml" ]; then
+        echo "Installing dbt dependencies..."
+        dbt deps
+    fi
+
     echo "Building dbt models..."
-    dbt build
+    if ! dbt build; then
+        echo "WARNING: dbt build failed — some models may be missing. Continuing startup."
+    fi
+
     cd ..
 else
     echo "dbt directory not found!"
