@@ -4,6 +4,7 @@ import subprocess
 import pandas as pd
 
 from dagster import (
+    AssetExecutionContext,
     AssetIn,
     AssetKey,
     Output,
@@ -28,7 +29,10 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     key=AssetKey(["github", "raw_github_readme"]),  # Matches dbt source
     required_resource_keys={"config"},
 )
-def core_github__fetch_readme(context, core_github__detect_languages: pd.DataFrame):
+def core_github__fetch_readme(
+    context: AssetExecutionContext,
+    core_github__detect_languages: pd.DataFrame,
+) -> Output[None]:
     """
     Fetch GitHub /readme for each project using Go fetcher.
 

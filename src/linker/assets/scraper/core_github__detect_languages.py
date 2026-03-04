@@ -1,9 +1,11 @@
 import re
 import uuid
+from typing import Any
 
 import pandas as pd
 
 from dagster import (
+    AssetExecutionContext,
     AssetIn,
     AssetKey,
     MetadataValue,
@@ -24,7 +26,10 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     key=AssetKey(["github", "int_github_detection"]),  # Matches dbt source
     required_resource_keys={"config", "fasttext_model"},
 )
-def core_github__detect_languages(context, stg_df: pd.DataFrame):
+def core_github__detect_languages(
+    context: AssetExecutionContext,
+    stg_df: pd.DataFrame,
+) -> Output[None]:
     """
     Detects and filters repositories based on language using fastText.
     Reads from dbt staging table `stg_github__project`.
@@ -211,7 +216,7 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
         lang_counts[k] = lang_counts.get(k, 0) + 1
 
     # Helper to serialize datetime objects for metadata
-    def _make_serializable(obj):
+    def _make_serializable(obj: Any) -> Any:
         import datetime
         import uuid
 

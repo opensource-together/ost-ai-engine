@@ -28,7 +28,7 @@ UPSERT_EMBEDDING_QUERY = text("""
 def core_ml__embed_projects(
     context: AssetExecutionContext,
     projects_df: pd.DataFrame,
-):
+) -> None:
     """Compute embeddings from int_project_embedding_candidate.
 
     Results are stored in embd_github_project.

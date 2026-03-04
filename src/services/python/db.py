@@ -1,12 +1,14 @@
 import os
+from collections.abc import Generator
 from contextlib import contextmanager
+from typing import Any
 
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
 
 @contextmanager
-def get_db_connection():
+def get_db_connection() -> Generator[Any]:
     """
     Context manager for a database connection.
     Yields a connection object.
@@ -32,7 +34,7 @@ def get_db_connection():
 
 
 @contextmanager
-def get_db_cursor(commit=False):
+def get_db_cursor(commit: bool = False) -> Generator[Any]:
     """
     Context manager for a database cursor.
     Yields a cursor object (RealDictCursor).

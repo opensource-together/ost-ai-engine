@@ -3,11 +3,11 @@ import shutil
 import time
 from pathlib import Path
 
-from dagster import job, op
+from dagster import OpExecutionContext, job, op
 
 
 @op
-def clean_dagster_home(context):
+def clean_dagster_home(context: OpExecutionContext) -> dict[str, int]:
     """
     Clean specific Dagster state directories older than 2 days.
 
@@ -17,7 +17,7 @@ def clean_dagster_home(context):
 
     Safety: only removes entries inside those two targets and logs actions.
     """
-    dagster_home = os.environ.get("DAGSTER_HOME")
+    dagster_home = os.environ.get("DAGSTER_HOME", "")
     dgh = Path(dagster_home)
     if not dgh.exists():
         context.log.info(f"dagster home not found: {dgh} — nothing to clean")
@@ -59,7 +59,7 @@ def clean_dagster_home(context):
 
 
 @job()
-def cleanup_dagster_history_job():
+def cleanup_dagster_history_job() -> None:
     clean_dagster_home()
 
 

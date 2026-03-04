@@ -23,7 +23,7 @@ class FastTextModelResource(ConfigurableResource):
     _model: Any = PrivateAttr(default=None)
 
     @property
-    def model(self):
+    def model(self) -> Any:
         """Lazy-load and return the fastText model.
 
         Returns:
@@ -35,7 +35,7 @@ class FastTextModelResource(ConfigurableResource):
         """
         if self._model is None:
             try:
-                import fasttext
+                import fasttext  # type: ignore[import-untyped]
             except ImportError as e:
                 raise ImportError(
                     "fasttext package is required for language detection. "
@@ -62,7 +62,7 @@ class FastTextModelResource(ConfigurableResource):
 
         return self._model
 
-    def predict(self, text: str, k: int = 1):
+    def predict(self, text: str, k: int = 1) -> Any:
         """Predict language(s) for given text.
 
         Args:

@@ -1,6 +1,7 @@
 import uuid
+from typing import Any
 
-from dagster import AssetKey, asset
+from dagster import AssetExecutionContext, AssetKey, asset
 from src.services.python.db import get_db_cursor
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
@@ -13,7 +14,10 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     key=AssetKey(["public", "Project"]),  # Explicitly match DBT Source
     required_resource_keys={"io_manager"},
 )
-def core_public__sync_projects(context, core_match__classify_projects):
+def core_public__sync_projects(
+    context: AssetExecutionContext,
+    core_match__classify_projects: list[dict[str, Any]],
+) -> None:
     """
     Step 2: Sync / Persistence.
 
@@ -52,7 +56,7 @@ def core_public__sync_projects(context, core_match__classify_projects):
         # languages is typically JSON like {"Python": 1000, "Rust": 500}
         # topics is JSON list ["machine-learning", "python"]
 
-        project_tech_names = set()
+        project_tech_names: set[str] = set()
 
         langs = p.get("languages")
         if langs:

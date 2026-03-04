@@ -17,7 +17,7 @@ class PandasPostgresIOManager(ConfigurableIOManager):
             self._engine = create_engine(self.db_url)
         return self._engine
 
-    def handle_output(self, context: OutputContext, obj: pd.DataFrame) -> None:
+    def handle_output(self, context: OutputContext, obj: pd.DataFrame | None) -> None:
         if obj is None:
             context.log.info("Skipping output write because obj is None")
             return

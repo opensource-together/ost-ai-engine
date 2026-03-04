@@ -1,5 +1,7 @@
 import os
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any
 
 from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
 
@@ -21,7 +23,10 @@ dbt_project.prepare_if_dev()
 
 
 @dbt_assets(manifest=dbt_project.manifest_path, name="dbt_models")
-def dbt_project_assets(context: AssetExecutionContext, dbt: DbtCliResource):
+def dbt_project_assets(
+    context: AssetExecutionContext,
+    dbt: DbtCliResource,
+) -> Iterator[Any]:
     yield from dbt.cli(
         ["build", "--indirect-selection", "cautious"], context=context
     ).stream()

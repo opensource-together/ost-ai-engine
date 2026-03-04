@@ -1,4 +1,6 @@
-from dagster import AssetIn, AssetKey, Output, asset
+import pandas as pd
+
+from dagster import AssetExecutionContext, AssetIn, AssetKey, Output, asset
 from src.services.python.db import get_db_cursor
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
@@ -14,7 +16,10 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     group_name="ml",
     required_resource_keys={"sentence_transformer", "io_manager"},
 )
-def core_ml__embed_users(context, user_df):
+def core_ml__embed_users(
+    context: AssetExecutionContext,
+    user_df: pd.DataFrame,
+) -> Output[None]:
     """
     Step 3: User Embedding.
 

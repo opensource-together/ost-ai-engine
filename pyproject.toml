@@ -55,6 +55,8 @@ dev = [
     "safety>=2.3.0,<3",
     "sqlfluff>=3.0,<4",
     "sqlfluff-templater-dbt>=3.0,<4",
+    "pandas-stubs>=3.0.0.260204",
+    "types-psycopg2>=2.9.21.20260223",
 ]
 
 [build-system]

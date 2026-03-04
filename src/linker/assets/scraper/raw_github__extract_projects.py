@@ -3,6 +3,7 @@ import os
 import subprocess
 
 from dagster import (
+    AssetExecutionContext,
     AssetKey,
     MetadataValue,
     Output,
@@ -21,7 +22,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     required_resource_keys={"config"},
     key=AssetKey(["github", "raw_github_project"]),  # Matches DB table
 )
-def raw_github__extract_projects(context):
+def raw_github__extract_projects(context: AssetExecutionContext) -> Output[None]:
     """Execute Go scraper to fetch GitHub projects and write to DB.
 
     Supports multi-query parallel scraping and single-query legacy format.

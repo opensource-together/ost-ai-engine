@@ -1,4 +1,8 @@
-from dagster import AssetIn, AssetKey, Output, asset
+from typing import Any
+
+import pandas as pd
+
+from dagster import AssetExecutionContext, AssetIn, AssetKey, Output, asset
 from src.services.python.db import get_db_cursor
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
@@ -12,7 +16,10 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     required_resource_keys={"llm_classifier"},
     io_manager_key="fs_io_manager",
 )
-def core_match__classify_projects(context, projects_df):
+def core_match__classify_projects(
+    context: AssetExecutionContext,
+    projects_df: pd.DataFrame,
+) -> Output[list[dict[str, Any]]]:
     """
     Classifies GitHub projects into standardized Categories and Domains using LLM.
     Reads from `github.fct_github_project` and outputs classification metadata.
@@ -47,7 +54,7 @@ def core_match__classify_projects(context, projects_df):
     cat_names = list(categories_map.keys())
     dom_names = list(domains_map.keys())
 
-    results_payload = []
+    results_payload: list[dict[str, Any]] = []
     total = len(projects)
 
     for idx, p in enumerate(projects, start=1):

@@ -60,10 +60,10 @@ class LLMClassifierResource(ConfigurableResource):
 
         user_content = f"Title: {title}\n\nProject Context:\n{truncated_context}"
 
-        result_container = [None]
-        error_container = [None]
+        result_container: list[dict[str, object] | None] = [None]
+        error_container: list[Exception | None] = [None]
 
-        def _call_api():
+        def _call_api() -> None:
             try:
                 completion = client.chat.completions.create(
                     model=self.model_id,
@@ -75,6 +75,9 @@ class LLMClassifierResource(ConfigurableResource):
                     response_format={"type": "json_object"},
                 )
                 content = completion.choices[0].message.content
+                if content is None:
+                    error_container[0] = ValueError("LLM returned empty content")
+                    return
                 clean_json = content.replace("```json", "").replace("```", "").strip()
                 result_container[0] = json.loads(clean_json)
             except Exception as e:

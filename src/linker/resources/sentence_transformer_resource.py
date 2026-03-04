@@ -11,12 +11,10 @@ class SentenceTransformerResource(ConfigurableResource):
 
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     device: str = "cpu"
-    _model: SentenceTransformer = PrivateAttr(default=None)
+    _model: SentenceTransformer | None = PrivateAttr(default=None)
 
     def get_model(self) -> SentenceTransformer:
         if self._model is None:
-            # logger = logging.getLogger("dagster")
-            # logger.info(f"Loading SentenceTransformer model: {self.model_name}")
             print(
                 f"Loading SentenceTransformer model: "
                 f"{self.model_name} on {self.device}",

@@ -4,6 +4,7 @@ import subprocess
 import pandas as pd
 
 from dagster import (
+    AssetExecutionContext,
     AssetIn,
     AssetKey,
     Output,
@@ -29,8 +30,8 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     required_resource_keys={"config"},
 )
 def core_github__fetch_repo_languages(
-    context, core_github__detect_languages: pd.DataFrame
-):
+    context: AssetExecutionContext, core_github__detect_languages: pd.DataFrame
+) -> Output[None]:
     """
     Fetch GitHub /languages for each project using Go fetcher.
 
