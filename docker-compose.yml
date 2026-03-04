@@ -1,49 +1,73 @@
+# Shared environment variables for Dagster services
+x-common-env: &common-env
+  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  DAGSTER_HOME: /app/dagster_home
+  DAGSTER_STORAGE_DIR: /app/dagster_home/storage
+  DAGSTER_LOGS_DIR: /app/dagster_home/logs
+  DAGSTER_PG_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  GITHUB_ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
+  GO_SCRAPER_PATH: /usr/local/bin/ost-scraper
+  GO_FETCHER_PATH: /usr/local/bin/ost-fetcher
+  DBT_TARGET: docker
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+  FASTTEXT_MODEL_PATH: models/lid.176.ftz
+
+x-common-volumes: &common-volumes
+  - dagster_data:/app/dagster_home
+  - ./src:/app/src
+  - ./dbt:/app/dbt
+  - ./scripts:/app/scripts
+  # Dev override: mount local SQLite dagster.yaml over the prod Postgres config
+  - ./dagster.yaml:/app/dagster_home/dagster.yaml
+
 services:
   # ============================================================================
-  # MAIN APPLICATION (Dagster + DBT + Go Binaries)
+  # DAGSTER WEBSERVER (UI + GraphQL API)
   # ============================================================================
-  ost-linker:
+  webserver:
     build: .
-    container_name: ost-linker-app
+    container_name: ost-linker-webserver
     restart: unless-stopped
     ports:
-      - "3000:3000" # Dagster UI
+      - "3000:3000"
     environment:
-      - DATABASE_URL=postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
-      # Dagster
-      - DAGSTER_HOME=/app/dagster_home
-      - DAGSTER_STORAGE_DIR=/app/dagster_home/storage
-      - DAGSTER_LOGS_DIR=/app/dagster_home/logs
-      # GitHub Tokens for Scraper
-      - GITHUB_ACCESS_TOKEN=${GITHUB_ACCESS_TOKEN}
-      # Go Binaries (Docker Path)
-      - GO_SCRAPER_PATH=/usr/local/bin/ost-scraper
-      - GO_FETCHER_PATH=/usr/local/bin/ost-fetcher
-      # DBT Config
-      - DBT_TARGET=docker
-      - POSTGRES_USER=${POSTGRES_USER}
-      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=${POSTGRES_DB}
-      # LLM / ML
-      - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
-      - FASTTEXT_MODEL_PATH=models/lid.176.ftz
-    volumes:
-      - dagster_data:/app/dagster_home
-      # Mount source code for simpler dev loops (optional, remove for prod)
-      - ./src:/app/src
-      - ./dbt:/app/dbt
-      - ./scripts:/app/scripts
+      <<: *common-env
+    volumes: *common-volumes
     depends_on:
       db:
         condition: service_healthy
-    # Override command to ensure migrations or specific tailored startup if needed
-    command: [ "./scripts/init.sh", "dagster", "dev", "-h", "0.0.0.0", "-p", "3000" ]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    command: ["./scripts/init.sh", "dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-w", "/app/workspace.yaml"]
+
+  # ============================================================================
+  # DAGSTER DAEMON (schedules, sensors, run queue)
+  # ============================================================================
+  daemon:
+    build: .
+    container_name: ost-linker-daemon
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      DAGSTER_ROLE: daemon
+    volumes: *common-volumes
+    depends_on:
+      webserver:
+        condition: service_healthy
+    command: ["./scripts/init.sh", "dagster-daemon", "run", "-w", "/app/workspace.yaml"]
 
   # ============================================================================
   # DATABASE (Postgres + PGVector)
   # ============================================================================
   db:
-    image: ankane/pgvector:v0.4.1 # Used same version as pyproject.toml requirement
+    image: ankane/pgvector:v0.4.1
     container_name: ost-linker-db
     restart: unless-stopped
     environment:

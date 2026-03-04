@@ -3,6 +3,13 @@ set -e
 
 echo "Starting initialization..."
 
+# Daemon skips dbt init — webserver handles it
+if [ "$DAGSTER_ROLE" = "daemon" ]; then
+    echo "Daemon role: skipping dbt init."
+    echo "Executing command: $@"
+    exec "$@"
+fi
+
 # Wait for Postgres
 echo "Waiting for Postgres to be ready..."
 # Use Python to check connection using standard environment variables.

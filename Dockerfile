@@ -68,14 +68,14 @@ ENV DAGSTER_LOGS_DIR=/app/dagster_home/logs
 ENV PYTHONPATH=/app
 ENV DBT_PROJECT_DIR=/app/dbt
 
-# Create Dagster home, copy config, and set ownership
+# Create Dagster home, copy prod config as default
 RUN mkdir -p $DAGSTER_HOME \
-    && cp dagster.yaml $DAGSTER_HOME/dagster.yaml
+    && cp dagster.prod.yaml $DAGSTER_HOME/dagster.yaml
 
-# Create non-root user
+# Create non-root user and set ownership for writable directories
 RUN groupadd -g 1000 appuser \
     && useradd -u 1000 -g appuser -s /bin/bash appuser \
-    && chown -R appuser:appuser $DAGSTER_HOME
+    && chown -R appuser:appuser $DAGSTER_HOME /app/dbt /app/models /app/scripts
 
 USER appuser
 
@@ -83,8 +83,8 @@ USER appuser
 EXPOSE 3000
 
 # Healthcheck for Dagster webserver
-HEALTHCHECK --interval=30s --timeout=5s --start-period=60s --retries=3 \
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
     CMD curl -f http://localhost:3000/server_info || exit 1
 
-# Default command: run dagster dev (can be overridden in compose)
-CMD ["dagster", "dev", "-h", "0.0.0.0", "-p", "3000"]
+# Default command: run dagster-webserver (production mode)
+CMD ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-w", "/app/workspace.yaml"]
