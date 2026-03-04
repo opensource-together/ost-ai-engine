@@ -2,6 +2,7 @@
 # Documentation: https://docs.dagster.io/deployment/dagster-instance
 
 # unified storage for runs, event logs, and schedules
+# NOTE: SQLite is suitable for dev only — use PostgreSQL storage for production
 storage:
   sqlite:
     # use environment variable so runtime path is configurable
@@ -21,7 +22,7 @@ run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
   config:
-    max_concurrent_runs: 5
+    max_concurrent_runs: 2
 
 # enable run monitoring for better error detection
 run_monitoring:
