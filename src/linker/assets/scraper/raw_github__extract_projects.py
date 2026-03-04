@@ -13,12 +13,13 @@ from ...resources.cfg_resource import build_scraper_env
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
+
 @asset(
     kinds={"go", "postgres"},
     owners=DEFAULT_OWNERS,
     group_name="ingestion",
     required_resource_keys={"config"},
-    key=AssetKey(["github", "raw_github_project"]), # Matches DB table
+    key=AssetKey(["github", "raw_github_project"]),  # Matches DB table
 )
 def raw_github__extract_projects(context):
     """Execute Go scraper to fetch GitHub projects and write to DB.
@@ -57,7 +58,7 @@ def raw_github__extract_projects(context):
             text=True,
             env=env,
             cwd=os.getcwd(),
-            timeout=600  # 10 minutes for parallel multi-query
+            timeout=600,  # 10 minutes for parallel multi-query
         )
 
         stdout = result.stdout
@@ -71,7 +72,7 @@ def raw_github__extract_projects(context):
 
         context.log.info(f"Scraper stdout: {stdout}")
         if stderr:
-             context.log.warning(f"Scraper stderr: {stderr}")
+            context.log.warning(f"Scraper stderr: {stderr}")
 
         # Parse summary from stdout
         try:

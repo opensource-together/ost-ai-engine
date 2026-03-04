@@ -1,10 +1,7 @@
-from dagster import asset, AssetExecutionContext, AssetKey, Output, MetadataValue, AssetIn
+from dagster import AssetIn, AssetKey, Output, asset
 from src.services.python.db import get_db_cursor
-import pandas as pd
-import json
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
-
 
 
 @asset(
@@ -21,61 +18,60 @@ def core_match__classify_projects(context, projects_df):
     Reads from `github.fct_github_project` and outputs classification metadata.
     """
     llm = context.resources.llm_classifier
-    
+
     projects = []
-    categories_map = {} # Name -> ID
-    domains_map = {}    # Name -> ID
-    
+    categories_map = {}  # Name -> ID
+    domains_map = {}  # Name -> ID
+
     with get_db_cursor() as cur:
         # 1. Fetch Categories & Domains for the Prompt
         cur.execute('SELECT "id", "name" FROM "public"."Category"')
         categories_map = {row["name"]: row["id"] for row in cur.fetchall()}
-        
+
         cur.execute('SELECT "id", "name" FROM "public"."Domain"')
         domains_map = {row["name"]: row["id"] for row in cur.fetchall()}
-        
+
         # 2. Use Projects from IO Manager
-        projects = projects_df.to_dict('records')
-        
+        projects = projects_df.to_dict("records")
+
         # Adjust alias manually if dataframe has 'name' but code implies 'title'
         for p in projects:
-            if 'name' in p and 'title' not in p:
-                p['title'] = p['name']
-
+            if "name" in p and "title" not in p:
+                p["title"] = p["name"]
 
     context.log.info(f"Loaded {len(projects)} projects for classification.")
-    
+
     if not projects:
         return Output(value=[], metadata={"count": 0})
 
     cat_names = list(categories_map.keys())
     dom_names = list(domains_map.keys())
-    
+
     results_payload = []
     total = len(projects)
-    
+
     for idx, p in enumerate(projects, start=1):
-        if not p.get('title'): 
+        if not p.get("title"):
             context.log.debug(f"[{idx}/{total}] Skipping project without title.")
             continue
 
         try:
             context.log.info(f"[{idx}/{total}] Classifying: {p['title'][:60]}...")
-            
+
             # Call LLM
             result_json = llm.classify_project(
-                title=p['title'], 
-                project_context=p.get('context') or "", 
-                categories=cat_names, 
-                domains=dom_names
+                title=p["title"],
+                project_context=p.get("context") or "",
+                categories=cat_names,
+                domains=dom_names,
             )
-            
+
             # Map strings back to IDs
             cat_name = result_json.get("category")
             dom_name = result_json.get("domain")
             cat_id = categories_map.get(cat_name)
             dom_id = domains_map.get(dom_name)
-            
+
             if cat_id or dom_id:
                 # Add classification info to the project object
                 payload = {
@@ -84,28 +80,39 @@ def core_match__classify_projects(context, projects_df):
                         "categoryId": cat_id,
                         "domainId": dom_id,
                         "categoryName": cat_name,
-                        "domainName": dom_name
-                    }
+                        "domainName": dom_name,
+                    },
                 }
                 results_payload.append(payload)
-                context.log.info(f"[{idx}/{total}] Classified '{p['title'][:40]}' → Cat: {cat_name}, Dom: {dom_name}")
+                context.log.info(
+                    f"[{idx}/{total}] Classified "
+                    f"'{p['title'][:40]}' "
+                    f"-> Cat: {cat_name}, Dom: {dom_name}"
+                )
             else:
-                context.log.warning(f"[{idx}/{total}] Unknown labels for '{p['title']}': Cat='{cat_name}', Dom='{dom_name}'")
+                context.log.warning(
+                    f"[{idx}/{total}] Unknown labels for "
+                    f"'{p['title']}': "
+                    f"Cat='{cat_name}', Dom='{dom_name}'"
+                )
 
         except Exception as e:
             context.log.error(f"[{idx}/{total}] Failed to classify '{p['title']}': {e}")
             continue
-        
+
         # Log progress every 10 projects
         if idx % 10 == 0:
-            context.log.info(f"Progress: {idx}/{total} projects processed ({len(results_payload)} successfully classified)")
+            context.log.info(
+                f"Progress: {idx}/{total} projects processed "
+                f"({len(results_payload)} classified)"
+            )
 
     context.log.info(f"Successfully classified {len(results_payload)} projects.")
-    
+
     return Output(
-        value=results_payload, 
+        value=results_payload,
         metadata={
             "count": len(results_payload),
-            "preview": [str(x['project']['title']) for x in results_payload[:10]]
-        }
+            "preview": [str(x["project"]["title"]) for x in results_payload[:10]],
+        },
     )

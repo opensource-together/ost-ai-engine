@@ -1,7 +1,6 @@
-from dagster import ScheduleDefinition, DefaultScheduleStatus
+from dagster import DefaultScheduleStatus, ScheduleDefinition
 
 from ..jobs.cleanup_dagster_job import cleanup_dagster_history_job
-
 
 # Enable by default at Dagster start, like the GitHub scraper schedule
 cleanup_dagster_history_schedule = ScheduleDefinition(

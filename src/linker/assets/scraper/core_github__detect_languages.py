@@ -1,17 +1,19 @@
-import typing as _t
 import re
 import uuid
+
+import pandas as pd
+
 from dagster import (
-    asset,
     AssetIn,
     AssetKey,
     MetadataValue,
     Output,
+    asset,
 )
 from src.services.python.db import get_db_cursor
-import pandas as pd
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
+
 
 @asset(
     kinds={"python", "postgres"},
@@ -19,7 +21,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     # Read from dbt staging model
     ins={"stg_df": AssetIn(key=AssetKey(["github", "stg_github__project"]))},
     group_name="ingestion",
-    key=AssetKey(["github", "int_github_detection"]), # Matches dbt source
+    key=AssetKey(["github", "int_github_detection"]),  # Matches dbt source
     required_resource_keys={"config", "fasttext_model"},
 )
 def core_github__detect_languages(context, stg_df: pd.DataFrame):
@@ -29,9 +31,9 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
     Output: List of repository dictionaries with added language metadata.
     """
     context.log.info("core_github__detect_languages: Starting language detection")
-    
+
     # Use DataFrame from IO Manager
-    projects = stg_df.to_dict('records')
+    projects = stg_df.to_dict("records")
     context.log.info(f"Fetched {len(projects)} projects from staging.")
 
     # Get the fastText model from Dagster resources (loaded once, reused across runs)
@@ -43,38 +45,55 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
     # Blacklist of language codes using non-Latin scripts or languages the pipeline
     # should exclude (Arabic, CJK, Japanese, Korean, many Indic languages...)
     NON_LATIN_LANGS = {
-        "ar", "zh", "ja", "ko",
-        "hi", "bn", "ta", "te", "kn", "ml", "gu", "mr", "pa", "or", "si", "ne", "my", "ru",
+        "ar",
+        "zh",
+        "ja",
+        "ko",
+        "hi",
+        "bn",
+        "ta",
+        "te",
+        "kn",
+        "ml",
+        "gu",
+        "mr",
+        "pa",
+        "or",
+        "si",
+        "ne",
+        "my",
+        "ru",
     }
 
-    # Regex to detect non-Latin script characters directly in text (CJK, Arabic, Devanagari, Bengali, Tamil, Hangul, etc.)
+    # Regex to detect non-Latin script characters directly in text
+    # (CJK, Arabic, Devanagari, Bengali, Tamil, Hangul, etc.)
     NON_LATIN_CHAR_RE = re.compile(
         r"[\u4E00-\u9FFF"  # CJK Unified Ideographs
-        r"\u3040-\u30FF"   # Hiragana + Katakana
-        r"\uAC00-\uD7AF"   # Hangul
-        r"\u0590-\u05FF"   # Hebrew
-        r"\u0600-\u06FF"   # Arabic
-        r"\u0900-\u097F"   # Devanagari
-        r"\u0980-\u09FF"   # Bengali
-        r"\u0B80-\u0BFF"   # Tamil
-        r"\u0C00-\u0C7F"   # Telugu
-        r"\u0C80-\u0CFF"   # Kannada
-        r"\u0D00-\u0D7F"   # Malayalam
+        r"\u3040-\u30FF"  # Hiragana + Katakana
+        r"\uAC00-\uD7AF"  # Hangul
+        r"\u0590-\u05FF"  # Hebrew
+        r"\u0600-\u06FF"  # Arabic
+        r"\u0900-\u097F"  # Devanagari
+        r"\u0980-\u09FF"  # Bengali
+        r"\u0B80-\u0BFF"  # Tamil
+        r"\u0C00-\u0C7F"  # Telugu
+        r"\u0C80-\u0CFF"  # Kannada
+        r"\u0D00-\u0D7F"  # Malayalam
         r"]"
     )
 
-    accepted: _t.List[_t.Dict] = []
-    filtered_out_projects: _t.List[_t.Dict] = []
+    accepted: list[dict] = []
+    filtered_out_projects: list[dict] = []
 
     context.log.info("core_github__detect_languages: Starting loop...")
     for i, repo in enumerate(projects):
         if i % 100 == 0:
             context.log.info(f"core_github__detect_languages: Processing item {i}...")
-        
+
         # Build text to detect language from several possible fields
         # Note: repo is a dict from query_raw, keys are column names
         text_parts = []
-        for key in ("readme", "description", "name"): # stg doesn't have combined_text
+        for key in ("readme", "description", "name"):  # stg doesn't have combined_text
             v = repo.get(key)
             if isinstance(v, str) and v.strip():
                 text_parts.append(v.strip())
@@ -86,7 +105,13 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
 
         # If text contains non-Latin script characters -> immediate filter
         if text and NON_LATIN_CHAR_RE.search(text):
-            filtered_out_projects.append({"id": repo.get("id"), "name": repo.get("name"), "reason": "non_latin_script"})
+            filtered_out_projects.append(
+                {
+                    "id": repo.get("id"),
+                    "name": repo.get("name"),
+                    "reason": "non_latin_script",
+                }
+            )
             continue
 
         # If no text to analyze, keep but with null language
@@ -102,40 +127,42 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
             labels_list = list(labels) if labels is not None else []
             probs_list = list(probs) if probs is not None else []
             preds = []
-            for lb, pr in zip(labels_list, probs_list):
-                if isinstance(lb, bytes):
+            for label, pr in zip(labels_list, probs_list, strict=False):
+                if isinstance(label, bytes):
                     try:
-                        lb = lb.decode("utf-8")
+                        label = label.decode("utf-8")
                     except Exception:
-                        lb = str(lb)
-                if isinstance(lb, str):
-                    code = lb.replace("__label__", "").strip()
+                        label = str(label)
+                if isinstance(label, str):
+                    code = label.replace("__label__", "").strip()
                     try:
                         pr_val = float(pr)
                     except Exception:
                         pr_val = 0.0
                     preds.append((code, pr_val))
-            
+
             if preds:
                 lang_code, confidence = preds[0]
-            
+
             # Check for blacklisted languages with significant confidence (> 30%)
             blacklisted_found = None
             for code, score in preds:
                 if code in NON_LATIN_LANGS and score >= 0.3:
                     blacklisted_found = (code, score)
                     break
-            
+
             if blacklisted_found:
                 b_code, b_score = blacklisted_found
-                filtered_out_projects.append({
-                    "id": repo.get("id"), 
-                    "name": repo.get("name"), 
-                    "reason": "blacklisted_lang", 
-                    "lang": b_code,
-                    "score": b_score,
-                    "all_langs": preds
-                })
+                filtered_out_projects.append(
+                    {
+                        "id": repo.get("id"),
+                        "name": repo.get("name"),
+                        "reason": "blacklisted_lang",
+                        "lang": b_code,
+                        "score": b_score,
+                        "all_langs": preds,
+                    }
+                )
                 continue
         except Exception as e:
             context.log.warning(f"fastText prediction failed for repo index {i}: {e}")
@@ -143,7 +170,7 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
         # Annotate and accept
         repo["language_detected"] = lang_code
         repo["language_confidence"] = confidence
-        
+
         accepted.append(repo)
 
     # Insert detection results into int_github_detection
@@ -152,7 +179,10 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
             for repo in accepted:
                 cur.execute(
                     """
-                    INSERT INTO "github"."int_github_detection" ("id", "project_id", "repo_url", "language_detected", "language_confidence", "created_at")
+                    INSERT INTO "github"."int_github_detection"
+                    ("id", "project_id", "repo_url",
+                     "language_detected", "language_confidence",
+                     "created_at")
                     VALUES (%s, %s, %s, %s, %s, NOW())
                     ON CONFLICT ("project_id") DO UPDATE
                     SET "language_detected" = EXCLUDED."language_detected",
@@ -160,9 +190,17 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
                         "repo_url" = EXCLUDED."repo_url",
                         "created_at" = NOW()
                     """,
-                    (str(uuid.uuid4()), repo.get("id"), repo.get("url"), repo.get("language_detected"), repo.get("language_confidence"))
+                    (
+                        str(uuid.uuid4()),
+                        repo.get("id"),
+                        repo.get("url"),
+                        repo.get("language_detected"),
+                        repo.get("language_confidence"),
+                    ),
                 )
-            context.log.info(f"Inserted {len(accepted)} detection records into int_github_detection.")
+            context.log.info(
+                f"Inserted {len(accepted)} detection records into int_github_detection."
+            )
     except Exception as e:
         context.log.error(f"Failed to insert detection records: {e}")
 
@@ -176,6 +214,7 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
     def _make_serializable(obj):
         import datetime
         import uuid
+
         if isinstance(obj, (datetime.date, datetime.datetime)):
             return obj.isoformat()
         if isinstance(obj, uuid.UUID):
@@ -196,7 +235,9 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
             "lang_detected": item.get("language_detected"),
             "lang_confidence": item.get("language_confidence"),
             # Add description if useful, but user wanted minimal
-            "description": (item.get("description") or "")[:50] + "..." if item.get("description") else None
+            "description": (item.get("description") or "")[:50] + "..."
+            if item.get("description")
+            else None,
         }
         clean_sample.append(clean_item)
 
@@ -206,10 +247,16 @@ def core_github__detect_languages(context, stg_df: pd.DataFrame):
         "input_count": MetadataValue.int(len(projects)),
         "output_count": MetadataValue.int(len(accepted)),
         "filtered_out_count": MetadataValue.int(len(filtered_out_projects)),
-        "filtered_out_percent": MetadataValue.float(round(100 * len(filtered_out_projects) / len(projects), 2) if projects else 0.0),
+        "filtered_out_percent": MetadataValue.float(
+            round(100 * len(filtered_out_projects) / len(projects), 2)
+            if projects
+            else 0.0
+        ),
         "filtered_projects": MetadataValue.json(filtered),
         "sample": MetadataValue.json(sample),
         "language_counts": MetadataValue.json(lang_counts),
     }
-    context.log.info(f"core_github__detect_languages: kept {len(accepted)} / {len(projects)} projects")
+    context.log.info(
+        f"detect_languages: kept {len(accepted)} / {len(projects)} projects"
+    )
     return Output(value=None, metadata=meta)

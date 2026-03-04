@@ -10,11 +10,6 @@ authors = [
 ]
 license = {text = "CC-BY-NC-4.0"}
 keywords = ["open-source", "recommendation-engine", "dagster", "dbt", "pgvector", "llm"]
-
-[project.urls]
-Homepage = "https://opensource-together.com/"
-Repository = "https://github.com/opensource-together/ost-linker"
-Issues = "https://github.com/opensource-together/ost-linker/issues"
 dependencies = [
     "sqlalchemy>=2.0.41,<3",
     "psycopg2-binary>=2.9.10,<3",
@@ -41,6 +36,11 @@ dependencies = [
     "dbt-core>=1.8.0,<2",
     "dbt-postgres>=1.8.0,<2",
 ]
+
+[project.urls]
+Homepage = "https://opensource-together.com/"
+Repository = "https://github.com/opensource-together/ost-linker"
+Issues = "https://github.com/opensource-together/ost-linker/issues"
 
 [dependency-groups]
 dev = [
@@ -90,6 +90,9 @@ select = [
     "SIM", # flake8-simplify
 ]
 
+[tool.ruff.lint.per-file-ignores]
+"src/linker/definitions.py" = ["E402"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
 
@@ -113,6 +116,8 @@ warn_unused_ignores = true
 warn_no_return = true
 warn_unreachable = true
 strict_equality = true
+explicit_package_bases = true
+mypy_path = "."
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

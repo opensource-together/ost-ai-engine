@@ -1,8 +1,16 @@
-from dagster import Definitions, EnvVar, load_assets_from_modules, AssetExecutionContext, FilesystemIOManager
-from dagster_dbt import DbtCliResource, dbt_assets, DbtProject
+import os
 from pathlib import Path
 
-import os
+from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
+
+from dagster import (
+    AssetExecutionContext,
+    Definitions,
+    EnvVar,
+    FilesystemIOManager,
+    load_assets_from_modules,
+)
+
 DEFAULT_DBT_DIR = Path(__file__).parent.parent.parent / "dbt"
 DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR", DEFAULT_DBT_DIR)).resolve()
 dbt_project = DbtProject(
@@ -11,60 +19,62 @@ dbt_project = DbtProject(
 )
 dbt_project.prepare_if_dev()
 
+
 @dbt_assets(manifest=dbt_project.manifest_path, name="dbt_models")
 def dbt_project_assets(context: AssetExecutionContext, dbt: DbtCliResource):
-    yield from dbt.cli(["build", "--indirect-selection", "cautious"], context=context).stream()
+    yield from dbt.cli(
+        ["build", "--indirect-selection", "cautious"], context=context
+    ).stream()
+
 
 dbt_resource = DbtCliResource(project_dir=DBT_PROJECT_DIR)
 
 dbt_assets_list = [dbt_project_assets]
 
-from .resources.cfg_resource import PipelineConfig
-from .resources.fasttext_resource import FastTextModelResource
-
-from .resources.llm_classifier_resource import LLMClassifierResource
-from .resources.sentence_transformer_resource import SentenceTransformerResource
-from .resources.io_manager import PandasPostgresIOManager
-
 # scraper Assets
 from .assets.scraper import (
-    raw_github__extract_projects,
     core_github__detect_languages,
     core_github__fetch_readme,
     core_github__fetch_repo_languages,
     core_github__fetch_repo_topics,
+    raw_github__extract_projects,
+)
+from .resources.cfg_resource import PipelineConfig
+from .resources.fasttext_resource import FastTextModelResource
+from .resources.io_manager import PandasPostgresIOManager
+from .resources.llm_classifier_resource import LLMClassifierResource
+from .resources.sentence_transformer_resource import SentenceTransformerResource
+
+scraper_assets = load_assets_from_modules(
+    [
+        raw_github__extract_projects,
+        core_github__detect_languages,
+        core_github__fetch_readme,
+        core_github__fetch_repo_languages,
+        core_github__fetch_repo_topics,
+    ]
 )
 
-scraper_assets = load_assets_from_modules([
-    raw_github__extract_projects,
-    core_github__detect_languages,
-    core_github__fetch_readme,
-    core_github__fetch_repo_languages,
-    core_github__fetch_repo_topics,
-])
-
-from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
-from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
-
-from .jobs.project_scraper_job import project_scraper_job
-
 # classification Assets
-from .assets.classification.core_match__classify_projects import core_match__classify_projects
-from .assets.sync.core_public__sync_projects import core_public__sync_projects
-
+from .assets.classification.core_match__classify_projects import (
+    core_match__classify_projects,
+)
 
 # ML Assets
 from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 from .assets.embedding.core_ml__embed_users import core_ml__embed_users
-
-# schedule
-from .schedules.run_all_schedule import run_all_schedule
+from .assets.sync.core_public__sync_projects import core_public__sync_projects
+from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
+from .jobs.project_classification_job import project_classification_job
+from .jobs.project_embedding_job import project_embedding_job
+from .jobs.project_scraper_job import project_scraper_job
 
 # jobs
 from .jobs.run_all_job import run_all_job
-from .jobs.project_classification_job import project_classification_job
-from .jobs.project_embedding_job import project_embedding_job
+from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
+# schedule
+from .schedules.run_all_schedule import run_all_schedule
 from .sensors.classification_sensor import classification_sensor
 
 defs = Definitions(
@@ -89,7 +99,9 @@ defs = Definitions(
         "llm_classifier": LLMClassifierResource(
             api_key=EnvVar("OPENROUTER_API_KEY"),
         ),
-        "sentence_transformer": SentenceTransformerResource(device="cpu"), # Using CPU for embedding for now, or mps
+        "sentence_transformer": SentenceTransformerResource(
+            device="cpu"
+        ),  # Using CPU for embedding for now, or mps
         "dbt": dbt_resource,
         "io_manager": PandasPostgresIOManager(db_url=EnvVar("DATABASE_URL")),
         "fs_io_manager": FilesystemIOManager(),

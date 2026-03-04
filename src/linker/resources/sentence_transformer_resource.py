@@ -1,12 +1,14 @@
-import logging
-from dagster import ConfigurableResource
-from sentence_transformers import SentenceTransformer
 from pydantic import PrivateAttr
+from sentence_transformers import SentenceTransformer
+
+from dagster import ConfigurableResource
+
 
 class SentenceTransformerResource(ConfigurableResource):
     """
     Resource for SentenceTransformer model to compute text embeddings.
     """
+
     model_name: str = "sentence-transformers/all-MiniLM-L6-v2"
     device: str = "cpu"
     _model: SentenceTransformer = PrivateAttr(default=None)
@@ -15,7 +17,11 @@ class SentenceTransformerResource(ConfigurableResource):
         if self._model is None:
             # logger = logging.getLogger("dagster")
             # logger.info(f"Loading SentenceTransformer model: {self.model_name}")
-            print(f"Loading SentenceTransformer model: {self.model_name} on {self.device}", flush=True)
+            print(
+                f"Loading SentenceTransformer model: "
+                f"{self.model_name} on {self.device}",
+                flush=True,
+            )
             self._model = SentenceTransformer(self.model_name, device=self.device)
             print("Model loaded successfully.", flush=True)
         return self._model

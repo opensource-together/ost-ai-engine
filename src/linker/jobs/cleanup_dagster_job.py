@@ -1,9 +1,9 @@
 import os
-import time
 import shutil
+import time
 from pathlib import Path
 
-from dagster import op, job
+from dagster import job, op
 
 
 @op
@@ -24,11 +24,7 @@ def clean_dagster_home(context):
         return {"scanned": 0, "deleted": 0}
 
     # explicit targets under DAGSTER_HOME
-    targets = [
-        dgh / "logs",
-        dgh / ".logs_queue",
-        dgh / "history" / "history"
-    ]
+    targets = [dgh / "logs", dgh / ".logs_queue", dgh / "history" / "history"]
 
     # keep items newer than this many days
     days_to_keep = 2
@@ -56,9 +52,10 @@ def clean_dagster_home(context):
             except Exception as e:
                 context.log.warning(f"cleanup: failed to remove {child}: {e}")
 
-    context.log.info(f"cleanup: scanned={scanned} deleted={deleted} (keeps last {days_to_keep} days)")
+    context.log.info(
+        f"cleanup: scanned={scanned} deleted={deleted} (keeps last {days_to_keep} days)"
+    )
     return {"scanned": scanned, "deleted": deleted}
-
 
 
 @job()

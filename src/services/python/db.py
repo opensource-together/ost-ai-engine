@@ -1,7 +1,9 @@
 import os
+from contextlib import contextmanager
+
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from contextlib import contextmanager
+
 
 @contextmanager
 def get_db_connection():
@@ -16,7 +18,7 @@ def get_db_connection():
         db_url = os.environ.get("DATABASE_URL")
         if not db_url:
             raise ValueError("DATABASE_URL environment variable is not set")
-            
+
         conn = psycopg2.connect(db_url)
         yield conn
         conn.commit()
@@ -28,14 +30,12 @@ def get_db_connection():
         if conn:
             conn.close()
 
+
 @contextmanager
 def get_db_cursor(commit=False):
     """
     Context manager for a database cursor.
     Yields a cursor object (RealDictCursor).
     """
-    with get_db_connection() as conn:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            yield cur
-
-
+    with get_db_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+        yield cur

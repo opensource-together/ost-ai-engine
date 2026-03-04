@@ -14,16 +14,23 @@ from ...resources.cfg_resource import build_fetcher_env
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
+
 @asset(
     kinds={"go", "postgres"},
     owners=DEFAULT_OWNERS,
     # Depends on detection (to filter topics)
-    ins={"core_github__detect_languages": AssetIn(key=AssetKey(["github", "int_github_detection"]))},
+    ins={
+        "core_github__detect_languages": AssetIn(
+            key=AssetKey(["github", "int_github_detection"])
+        )
+    },
     group_name="ingestion",
-    key=AssetKey(["github", "raw_github_topics"]), # Matches dbt source
+    key=AssetKey(["github", "raw_github_topics"]),  # Matches dbt source
     required_resource_keys={"config"},
 )
-def core_github__fetch_repo_topics(context, core_github__detect_languages: pd.DataFrame):
+def core_github__fetch_repo_topics(
+    context, core_github__detect_languages: pd.DataFrame
+):
     """
     Fetch GitHub /topics for each project using Go fetcher.
 
@@ -46,7 +53,11 @@ def core_github__fetch_repo_topics(context, core_github__detect_languages: pd.Da
         raise RuntimeError("GO_FETCHER_PATH not configured")
 
     if not os.path.exists(fetcher_bin):
-        raise RuntimeError(f"Go binary not found at {fetcher_bin}. Please run 'go build -o ost-fetcher .' in src/services/go/fetcher/")
+        raise RuntimeError(
+            f"Go binary not found at {fetcher_bin}. "
+            "Run 'go build -o ost-fetcher .' "
+            "in src/services/go/fetcher/"
+        )
 
     env = os.environ.copy()
     env.update(build_fetcher_env(cfg))
@@ -56,11 +67,7 @@ def core_github__fetch_repo_topics(context, core_github__detect_languages: pd.Da
     context.log.info(f"Running command: {' '.join(cmd)}")
     try:
         result = subprocess.run(
-            cmd,
-            env=env,
-            capture_output=True,
-            text=True,
-            check=True
+            cmd, env=env, capture_output=True, text=True, check=True
         )
         context.log.info(f"Go fetcher stdout:\n{result.stdout}")
         if result.stderr:

@@ -14,13 +14,23 @@ class LLMClassifierResource(ConfigurableResource):
     api_key: str
     model_id: str = "mistralai/mistral-small-3.2-24b-instruct"
 
-    def classify_project(self, title: str, project_context: str, categories: list[str], domains: list[str]) -> dict:
-        """
-        Takes a project in context (title, description, topics, readme) and the list of valid categories/domains from OST.
+    def classify_project(
+        self,
+        title: str,
+        project_context: str,
+        categories: list[str],
+        domains: list[str],
+    ) -> dict:
+        """Classify a project using its context and valid labels.
+
+        Takes a project in context (title, description, topics, readme)
+        and the list of valid categories/domains from OST.
         Returns a Dict with the classification.
         """
         if not self.api_key:
-            logging.error("LLMResource: No OPENROUTER_API_KEY found in environment variables.")
+            logging.error(
+                "LLMResource: No OPENROUTER_API_KEY found in environment variables."
+            )
             return {"error": "no_api_key"}
 
         client = OpenAI(
@@ -38,12 +48,14 @@ class LLMClassifierResource(ConfigurableResource):
 
         system_prompt = (
             "You are an expert technical classifier. "
-            "Analyze the GitHub project context (Title, Description, Topics, Readme) and classify it.\n"
+            "Analyze the GitHub project context "
+            "(Title, Description, Topics, Readme) "
+            "and classify it.\n"
             f"1. Assign the single most relevant Category from: [{cats_str}]\n"
             f"2. Assign the single most relevant Domain from: [{doms_str}]\n"
             "If unsure, pick the closest match or null.\n"
             "Response format: JSON ONLY, no markdown, no explanation.\n"
-            "Example: {\"category\": \"Framework\", \"domain\": \"Web Development\"}"
+            'Example: {"category": "Framework", "domain": "Web Development"}'
         )
 
         user_content = f"Title: {title}\n\nProject Context:\n{truncated_context}"
@@ -57,10 +69,10 @@ class LLMClassifierResource(ConfigurableResource):
                     model=self.model_id,
                     messages=[
                         {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_content}
+                        {"role": "user", "content": user_content},
                     ],
                     temperature=0.0,
-                    response_format={"type": "json_object"}
+                    response_format={"type": "json_object"},
                 )
                 content = completion.choices[0].message.content
                 clean_json = content.replace("```json", "").replace("```", "").strip()
@@ -73,8 +85,14 @@ class LLMClassifierResource(ConfigurableResource):
         thread.join(timeout=_LLM_CALL_TIMEOUT_SECONDS)
 
         if thread.is_alive():
-            logging.error(f"OpenRouter API hard timeout ({_LLM_CALL_TIMEOUT_SECONDS}s) for {title}")
-            return {"error": "timeout", "details": f"Hard timeout after {_LLM_CALL_TIMEOUT_SECONDS}s"}
+            logging.error(
+                "OpenRouter API hard timeout "
+                f"({_LLM_CALL_TIMEOUT_SECONDS}s) for {title}"
+            )
+            return {
+                "error": "timeout",
+                "details": f"Hard timeout after {_LLM_CALL_TIMEOUT_SECONDS}s",
+            }
 
         if error_container[0] is not None:
             logging.error(f"OpenRouter API Error for {title}: {error_container[0]}")
