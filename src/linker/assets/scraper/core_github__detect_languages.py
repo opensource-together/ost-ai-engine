@@ -220,7 +220,7 @@ def core_github__detect_languages(
         import datetime
         import uuid
 
-        if isinstance(obj, (datetime.date, datetime.datetime)):
+        if isinstance(obj, datetime.date | datetime.datetime):
             return obj.isoformat()
         if isinstance(obj, uuid.UUID):
             return str(obj)
