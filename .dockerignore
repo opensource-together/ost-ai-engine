@@ -10,7 +10,6 @@
 # ==============================================================================
 !src/
 !dbt/
-!dagster/
 !prisma/
 !scripts/
 !models/
@@ -23,6 +22,7 @@
 !Dockerfile
 !docker-compose.yml
 !.env.example
+!dagster.yaml
 !README.md
 !LICENSE
 
@@ -53,6 +53,14 @@
 # DBT
 **/dbt_packages
 **/target
+
+# Compiled Go binaries (built inside Docker)
+src/services/go/**/github-scraper
+src/services/go/**/ost-fetcher
+src/services/go/**/ost-scraper
+
+# dbt user config
+dbt/.user.yml
 
 # Git (redundant with * but safe)
 .git
