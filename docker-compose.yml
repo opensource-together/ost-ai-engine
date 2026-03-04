@@ -1,17 +1,14 @@
 # Shared environment variables for Dagster services
 x-common-env: &common-env
-  DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  DATABASE_URL: ${DATABASE_URL}
   DAGSTER_HOME: /app/dagster_home
   DAGSTER_STORAGE_DIR: /app/dagster_home/storage
   DAGSTER_LOGS_DIR: /app/dagster_home/logs
-  DAGSTER_PG_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+  DAGSTER_PG_URL: ${DAGSTER_PG_URL:-${DATABASE_URL}}
   GITHUB_ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
   GO_SCRAPER_PATH: /usr/local/bin/ost-scraper
   GO_FETCHER_PATH: /usr/local/bin/ost-fetcher
   DBT_TARGET: docker
-  POSTGRES_USER: ${POSTGRES_USER}
-  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-  POSTGRES_DB: ${POSTGRES_DB}
   OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
   FASTTEXT_MODEL_PATH: models/lid.176.ftz
 
@@ -20,8 +17,6 @@ x-common-volumes: &common-volumes
   - ./src:/app/src
   - ./dbt:/app/dbt
   - ./scripts:/app/scripts
-  # Dev override: mount local SQLite dagster.yaml over the prod Postgres config
-  - ./dagster.yaml:/app/dagster_home/dagster.yaml
 
 services:
   # ============================================================================
@@ -36,9 +31,6 @@ services:
     environment:
       <<: *common-env
     volumes: *common-volumes
-    depends_on:
-      db:
-        condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
       interval: 30s
@@ -63,28 +55,5 @@ services:
         condition: service_healthy
     command: ["./scripts/init.sh", "dagster-daemon", "run", "-w", "/app/workspace.yaml"]
 
-  # ============================================================================
-  # DATABASE (Postgres + PGVector)
-  # ============================================================================
-  db:
-    image: ankane/pgvector:v0.4.1
-    container_name: ost-linker-db
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-      start_period: 10s
-
 volumes:
-  postgres_data:
   dagster_data:

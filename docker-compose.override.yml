@@ -1,0 +1,44 @@
+# Dev overrides — automatically loaded by `docker compose up`
+# Adds a local Postgres container and mounts local SQLite dagster.yaml.
+# In staging/prod, use `docker compose -f docker-compose.yml up` to skip this file.
+services:
+  webserver:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      # Dev override: mount local SQLite dagster.yaml over the prod Postgres config
+      - ./dagster.yaml:/app/dagster_home/dagster.yaml
+    depends_on:
+      db:
+        condition: service_healthy
+
+  daemon:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - ./dagster.yaml:/app/dagster_home/dagster.yaml
+
+  # ============================================================================
+  # DATABASE (Postgres + PGVector) — dev only
+  # ============================================================================
+  db:
+    image: ankane/pgvector:v0.4.1
+    container_name: ost-linker-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB}
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5433}:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  postgres_data:
