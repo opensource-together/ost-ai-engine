@@ -123,7 +123,7 @@ model Verification {
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
-  @@map("verification_token")
+  @@map("verification")
   @@schema("public")
 }
 
@@ -177,16 +177,6 @@ model UserDomains {
 
   @@unique([userId, domainId])
   @@map("user_domain")
-  @@schema("public")
-}
-
-model ProjectEmbedding {
-  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  projectId String   @db.Uuid
-  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
-
-  @@map("project_embedding")
   @@schema("public")
 }
 
@@ -294,7 +284,6 @@ model Project {
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
   projectBookmark       ProjectBookmark[]
-  projectEmbeddings     ProjectEmbedding[]
   projectClassification ProjectClassification?
 
   @@schema("public")
@@ -321,8 +310,37 @@ model BetaSignup {
   @@schema("public")
 }
 
+// ------ MATCH (dbt-materialized, read-only from backend) ------
+
+/// Global top-N project recommendations (dbt-managed table).
+model MatchGlobalRecommendation {
+  project_id     String   @db.Uuid
+  stars          Int?
+  last_synced_at DateTime?
+
+  @@id([project_id])
+  @@map("match_global_recommendation")
+  @@schema("public")
+}
+
+/// Per-user personalized recommendations (dbt-managed table).
+model MatchUserRecommendation {
+  user_id          String   @db.Uuid
+  project_id       String   @db.Uuid
+  similarity_score Float?
+  preference_score Float?
+  freshness_score  Float?
+  popularity_score Float?
+  final_score      Float?
+  calculated_at    DateTime?
+
+  @@id([user_id, project_id])
+  @@map("match_user_recommendation")
+  @@schema("public")
+}
+
 // ------ LINKER ------
-// Raw / Embedding tables, not managed by DBT
+// Raw / Embedding tables, not managed by dbt
 
 model RawGithubReadme {
   id         String   @id @default(uuid()) @db.Uuid
