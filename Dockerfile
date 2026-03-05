@@ -52,10 +52,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install Python dependencies
-# Strip the `-e .` editable self-install line — the project is COPY'd later and
-# discovered via PYTHONPATH, so there's no need for an editable install.
+# 1. Install torch CPU-only first (avoids downloading ~2GB of CUDA libs)
+# 2. Strip the `-e .` editable self-install line — the project is COPY'd later
+#    and discovered via PYTHONPATH, so there's no need for an editable install.
+# 3. Install remaining deps (torch is already satisfied, pip skips it)
 COPY --from=python-builder /app/requirements.txt .
-RUN sed -i '/^-e \./d' requirements.txt \
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+    && sed -i '/^-e \./d' requirements.txt \
+    && sed -i '/^torch==/d' requirements.txt \
+    && sed -i '/^nvidia-/d' requirements.txt \
+    && sed -i '/^triton==/d' requirements.txt \
+    && sed -i '/^cuda-/d' requirements.txt \
     && pip install --no-cache-dir -r requirements.txt
 
 # Copy Go binaries from Stage 1
