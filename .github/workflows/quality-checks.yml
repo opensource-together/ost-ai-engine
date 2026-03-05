@@ -138,11 +138,13 @@ jobs:
       - name: Dependency audit
         run: uv run pip-audit
 
+      - name: Install gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz | tar xz
+          sudo mv gitleaks /usr/local/bin/
+
       - name: Secret leak scan
-        uses: gitleaks/gitleaks-action@v2
-        continue-on-error: true
-        env:
-          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
+        run: gitleaks detect --source . --no-git --verbose
 
   docs-submodule:
     runs-on: ubuntu-latest
