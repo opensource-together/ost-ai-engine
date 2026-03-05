@@ -3,8 +3,6 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
-
 from dagster import (
     AssetExecutionContext,
     Definitions,
@@ -12,6 +10,7 @@ from dagster import (
     FilesystemIOManager,
     load_assets_from_modules,
 )
+from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
 
 DEFAULT_DBT_DIR = Path(__file__).parent.parent.parent / "dbt"
 DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR", DEFAULT_DBT_DIR)).resolve()

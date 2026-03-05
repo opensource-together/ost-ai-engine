@@ -1,7 +1,6 @@
+from dagster import ConfigurableResource
 from pydantic import PrivateAttr
 from sentence_transformers import SentenceTransformer
-
-from dagster import ConfigurableResource
 
 
 class SentenceTransformerResource(ConfigurableResource):

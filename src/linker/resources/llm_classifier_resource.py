@@ -3,9 +3,8 @@ import logging
 import threading
 
 import httpx
-from openai import OpenAI
-
 from dagster import ConfigurableResource
+from openai import OpenAI
 
 _LLM_CALL_TIMEOUT_SECONDS = 45
 

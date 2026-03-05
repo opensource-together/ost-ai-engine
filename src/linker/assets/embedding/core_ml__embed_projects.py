@@ -1,9 +1,8 @@
 import uuid
 
 import pandas as pd
-from sqlalchemy import create_engine, text
-
 from dagster import AssetExecutionContext, AssetIn, AssetKey, asset
+from sqlalchemy import create_engine, text
 
 # Constant for the upsert query
 UPSERT_EMBEDDING_QUERY = text("""

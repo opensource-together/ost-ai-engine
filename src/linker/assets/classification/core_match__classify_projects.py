@@ -1,8 +1,8 @@
 from typing import Any
 
 import pandas as pd
-
 from dagster import AssetExecutionContext, AssetIn, AssetKey, Output, asset
+
 from src.services.python.db import get_db_cursor
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]

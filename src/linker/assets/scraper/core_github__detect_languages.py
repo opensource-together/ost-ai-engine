@@ -3,7 +3,6 @@ import uuid
 from typing import Any
 
 import pandas as pd
-
 from dagster import (
     AssetExecutionContext,
     AssetIn,
@@ -12,6 +11,7 @@ from dagster import (
     Output,
     asset,
 )
+
 from src.services.python.db import get_db_cursor
 
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]

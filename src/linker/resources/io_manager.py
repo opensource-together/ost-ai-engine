@@ -1,9 +1,8 @@
 import pandas as pd
+from dagster import ConfigurableIOManager, InputContext, OutputContext
 from pydantic import PrivateAttr
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
-
-from dagster import ConfigurableIOManager, InputContext, OutputContext
 
 
 class PandasPostgresIOManager(ConfigurableIOManager):

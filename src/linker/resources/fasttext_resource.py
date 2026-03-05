@@ -7,9 +7,8 @@ and reused across all assets.
 import os
 from typing import Any
 
-from pydantic import PrivateAttr
-
 from dagster import ConfigurableResource
+from pydantic import PrivateAttr
 
 
 class FastTextModelResource(ConfigurableResource):
