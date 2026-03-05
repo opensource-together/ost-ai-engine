@@ -10,6 +10,8 @@ on:
 jobs:
   checks:
     uses: ./.github/workflows/quality-checks.yml
+    secrets:
+      OST_DOCS_TOKEN: ${{ secrets.OST_DOCS_TOKEN }}
 
   build:
     runs-on: ubuntu-latest

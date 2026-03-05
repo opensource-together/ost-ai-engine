@@ -2,6 +2,9 @@ name: Quality checks
 
 on:
   workflow_call:
+    secrets:
+      OST_DOCS_TOKEN:
+        required: true
 
 jobs:
   quality:
@@ -58,3 +61,24 @@ jobs:
           cd dbt
           uv run dbt deps
           uv run dbt parse
+
+  docs-submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.OST_DOCS_TOKEN }}
+
+      - name: Check docs submodule SHA exists on remote
+        run: |
+          SUBMODULE_SHA=$(git -C docs rev-parse HEAD)
+          echo "Submodule SHA: $SUBMODULE_SHA"
+          if git ls-remote https://x-access-token:${{ secrets.OST_DOCS_TOKEN }}@github.com/opensource-together/ost-docs.git | grep -q "$SUBMODULE_SHA"; then
+            echo "docs submodule SHA exists on ost-docs remote"
+          else
+            echo "::error::docs submodule points to $SUBMODULE_SHA which does not exist on ost-docs remote"
+            echo "Make sure your submodule commits are pushed to ost-docs"
+            exit 1
+          fi
