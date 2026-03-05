@@ -75,10 +75,12 @@ from .jobs.project_scraper_job import project_scraper_job
 
 # jobs
 from .jobs.run_all_job import run_all_job
+from .jobs.user_recommendation_job import user_recommendation_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
 # schedule
 from .schedules.run_all_schedule import run_all_schedule
+from .schedules.user_recommendation_schedule import user_recommendation_schedule
 from .sensors.classification_sensor import classification_sensor
 
 defs = Definitions(
@@ -116,7 +118,12 @@ defs = Definitions(
         project_classification_job,
         project_embedding_job,
         run_all_job,
+        user_recommendation_job,
     ],
-    schedules=[cleanup_dagster_history_schedule, run_all_schedule],
+    schedules=[
+        cleanup_dagster_history_schedule,
+        run_all_schedule,
+        user_recommendation_schedule,
+    ],
     sensors=[classification_sensor],
 )
