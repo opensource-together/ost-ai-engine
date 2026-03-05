@@ -38,6 +38,12 @@ jobs:
           git checkout -b "$BRANCH"
           git push -u origin "$BRANCH" --force
 
+          # Skip PR creation if branch has no new commits vs main
+          if git diff --quiet origin/main..HEAD 2>/dev/null; then
+            echo "No new commits vs main — skipping PR creation"
+            exit 0
+          fi
+
           # Create PR if one doesn't already exist
           EXISTING=$(gh pr list --repo opensource-together/ost-docs --head "$BRANCH" --state open --json number -q '.[0].number' || echo "")
           if [ -z "$EXISTING" ]; then
