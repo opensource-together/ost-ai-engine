@@ -34,7 +34,7 @@ jobs:
         run: uv run mypy src/
 
       - name: Unit tests
-        run: uv run pytest -m unit
+        run: uv run pytest -m unit --cov-fail-under=80
 
   dbt-check:
     runs-on: ubuntu-latest
@@ -61,6 +61,88 @@ jobs:
           cd dbt
           uv run dbt deps
           uv run dbt parse
+
+  go-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Vet and build scraper
+        run: |
+          cd src/services/go/scraper
+          go vet ./...
+          go build -o /dev/null .
+
+      - name: Vet and build fetcher
+        run: |
+          cd src/services/go/fetcher
+          go vet ./...
+          go build -o /dev/null .
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  prisma-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema prisma/schema.prisma
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Dependency audit
+        run: uv run pip-audit
+
+      - name: Secret leak scan
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   docs-submodule:
     runs-on: ubuntu-latest
