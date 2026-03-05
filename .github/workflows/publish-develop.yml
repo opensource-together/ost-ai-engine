@@ -12,6 +12,7 @@ jobs:
     uses: ./.github/workflows/quality-checks.yml
     secrets:
       OST_DOCS_TOKEN: ${{ secrets.OST_DOCS_TOKEN }}
+      OST_PRISMA_TOKEN: ${{ secrets.OST_PRISMA_TOKEN }}
 
   build:
     runs-on: ubuntu-latest

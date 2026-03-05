@@ -5,6 +5,8 @@ on:
     secrets:
       OST_DOCS_TOKEN:
         required: true
+      OST_PRISMA_TOKEN:
+        required: true
 
 jobs:
   quality:
@@ -107,8 +109,11 @@ jobs:
   prisma-validate:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
+      - name: Checkout with submodules
         uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.OST_PRISMA_TOKEN }}
 
       - name: Set up Node
         uses: actions/setup-node@v4
@@ -170,5 +175,26 @@ jobs:
           else
             echo "::error::docs submodule points to $SUBMODULE_SHA which does not exist on ost-docs remote"
             echo "Make sure your submodule commits are pushed to ost-docs"
+            exit 1
+          fi
+
+  prisma-submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.OST_PRISMA_TOKEN }}
+
+      - name: Check prisma submodule SHA exists on remote
+        run: |
+          SUBMODULE_SHA=$(git -C prisma rev-parse HEAD)
+          echo "Submodule SHA: $SUBMODULE_SHA"
+          if git ls-remote https://x-access-token:${{ secrets.OST_PRISMA_TOKEN }}@github.com/opensource-together/prisma.git | grep -q "$SUBMODULE_SHA"; then
+            echo "prisma submodule SHA exists on prisma remote"
+          else
+            echo "::error::prisma submodule points to $SUBMODULE_SHA which does not exist on prisma remote"
+            echo "Make sure your submodule commits are pushed to the prisma repo"
             exit 1
           fi

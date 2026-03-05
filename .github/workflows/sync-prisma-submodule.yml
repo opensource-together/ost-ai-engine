@@ -1,0 +1,67 @@
+name: Sync prisma submodule to prisma repo
+
+on:
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - prisma
+
+jobs:
+  sync-prisma:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.OST_PRISMA_TOKEN }}
+
+      - name: Check if prisma submodule changed
+        id: check
+        run: |
+          BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+          PRISMA_CHANGED=$(git diff --name-only "$BASE_SHA" HEAD -- prisma)
+          if [ -z "$PRISMA_CHANGED" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push submodule branch and create PR on prisma repo
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          cd prisma
+          BRANCH="sync/ost-linker-${{ github.head_ref }}"
+
+          git remote set-url origin https://x-access-token:${{ secrets.OST_PRISMA_TOKEN }}@github.com/opensource-together/prisma.git
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH" --force
+
+          # Skip PR creation if branch has no new commits vs main
+          if git diff --quiet origin/main..HEAD 2>/dev/null; then
+            echo "No new commits vs main — skipping PR creation"
+            exit 0
+          fi
+
+          # Create PR if one doesn't already exist
+          EXISTING=$(gh pr list --repo opensource-together/prisma --head "$BRANCH" --state open --json number -q '.[0].number' || echo "")
+          if [ -z "$EXISTING" ]; then
+            gh pr create \
+              --repo opensource-together/prisma \
+              --head "$BRANCH" \
+              --base main \
+              --title "chore: sync from ost-linker (${{ github.head_ref }})" \
+              --body "$(cat <<'EOF'
+          ## Summary
+          Automated prisma sync from [ost-linker](${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.pull_request.number }}).
+
+          This PR contains schema/migration changes made in the ost-linker repository.
+          EOF
+          )"
+            echo "PR created on prisma repo"
+          else
+            echo "PR #$EXISTING already exists on prisma repo"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.OST_PRISMA_TOKEN }}
