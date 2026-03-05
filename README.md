@@ -13,54 +13,41 @@ Recommender-system of the [OpenSource Together](https://github.com/opensource-to
 
 ## What is it?
 
-**OST Linker** is the intelligence engine behind [OpenSourceTogether](https://opensource-together.com/). It helps you find your next open-source contribution in seconds, not hours.
+**OST Linker** is the AI brain behind [OpenSourceTogether](https://opensource-together.com/). It scrapes GitHub, classifies projects with LLMs, computes embeddings, and delivers personalized open-source recommendations — so you find your next contribution in seconds, not hours.
 
-It automatically explores the GitHub ecosystem to:
-- **Spot Hidden Gems**: Surfaces high-potential projects you might miss.
-- **Match Your Skills**: Understands tech stacks to recommend relevant issues.
-- **Save You Time**: Filters out noise so you can focus on coding.
+**How it works:** GitHub scraping (Go) → dbt transformations → LLM classification → vector embeddings → cosine similarity matching.
 
 ## Quick Start
 
-1. **Configuration**
-   Copy `.env.example` to `.env` and adjust values.
-   ```bash
-   cp .env.example .env
-   ```
+```bash
+cp .env.example .env              # configure
+make setup                        # install deps + compile Go binaries
+docker compose up --build -d      # start services (Dagster UI at :3000)
+make db-init                      # apply schema + seed data
+```
 
-2. **Start the Platform**
-   Launch all services :
-   ```bash
-   docker compose up --build -d
-   ```
-   
-   *Dagster UI will be available at [http://localhost:3000](http://localhost:3000).*
+See the full [Contributing Guide](CONTRIBUTING.md) for local development setup.
 
-3. **Initialize Database**
-   Apply the Schema and seed initial data (TechStacks, Categories, etc.):
-   ```bash
-   npx prisma db push
-   npx ts-node prisma/seed/seed.ts
-   ```
-   *(Ensure you have Node.js installed locally. The DB is exposed on port 5433 by default).*
+## Tech Stack
 
-## Contributing
-
-Contributions are welcome! Please read our [Contributing Guide](CONTRIBUTING.md) to get started.
-
-## Status
-
-Work in progress.
-Build in public here : [@spideystreet](https://x.com/spideystreet)
+| Layer | Tech |
+|---|---|
+| Orchestration | Dagster |
+| Scraping | Go (scraper + fetcher) |
+| Transformations | dbt (PostgreSQL) |
+| Classification | LLM via OpenRouter |
+| Embeddings | SentenceTransformers (MiniLM-L6-v2) |
+| Similarity | pgvector (cosine) |
+| Database | PostgreSQL + Prisma |
 
 ## License
 
-This project is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/). See [LICENSE](LICENSE) for details.
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — See [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
 
-Made with love by [@spideystreet](https://x.com/spideystreet) & the [OST team](https://github.com/opensource-together) for the OSS community
+Built in public by [@spideystreet](https://x.com/spideystreet) & the [OST team](https://github.com/opensource-together)
 
 </div>
