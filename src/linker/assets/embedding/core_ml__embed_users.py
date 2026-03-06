@@ -13,7 +13,7 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
     ins={
         "user_df": AssetIn(key=AssetKey(["ml", "fct_public_user"]))
     },  # Matches dbt model
-    group_name="ml",
+    group_name="user_ml",
     required_resource_keys={"sentence_transformer", "io_manager"},
 )
 def core_ml__embed_users(

@@ -12,10 +12,8 @@ run_all_job = define_asset_job(
         "ingestion",
         "classification",
         "sync",
-        "ml_project_preparation",
-        "ml_user_preparation",
-        "ml",
-        "matching",
+        "project_ml",
+        "user_ml",
     ),
     op_retry_policy=RetryPolicy(
         max_retries=2,

@@ -11,9 +11,7 @@ project_enrichment_job = define_asset_job(
     selection=AssetSelection.groups(
         "classification",
         "sync",
-        "ml_project_preparation",
-        "ml",
-        "matching",
+        "project_ml",
     ),
     op_retry_policy=RetryPolicy(
         max_retries=2,

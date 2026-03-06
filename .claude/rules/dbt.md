@@ -15,6 +15,5 @@ dbt profiles: `local` (default, port 5433) and `docker` (port 5432, host `db`). 
 
 dbt models are assigned to Dagster groups via `+meta.dagster.group` in `dbt_project.yml`:
 - `stg_github__*`, `int_project_enriched`, `fct_github_project` -> `ingestion`
-- `stg_public__project`, `int_project_contextualized`, `int_project_embedding_candidate` -> `ml_project_preparation`
-- `stg_public__user`, `int_user_enriched`, `fct_public_user` -> `ml_user_preparation`
-- `match_*` -> `matching`
+- `stg_public__project`, `int_project_contextualized`, `int_project_embedding_candidate`, `match_global_recommendation` -> `project_ml`
+- `stg_public__user`, `int_user_enriched`, `fct_public_user`, `match_user_recommendation` -> `user_ml`

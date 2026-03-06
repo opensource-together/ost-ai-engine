@@ -1,10 +1,10 @@
 from dagster import DefaultScheduleStatus, ScheduleDefinition
 
-from ..jobs.run_all_job import run_all_job
+from ..jobs.project_classification_job import project_enrichment_job
 
 # Schedule: 1x per day at 3 AM
-run_all_schedule = ScheduleDefinition(
-    job=run_all_job,
+project_enrichment_schedule = ScheduleDefinition(
+    job=project_enrichment_job,
     cron_schedule="0 3 * * *",
     execution_timezone="Europe/Paris",
     default_status=DefaultScheduleStatus.RUNNING,

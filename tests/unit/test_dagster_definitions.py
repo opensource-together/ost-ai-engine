@@ -1,6 +1,13 @@
 from src.linker.definitions import defs
 
-EXPECTED_ASSET_GROUPS = {"ingestion", "classification", "ml", "sync", "default"}
+EXPECTED_ASSET_GROUPS = {
+    "ingestion",
+    "classification",
+    "sync",
+    "project_ml",
+    "user_ml",
+    "default",
+}
 EXPECTED_JOB_NAMES = {
     "run_all_job",
     "project_scraper_job",
@@ -9,11 +16,11 @@ EXPECTED_JOB_NAMES = {
     "user_recommendation_job",
 }
 EXPECTED_SCHEDULE_NAMES = {
-    "run_all_job_schedule",
+    "project_enrichment_job_schedule",
     "cleanup_dagster_history_schedule",
     "user_recommendation_job_schedule",
 }
-EXPECTED_SENSOR_NAMES = {"classification_sensor"}
+EXPECTED_SENSOR_NAMES: set[str] = set()
 
 
 class TestDefinitionsLoad:
