@@ -210,9 +210,9 @@ scored AS (
         s.project_id,
         s.similarity_score,
         s.preference_score,
-        {{ clamp(
+        ({{ clamp(
             '1.0 - extract(EPOCH FROM (now() - ps.pushed_at)) / (' ~ var('freshness_decay_days', 90) ~ ' * 86400.0)'
-        ) }} AS freshness_score,
+        ) }})::double precision AS freshness_score,
         {{ clamp('ln(ps.stars + 1) / mls.val') }} AS popularity_score
     FROM similarity AS s
     INNER JOIN project_stats AS ps ON s.project_id = ps.project_id
