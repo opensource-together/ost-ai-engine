@@ -1,0 +1,17 @@
+version: 2
+
+macros:
+  - name: safe_divide
+    description: >
+      Divides numerator by denominator, returning fallback when denominator is zero or NULL.
+      Casts numerator to float to avoid integer division truncation.
+    arguments:
+      - name: numerator
+        type: string
+        description: "SQL expression for the numerator"
+      - name: denominator
+        type: string
+        description: "SQL expression for the denominator"
+      - name: fallback
+        type: string
+        description: "Value to return on division by zero (default: 'null')"

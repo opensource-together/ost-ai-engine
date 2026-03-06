@@ -1,0 +1,14 @@
+version: 2
+
+macros:
+  - name: build_user_context
+    description: >
+      Generates a structured Markdown context string for users, optimized for LLM/embedding consumption.
+      Mirrors build_project_context logic with a '# User Profile' header.
+    arguments:
+      - name: fields
+        type: list
+        description: "List of tuples [('Label', 'column_name'), ...] defining sections"
+      - name: skip_empty
+        type: boolean
+        description: "If true, omit sections with empty/null values (default: true)"

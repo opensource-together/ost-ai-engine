@@ -1,0 +1,17 @@
+version: 2
+
+macros:
+  - name: clamp
+    description: >
+      Clamps a numeric expression between min and max bounds.
+      Ensures score columns stay within valid range even with unexpected upstream data.
+    arguments:
+      - name: expr
+        type: string
+        description: "SQL expression to clamp"
+      - name: min_val
+        type: number
+        description: "Lower bound (default: 0)"
+      - name: max_val
+        type: number
+        description: "Upper bound (default: 1.0)"

@@ -1,0 +1,17 @@
+version: 2
+
+macros:
+  - name: deduplicate
+    description: >
+      Deduplicates rows using ROW_NUMBER() windowing.
+      Returns a SELECT keeping only the first row per partition.
+    arguments:
+      - name: cte_name
+        type: string
+        description: "Name of the CTE or table to deduplicate"
+      - name: partition_by
+        type: string
+        description: "Column(s) to partition by (e.g. 'project_id')"
+      - name: order_by
+        type: string
+        description: "Order expression to pick the winning row (e.g. 'created_at desc')"
