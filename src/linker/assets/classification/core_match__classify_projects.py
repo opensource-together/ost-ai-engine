@@ -38,7 +38,11 @@ def core_match__classify_projects(
         cur.execute('SELECT "id", "name" FROM "public"."Domain"')
         domains_map = {row["name"]: row["id"] for row in cur.fetchall()}
 
-        # 2. Use Projects from IO Manager
+        # 2. Filter out already-classified projects
+        cur.execute('SELECT "projectId" FROM "match"."project_classification"')
+        classified_ids = {str(row["projectId"]) for row in cur.fetchall()}
+
+        # 3. Use Projects from IO Manager
         projects = projects_df.to_dict("records")
 
         # Adjust alias manually if dataframe has 'name' but code implies 'title'
@@ -46,7 +50,13 @@ def core_match__classify_projects(
             if "name" in p and "title" not in p:
                 p["title"] = p["name"]
 
-    context.log.info(f"Loaded {len(projects)} projects for classification.")
+    total_before = len(projects)
+    projects = [p for p in projects if str(p.get("id")) not in classified_ids]
+    context.log.info(
+        f"Loaded {total_before} projects, "
+        f"{total_before - len(projects)} already classified, "
+        f"{len(projects)} to classify."
+    )
 
     if not projects:
         return Output(value=[], metadata={"count": 0})
