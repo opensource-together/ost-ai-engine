@@ -216,7 +216,7 @@ func (f *GitHubFetcher) retryRequest(ctx context.Context, reqURL string, maxAtte
 			return nil, err
 		}
 
-		body, readErr := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 		resp.Body.Close()
 
 		if resp.StatusCode == 200 {

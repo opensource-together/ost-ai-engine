@@ -213,7 +213,7 @@ scored AS (
         {{ clamp(
             '1.0 - extract(EPOCH FROM (now() - ps.pushed_at)) / (' ~ var('freshness_decay_days', 90) ~ ' * 86400.0)'
         ) }} AS freshness_score,
-        ln(ps.stars + 1) / mls.val AS popularity_score
+        {{ clamp('ln(ps.stars + 1) / mls.val') }} AS popularity_score
     FROM similarity AS s
     INNER JOIN project_stats AS ps ON s.project_id = ps.project_id
     CROSS JOIN max_log_stars AS mls

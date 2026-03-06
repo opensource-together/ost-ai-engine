@@ -22,5 +22,7 @@ run_all_job = define_asset_job(
         jitter=Jitter.FULL,
     ),
     tags={"dagster/max_concurrent_runs": "1"},
-    description="Runs the full pipeline: ingestion, classification, sync, ML, and matching.",
+    description=(
+        "Runs the full pipeline: ingestion, classification, sync, ML, and matching."
+    ),
 )
