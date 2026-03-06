@@ -8,6 +8,7 @@ on:
 
 jobs:
   sync-docs:
+    if: github.base_ref == 'staging' || github.base_ref == 'main'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout with submodules
