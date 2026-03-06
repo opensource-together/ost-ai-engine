@@ -78,6 +78,13 @@ scripts/clean_docker_images.sh            # Docker image cleanup
 | `DBT_PROJECT_DIR` | dbt project directory (default: `<repo>/dbt`, set to `/app/dbt` in Docker) |
 | `DAGSTER_HOME` | Dagster metadata directory (default: `./dagster_home`) |
 
+## Bug Fixing
+
+When fixing a bug, always follow this order:
+1. Write a failing test that reproduces the bug
+2. Fix the code until the test passes
+3. Never skip step 1 — no test, no fix
+
 ## CI/CD
 
 - `publish-prod.yml` — on release, pushes Docker image to `ghcr.io/opensource-together/ia`
