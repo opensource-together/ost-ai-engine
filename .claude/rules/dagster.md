@@ -7,16 +7,18 @@
 | `ingestion` | `raw_github__extract_projects` + 4 fetcher assets | Go binaries write raw data; Python fetchers enrich it |
 | `classification` | `core_match__classify_projects` | LLM via OpenRouter classifies projects into Category + Domain |
 | `ml` | `core_ml__embed_projects`, `core_ml__embed_users` | SentenceTransformer embeds projects & users |
+| `ml_project_preparation` | (dbt) `stg_public__project`, `int_project_contextualized`, `int_project_embedding_candidate` | dbt models preparing project context for ML |
+| `ml_user_preparation` | (dbt) `stg_public__user`, `int_user_enriched`, `fct_public_user` | dbt models preparing user context for ML |
+| `matching` | (dbt) `match_global_recommendation`, `match_user_recommendation` | Cosine similarity recommendations |
 | `sync` | `core_public__sync_projects` | Syncs enriched data into public-facing `Project` table |
-| `dbt_models` | all dbt models | Runs `dbt build` via `dagster-dbt` |
 
 ## Jobs
 
 - `run_all_job` — runs all asset groups (scheduled 1x daily at 3 AM Europe/Paris)
 - `project_scraper_job` — ingestion only (with retry policy)
 - `project_classification_job` — classification + sync (triggered by sensor after scraper succeeds, with retry policy)
-- `project_embedding_job` — ml_preparation + ml + matching
-- `user_recommendation_job` — user embeddings + matching + sync (scheduled every 2h)
+- `project_embedding_job` — ml_project_preparation + ml + matching
+- `user_recommendation_job` — ml_user_preparation + user embeddings + user matching (scheduled every 2h)
 - `cleanup_dagster_history_job` — housekeeping (scheduled every 2 days at 23h)
 
 ## Sensor
