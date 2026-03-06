@@ -11,14 +11,12 @@ GitHub API (Go scraper)                    [ingestion]
   -> dbt staging/int models (github)       [ingestion]
   -> LLM classification                    [classification]
   -> public sync (public.Project)          [sync]
-  -> dbt project ML prep (ml schema)       [ml_project_preparation]
-  -> project embeddings (ml schema)        [ml]
-  -> dbt matching models (public schema)   [matching]
+  -> dbt project ML prep + embeddings      [project_ml]
+  -> global recommendations                [project_ml]
 
-User profiles (public.User)                [ml_user_preparation]
-  -> dbt user ML prep (ml schema)
-  -> user embeddings (ml schema)           [ml]
-  -> dbt user matching (public schema)     [matching]
+User profiles (public.User)                [user_ml]
+  -> dbt user ML prep + embeddings
+  -> user recommendations
 ```
 
 ## Resources (`src/linker/resources/`)

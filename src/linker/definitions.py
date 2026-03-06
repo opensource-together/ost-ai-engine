@@ -69,7 +69,7 @@ from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 from .assets.embedding.core_ml__embed_users import core_ml__embed_users
 from .assets.sync.core_public__sync_projects import core_public__sync_projects
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
-from .jobs.project_classification_job import project_enrichment_job
+from .jobs.project_enrichment_job import project_enrichment_job
 from .jobs.project_scraper_job import project_scraper_job
 
 # jobs
@@ -78,7 +78,7 @@ from .jobs.user_recommendation_job import user_recommendation_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
 # schedule
-from .schedules.run_all_schedule import project_enrichment_schedule
+from .schedules.project_enrichment_schedule import project_enrichment_schedule
 from .schedules.user_recommendation_schedule import user_recommendation_schedule
 
 defs = Definitions(

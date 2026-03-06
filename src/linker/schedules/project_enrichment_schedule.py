@@ -1,6 +1,6 @@
 from dagster import DefaultScheduleStatus, ScheduleDefinition
 
-from ..jobs.project_classification_job import project_enrichment_job
+from ..jobs.project_enrichment_job import project_enrichment_job
 
 # Schedule: 1x per day at 3 AM
 project_enrichment_schedule = ScheduleDefinition(
