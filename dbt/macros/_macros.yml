@@ -1,0 +1,113 @@
+version: 2
+
+macros:
+  - name: build_project_context
+    description: >
+      Generates a structured Markdown context string for projects, optimized for LLM/embedding consumption.
+      Outputs sections like ## Title, ## Description, skipping empty fields by default.
+    arguments:
+      - name: fields
+        type: list
+        description: "List of tuples [('Label', 'column_name'), ...] defining sections"
+      - name: skip_empty
+        type: boolean
+        description: "If true, omit sections with empty/null values (default: true)"
+
+  - name: build_user_context
+    description: >
+      Generates a structured Markdown context string for users, optimized for LLM/embedding consumption.
+      Mirrors build_project_context logic with a '# User Profile' header.
+    arguments:
+      - name: fields
+        type: list
+        description: "List of tuples [('Label', 'column_name'), ...] defining sections"
+      - name: skip_empty
+        type: boolean
+        description: "If true, omit sections with empty/null values (default: true)"
+
+  - name: clamp
+    description: >
+      Clamps a numeric expression between min and max bounds.
+      Ensures score columns stay within valid range even with unexpected upstream data.
+    arguments:
+      - name: expr
+        type: string
+        description: "SQL expression to clamp"
+      - name: min_val
+        type: number
+        description: "Lower bound (default: 0)"
+      - name: max_val
+        type: number
+        description: "Upper bound (default: 1.0)"
+
+  - name: clean_text
+    description: >
+      Cleans raw text (README, descriptions) for LLM context.
+      Removes code blocks, HTML tags, URLs, emojis, long strings, and normalizes whitespace.
+      Truncates to max_length for embedding models.
+    arguments:
+      - name: column_name
+        type: string
+        description: "Column containing raw text to clean"
+      - name: max_length
+        type: integer
+        description: "Max character length after cleaning (default: 8000)"
+
+  - name: deduplicate
+    description: >
+      Deduplicates rows using ROW_NUMBER() windowing.
+      Returns a SELECT keeping only the first row per partition.
+    arguments:
+      - name: cte_name
+        type: string
+        description: "Name of the CTE or table to deduplicate"
+      - name: partition_by
+        type: string
+        description: "Column(s) to partition by (e.g. 'project_id')"
+      - name: order_by
+        type: string
+        description: "Order expression to pick the winning row (e.g. 'created_at desc')"
+
+  - name: generate_schema_name
+    description: >
+      Overrides dbt's default schema naming to use the custom_schema_name directly
+      (without prepending the target schema). Allows models to write to exact schemas
+      like 'github', 'ml', 'public', 'match'.
+    arguments:
+      - name: custom_schema_name
+        type: string
+        description: "Schema name from model config (+schema)"
+      - name: node
+        type: object
+        description: "dbt node object (injected by dbt)"
+
+  - name: jsonb_to_list
+    description: >
+      Converts a JSONB array (or object keys) to a comma-separated string.
+      Handles null, arrays, and {key: value} objects (e.g. GitHub languages API format).
+      Optionally normalizes (lowercase + trim + dedup).
+    arguments:
+      - name: column_name
+        type: string
+        description: "JSONB column to convert"
+      - name: separator
+        type: string
+        description: "Delimiter between values (default: ', ')"
+      - name: normalize
+        type: boolean
+        description: "If true, lowercase + trim + dedup (default: true)"
+
+  - name: safe_divide
+    description: >
+      Divides numerator by denominator, returning fallback when denominator is zero or NULL.
+      Casts numerator to float to avoid integer division truncation.
+    arguments:
+      - name: numerator
+        type: string
+        description: "SQL expression for the numerator"
+      - name: denominator
+        type: string
+        description: "SQL expression for the denominator"
+      - name: fallback
+        type: string
+        description: "Value to return on division by zero (default: 'null')"
