@@ -3,10 +3,22 @@ version: 2
 models:
   - name: fct_public_user
     description: "Mart model formatting user data into a single context string for embedding"
+    config:
+      contract:
+        enforced: true
     columns:
       - name: user_id
+        description: "User UUID (PK from public.User)"
+        data_type: uuid
+        constraints:
+          - type: not_null
         tests:
           - unique
           - not_null
       - name: user_context
-        description: "Enriched text representation of the user profile"
+        description: "Enriched text representation of the user profile, formatted for embedding"
+        data_type: text
+        constraints:
+          - type: not_null
+        tests:
+          - not_null

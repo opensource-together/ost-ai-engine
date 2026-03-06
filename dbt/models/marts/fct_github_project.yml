@@ -6,32 +6,59 @@ models:
       Central fact table aggregating all GitHub project data. This model serves as the primary
       source for downstream ML and application layers, providing enriched metadata and
       pre-computed LLM context.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: id
-        description: "Project UUID"
-        tests: [unique, not_null]
+        description: "Project UUID (deterministic UUID v5 derived from GitHub URL)"
+        data_type: uuid
+        constraints:
+          - type: not_null
+        tests:
+          - unique
+          - not_null
       - name: name
         description: "Repository name"
+        data_type: text
       - name: description
         description: "Repository description"
+        data_type: text
       - name: url
-        description: "GitHub URL"
+        description: "GitHub URL (canonical deduplicated key)"
+        data_type: text
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
       - name: stars
         description: "Star count (popularity metric)"
+        data_type: integer
       - name: forks
         description: "Fork count"
+        data_type: integer
       - name: open_issues_count
         description: "Number of open issues at scrape time"
+        data_type: integer
       - name: pushed_at
         description: "Timestamp of the most recent push to the repository"
+        data_type: timestamp without time zone
+      - name: created_at
+        description: "Record creation timestamp"
+        data_type: timestamp without time zone
+      - name: updated_at
+        description: "Record last update timestamp"
+        data_type: timestamp without time zone
+      - name: language_confidence
+        description: "Confidence score of the FastText language detection (0.0 to 1.0)"
+        data_type: double precision
       - name: language
         description: "Primary language (coalesced from GitHub source and FastText detection)"
-      - name: language_confidence
-        description: "Confidence score of the language detection (0-1)"
+        data_type: text
       - name: context
         description: "Structured markdown context for embeddings (## Title, Description, Topics, Tech stacks, Readme)"
-        tests: [not_null]
-      - name: created_at
-        description: "Creation timestamp"
-      - name: updated_at
-        description: "Last update timestamp"
+        data_type: text
+        constraints:
+          - type: not_null
+        tests:
+          - not_null

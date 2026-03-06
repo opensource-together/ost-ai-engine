@@ -6,13 +6,25 @@ models:
       Generates top global project recommendations based on popularity and recency.
       Filters for trending or published projects and ranks them by update freshness
       and star count. The limit is configurable via var('global_reco_top_n', 20).
+    config:
+      contract:
+        enforced: true
     columns:
       - name: project_id
-        description: "PK projects"
+        description: "FK to public.Project — UUID of the recommended project"
+        data_type: uuid
+        constraints:
+          - type: not_null
         tests:
           - unique
           - not_null
+          - relationships:
+              arguments:
+                to: source('public', 'Project')
+                field: id
       - name: stars
-        description: "Total GitHub star count"
+        description: "Total GitHub star count at last scrape"
+        data_type: integer
       - name: last_synced_at
-        description: "Timestamp of the last synchronization"
+        description: "Timestamp of the last synchronization (public.Project.updatedAt)"
+        data_type: timestamp without time zone
