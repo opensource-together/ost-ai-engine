@@ -3,12 +3,13 @@
 -- blended alongside similarity, freshness, and popularity.
 
 -- Per-user totals for each preference dimension
+-- Pre-aggregate each junction table before joining to avoid row explosion.
 WITH user_totals AS (
     SELECT
         u.user_id,
-        count(DISTINCT uts."techStackId") AS total_tech_stacks,
-        count(DISTINCT uc."categoryId") AS total_categories,
-        count(DISTINCT ud."domainId") AS total_domains
+        coalesce(t.total_tech_stacks, 0) AS total_tech_stacks,
+        coalesce(c.total_categories, 0) AS total_categories,
+        coalesce(d.total_domains, 0) AS total_domains
     FROM (
         SELECT "userId" AS user_id FROM {{ source('public', 'user_tech_stack') }}
         UNION
@@ -16,13 +17,21 @@ WITH user_totals AS (
         UNION
         SELECT "userId" FROM {{ source('public', 'user_domain') }}
     ) AS u
-    LEFT JOIN {{ source('public', 'user_tech_stack') }} AS uts
-        ON u.user_id = uts."userId"
-    LEFT JOIN {{ source('public', 'user_categories') }} AS uc
-        ON u.user_id = uc."userId"
-    LEFT JOIN {{ source('public', 'user_domain') }} AS ud
-        ON u.user_id = ud."userId"
-    GROUP BY u.user_id
+    LEFT JOIN (
+        SELECT "userId", count(*) AS total_tech_stacks
+        FROM {{ source('public', 'user_tech_stack') }}
+        GROUP BY "userId"
+    ) AS t ON u.user_id = t."userId"
+    LEFT JOIN (
+        SELECT "userId", count(*) AS total_categories
+        FROM {{ source('public', 'user_categories') }}
+        GROUP BY "userId"
+    ) AS c ON u.user_id = c."userId"
+    LEFT JOIN (
+        SELECT "userId", count(*) AS total_domains
+        FROM {{ source('public', 'user_domain') }}
+        GROUP BY "userId"
+    ) AS d ON u.user_id = d."userId"
 ),
 
 -- Overlap counts per (user, project) for each dimension
@@ -201,11 +210,10 @@ scored AS (
         s.project_id,
         s.similarity_score,
         s.preference_score,
-        greatest(
-            0,
+        greatest(0, least(1.0,
             1.0 - extract(EPOCH FROM (now() - ps.pushed_at))
             / ({{ var('freshness_decay_days', 90) }} * 86400.0)
-        ) AS freshness_score,
+        )) AS freshness_score,
         ln(ps.stars + 1) / mls.val AS popularity_score
     FROM similarity AS s
     INNER JOIN project_stats AS ps ON s.project_id = ps.project_id
