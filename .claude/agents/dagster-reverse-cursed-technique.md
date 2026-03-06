@@ -35,17 +35,17 @@ Entry point: `src/linker/definitions.py`
 | `FastTextModelResource` | `"fasttext_model"` | lid.176.ftz for language detection |
 | `PandasPostgresIOManager` | `"io_manager"` | DataFrame <-> Postgres via SQLAlchemy |
 
-### Known issues to check for
+### Known issues to check for (updated 2026-03-06)
 
-- `get_db_cursor(commit=)` param is ignored — `get_db_connection()` always auto-commits
-- IO manager uses `to_sql(if_exists="replace")` which drops and recreates tables
-- IO manager has SQL injection risk via f-string table name interpolation
-- LLM classifier returns `{"error": ...}` dicts instead of raising exceptions
-- LLM classifier creates a new OpenAI client per call instead of singleton
-- Fetcher assets have no `timeout` on `subprocess.run()`
-- `core_github__detect_languages` returns success Output even if DB insert fails
+- ~~`get_db_cursor(commit=)` param is ignored~~ FIXED: commit parameter now implemented
+- ~~IO manager uses `to_sql(if_exists="replace")`~~ FIXED: truncate+append strategy
+- ~~IO manager SQL injection via f-string~~ FIXED: table name allowlist validation
+- ~~LLM classifier returns error dicts~~ FIXED: raises exceptions
+- ~~LLM classifier creates new client per call~~ FIXED: singleton via PrivateAttr
+- ~~Fetcher assets have no `timeout` on `subprocess.run()`~~ FIXED: timeout=600 added
+- ~~`core_github__detect_languages` returns success on DB failure~~ FIXED: re-raises exception
 - `core_ml__embed_projects` creates `SQLAlchemy.create_engine()` per run without dispose
-- `core_public__sync_projects` inner raise is caught by outer except and swallowed
+- ~~`core_public__sync_projects` inner raise swallowed~~ FIXED: custom exception type propagates
 
 ### DB schemas
 
