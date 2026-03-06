@@ -1,5 +1,5 @@
 ---
-name: security-auditor
+name: security-prison-realm
 description: Security auditor for the OST Linker project. Use proactively before creating PRs, when modifying code that touches the database, subprocess calls, environment variables, Docker configuration, or CI/CD workflows. Also use when reviewing external contributions.
 tools: Read, Grep, Glob, Bash
 model: opus

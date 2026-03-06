@@ -1,5 +1,5 @@
 ---
-name: go-service-reviewer
+name: go-black-flash
 description: Go code reviewer for the OST Linker scraper and fetcher services. Use proactively when creating or modifying Go code in src/services/go/. Also use when Go builds fail or GitHub API interactions have issues.
 tools: Read, Grep, Glob, Bash
 model: sonnet

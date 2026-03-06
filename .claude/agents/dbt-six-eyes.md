@@ -1,5 +1,5 @@
 ---
-name: dbt-analyst
+name: dbt-six-eyes
 description: dbt model reviewer and analyst for the OST Linker project. Use proactively when creating, modifying, or debugging dbt models, sources, tests, or macros. Also use when dbt build/test/run fails.
 tools: Read, Grep, Glob, Bash
 model: sonnet
