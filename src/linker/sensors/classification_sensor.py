@@ -5,17 +5,17 @@ from dagster import (
     run_status_sensor,
 )
 
-from ..jobs.project_classification_job import project_classification_job
+from ..jobs.project_classification_job import project_enrichment_job
 from ..jobs.project_scraper_job import project_scraper_job
 
 
 @run_status_sensor(
     run_status=DagsterRunStatus.SUCCESS,
     monitored_jobs=[project_scraper_job],
-    request_job=project_classification_job,
+    request_job=project_enrichment_job,
 )
 def classification_sensor(context: RunStatusSensorContext) -> RunRequest:
-    """Trigger classification job on scraper success."""
+    """Trigger enrichment job on scraper success."""
     return RunRequest(
-        run_key=f"classification_run_{context.dagster_run.run_id}",
+        run_key=f"enrichment_run_{context.dagster_run.run_id}",
     )

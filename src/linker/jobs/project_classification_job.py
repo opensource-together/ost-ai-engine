@@ -6,9 +6,15 @@ from dagster import (
     define_asset_job,
 )
 
-project_classification_job = define_asset_job(
-    name="project_classification_job",
-    selection=AssetSelection.groups("classification", "sync"),
+project_enrichment_job = define_asset_job(
+    name="project_enrichment_job",
+    selection=AssetSelection.groups(
+        "classification",
+        "sync",
+        "ml_project_preparation",
+        "ml",
+        "matching",
+    ),
     op_retry_policy=RetryPolicy(
         max_retries=2,
         delay=30,
@@ -17,7 +23,7 @@ project_classification_job = define_asset_job(
     ),
     tags={"dagster/max_concurrent_runs": "1"},
     description=(
-        "Orchestrates the LLM classification of projects into Categories and Domains, "
-        "then syncs results to the public Project table."
+        "Classifies projects via LLM, syncs to public, computes embeddings, "
+        "and materializes project recommendations."
     ),
 )

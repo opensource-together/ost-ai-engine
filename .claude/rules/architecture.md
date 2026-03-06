@@ -6,14 +6,19 @@ The pipeline entry point is `src/linker/definitions.py`, which wires all assets,
 
 **Data flow:**
 ```
-GitHub API (Go scraper)
+GitHub API (Go scraper)                    [ingestion]
   -> raw DB tables (github schema)
-  -> dbt staging/int/pivot models (github schema)
-  -> LLM classification (classification group)
-  -> dbt match models (public schema)
-  -> Embedding computation (ml schema)
-  -> cosine similarity recommendations (match schema)
-  -> public sync (public.Project)
+  -> dbt staging/int models (github)       [ingestion]
+  -> LLM classification                    [classification]
+  -> public sync (public.Project)          [sync]
+  -> dbt project ML prep (ml schema)       [ml_project_preparation]
+  -> project embeddings (ml schema)        [ml]
+  -> dbt matching models (public schema)   [matching]
+
+User profiles (public.User)                [ml_user_preparation]
+  -> dbt user ML prep (ml schema)
+  -> user embeddings (ml schema)           [ml]
+  -> dbt user matching (public schema)     [matching]
 ```
 
 ## Resources (`src/linker/resources/`)
@@ -54,6 +59,11 @@ Managed by **Prisma** (`prisma/schema.prisma`) with 4 PostgreSQL schemas:
 The `pgvector` extension enables cosine similarity search. The vector dimension is 384 (MiniLM-L6-v2).
 
 Seed data lives in `prisma/seed/` (categories, domains, techstacks).
+
+## Shared Utilities (`src/linker/utils/`)
+
+- `language_detection.py` — `has_non_latin_chars()`, `parse_fasttext_labels()`, `is_blacklisted()` + constants (`NON_LATIN_LANGS`, `NON_LATIN_CHAR_RE`)
+- `serialization.py` — `make_serializable()` (datetime/UUID → string), `clean_llm_json()` (strip markdown fences)
 
 ## Python Services (`src/services/python/`)
 

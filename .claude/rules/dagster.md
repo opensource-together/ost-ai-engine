@@ -16,14 +16,13 @@
 
 - `run_all_job` — runs all asset groups (scheduled 1x daily at 3 AM Europe/Paris)
 - `project_scraper_job` — ingestion only (with retry policy)
-- `project_classification_job` — classification + sync (triggered by sensor after scraper succeeds, with retry policy)
-- `project_embedding_job` — ml_project_preparation + ml + matching
-- `user_recommendation_job` — ml_user_preparation + user embeddings + user matching (scheduled every 2h)
+- `project_enrichment_job` — classification + sync + ml_project_preparation + ml + matching (triggered by sensor after scraper succeeds, with retry policy)
+- `user_recommendation_job` — ml_user_preparation + user embeddings + user matching (scheduled every 10min)
 - `cleanup_dagster_history_job` — housekeeping (scheduled every 2 days at 23h)
 
 ## Sensor
 
-`classification_sensor` triggers `project_classification_job` on scraper success.
+`classification_sensor` triggers `project_enrichment_job` on scraper success.
 
 ## Asset Naming Convention
 

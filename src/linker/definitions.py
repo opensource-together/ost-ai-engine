@@ -69,8 +69,7 @@ from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 from .assets.embedding.core_ml__embed_users import core_ml__embed_users
 from .assets.sync.core_public__sync_projects import core_public__sync_projects
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
-from .jobs.project_classification_job import project_classification_job
-from .jobs.project_embedding_job import project_embedding_job
+from .jobs.project_classification_job import project_enrichment_job
 from .jobs.project_scraper_job import project_scraper_job
 
 # jobs
@@ -115,8 +114,7 @@ defs = Definitions(
     jobs=[
         project_scraper_job,
         cleanup_dagster_history_job,
-        project_classification_job,
-        project_embedding_job,
+        project_enrichment_job,
         run_all_job,
         user_recommendation_job,
     ],
