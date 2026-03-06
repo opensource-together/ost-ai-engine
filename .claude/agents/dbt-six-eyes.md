@@ -32,33 +32,38 @@ dbt project lives in `dbt/`. Profiles: `local` (port 5433) and `docker` (port 54
 ### Dagster group mapping (from `dbt_project.yml`)
 
 - `stg_github__*`, `int_project_enriched`, `fct_github_project` -> `ingestion`
-- `stg_public__*`, `int_user_enriched`, `int_project_contextualized`, `int_project_embedding_candidate`, `fct_public_user` -> `ml_preparation`
-- `match_*` -> `matching`
+- `stg_public__project`, `int_project_contextualized`, `int_project_embedding_candidate`, `match_global_recommendation` -> `project_ml`
+- `stg_public__user`, `int_user_enriched`, `fct_public_user`, `match_user_recommendation` -> `user_ml`
 
 ### Known issues to check for
 
 - `stg_public__project.sql:53` joins `Project.id::uuid` with github `project_id` — these may be different UUID namespaces, verify the sync asset preserves IDs
-- `match_user_recommendation.sql` `user_totals` CTE has cross-join row explosion (correct with DISTINCT but O(n^3))
-- `freshness_score` not clamped to upper bound 1.0 — future `pushed_at` breaks `valid_hybrid_score_bounds` test
-- No `relationships` tests on any foreign keys
 - No source freshness configured (`loaded_at_field` / `freshness`)
-- `profiles.yml` has hardcoded default password `'postgres'` (violates project convention)
 - All models materialized as `table` — intermediates could be `view`
+
+### Fixed (do not re-report)
+
+- ~~`freshness_score` not clamped~~ — now uses `{{ clamp() }}` macro
+- ~~No `relationships` tests on FKs~~ — added to all mart models
+- ~~`user_totals` CTE cross-join O(n³)~~ — refactored
+- ~~`profiles.yml` hardcoded password~~ — removed
 
 ## Review checklist
 
 When reviewing or creating dbt models:
 
-1. **Naming** — verify `stg_`/`int_`/`fct_`/`match_` prefix matches the layer
-2. **Double underscore** — staging models use `stg_source__entity` (not single underscore)
-3. **Schema tests** — every model YAML must have `unique` and `not_null` on primary keys
-4. **Relationships** — FK columns should have `relationships` tests
-5. **Materialization** — marts as `table`, intermediates as `view` unless performance requires `table`
-6. **Source freshness** — sources should declare `loaded_at_field`
-7. **ref() usage** — never hardcode table names, always use `{{ ref() }}` or `{{ source() }}`
-8. **Score bounds** — any computed score must be clamped with `greatest(0, least(1.0, ...))`
-9. **Join safety** — verify UUID namespaces match across schemas before joining
-10. **No secrets** — profiles must not have hardcoded passwords as defaults
+1. **File convention** — every `.sql` file MUST have a matching `.yml` file (models, macros, and singular tests)
+2. **Naming** — verify `stg_`/`int_`/`fct_`/`match_` prefix matches the layer
+3. **Double underscore** — staging models use `stg_source__entity` (not single underscore)
+4. **Schema tests** — every model YAML must have `unique` and `not_null` on primary keys
+5. **Relationships** — FK columns should have `relationships` tests (use `arguments:` syntax for dbt 1.10+)
+6. **Data contracts** — mart models should have `contract: {enforced: true}` with `data_type` and `constraints`
+7. **Materialization** — marts as `table`, intermediates as `view` unless performance requires `table`
+8. **Source freshness** — sources should declare `loaded_at_field`
+9. **ref() usage** — never hardcode table names, always use `{{ ref() }}` or `{{ source() }}`
+10. **Score bounds** — any computed score must be clamped with `{{ clamp() }}` macro
+11. **Join safety** — verify UUID namespaces match across schemas before joining
+12. **No secrets** — profiles must not have hardcoded passwords as defaults
 
 When debugging:
 
