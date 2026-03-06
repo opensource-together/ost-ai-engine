@@ -91,17 +91,24 @@ When fixing a bug, always follow this order:
 
 ## CI/CD
 
-- `publish-prod.yml` — on release, pushes Docker image to `ghcr.io/opensource-together/ia`
-- `publish-develop.yml` — develop branch deployment
-- `deploy-docs.yml` — auto-syncs `docs/ai/**` to external docs repo
-- `claude-code-review.yml` — automatic Claude review on every PR (Sonnet)
-- `claude.yml` — `@claude` assistant in issues and PR comments
+| Workflow | Trigger | Purpose |
+|----------|---------|---------|
+| `publish-prod.yml` | Release published | Docker build/push to `ghcr.io/opensource-together/ia` |
+| `publish-develop.yml` | PR to main/staging + push to staging | Quality checks (reusable) + Docker build/push |
+| `quality-checks.yml` | Reusable (`workflow_call`) | Lint, format, type check, tests, dbt, Go, Docker, Prisma, security |
+| `claude-code-review.yml` | PR opened/synced (all branches) | Automatic Claude review (Sonnet) |
+| `claude.yml` | `@claude` in issues/PR comments | AI assistant (requires workflow on default branch) |
+| `sync-docs-submodule.yml` | PR to main/staging (path: `docs`) | Sync docs submodule to `ost-docs` repo |
+| `sync-prisma-backend.yml` | PR to main/staging (path: `prisma/**`) | Sync Prisma schema to `ost-backend` repo |
+
+**Important:** `claude.yml` uses `issue_comment`/`issues` events which only trigger from the **default branch** (`staging`). The workflow must exist on `staging` to work.
 
 ## Custom Agents (`.claude/agents/`)
 
 | Agent | Model | Purpose |
 |---|---|---|
-| `pipeline-doctor` | opus | Dagster pipeline debugging and diagnostics |
-| `dbt-analyst` | sonnet | dbt model review, debugging, and conventions |
-| `security-auditor` | opus | Security audit (SQL injection, secrets, Docker, CI) |
-| `go-service-reviewer` | sonnet | Go scraper/fetcher review (concurrency, rate limiting) |
+| `dagster-reverse-cursed-technique` | opus | Dagster pipeline debugging and diagnostics |
+| `dbt-six-eyes` | sonnet | dbt model review, debugging, and conventions |
+| `security-prison-realm` | opus | Security audit (SQL injection, secrets, Docker, CI) |
+| `go-black-flash` | sonnet | Go scraper/fetcher review (concurrency, rate limiting) |
+| `infra-domain-expansion` | sonnet | Docker and CI/CD review (workflows, Dockerfile, compose) |

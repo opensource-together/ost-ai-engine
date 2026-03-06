@@ -11,34 +11,26 @@ Recommender-system of the [OpenSource Together](https://github.com/opensource-to
 
 ---
 
-## What is it?
+## What is OST Linker?
 
-**OST Linker** is the AI brain behind [OpenSourceTogether](https://opensource-together.com/). It scrapes GitHub, classifies projects with LLMs, computes embeddings, and delivers personalized open-source recommendations — so you find your next contribution in seconds, not hours.
+The AI-powered recommendation engine behind [OpenSourceTogether](https://opensource-together.com/).
 
-**How it works:** GitHub scraping (Go) → dbt transformations → LLM classification → vector embeddings → cosine similarity matching.
+It analyzes open-source projects and matches them to contributors — so you find your next contribution in seconds, not hours.
 
-## Quick Start
+
+## Getting Started
 
 ```bash
-cp .env.example .env              # configure
+cp .env.example .env              # configure environment
 make setup                        # install deps + compile Go binaries
 docker compose up --build -d      # start services (Dagster UI at :3000)
 make db-init                      # apply schema + seed data
 ```
 
-See the full [Contributing Guide](CONTRIBUTING.md) for local development setup.
+## Contributing
 
-## Tech Stack
-
-| Layer | Tech |
-|---|---|
-| Orchestration | Dagster |
-| Scraping | Go (scraper + fetcher) |
-| Transformations | dbt (PostgreSQL) |
-| Classification | LLM via OpenRouter |
-| Embeddings | SentenceTransformers (MiniLM-L6-v2) |
-| Similarity | pgvector (cosine) |
-| Database | PostgreSQL + Prisma |
+Contributions soon !  
+You can already check the [Contributing Guide](CONTRIBUTING.md) to be ready.
 
 ## License
 

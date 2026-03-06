@@ -1,5 +1,5 @@
 ---
-name: pipeline-doctor
+name: dagster-reverse-cursed-technique
 description: Dagster pipeline debugging and diagnostic specialist. Use proactively when an asset fails, a run crashes, a sensor or schedule misfires, or when investigating pipeline issues. Also use when modifying assets, jobs, schedules, sensors, or resources.
 tools: Read, Edit, Bash, Grep, Glob
 model: opus
