@@ -9,7 +9,6 @@ on:
 
 jobs:
   checks:
-    if: github.event_name == 'push' || github.base_ref == 'staging' || github.base_ref == 'main'
     uses: ./.github/workflows/quality-checks.yml
     secrets:
       OST_DOCS_TOKEN: ${{ secrets.OST_DOCS_TOKEN }}
