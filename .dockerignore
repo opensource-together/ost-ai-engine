@@ -1,8 +1,70 @@
-.git/
-.github/
-docs/
 
-.env*
+# ==============================================================================
+# STRICT WHITELIST STRATEGY
+# 1. Ignore EVERYTHING by default
+# ==============================================================================
+*
 
-github-scraper
-gitlab-scraper
+# ==============================================================================
+# 2. Allow specific source directories (and their contents)
+# ==============================================================================
+!src/
+!dbt/
+!prisma/
+!scripts/
+!models/
+
+# ==============================================================================
+# 3. Allow specific configuration files
+# ==============================================================================
+!pyproject.toml
+!uv.lock
+!Dockerfile
+!docker-compose.yml
+!.env.example
+!dagster.yaml
+!dagster.prod.yaml
+!workspace.yaml
+!README.md
+!LICENSE
+
+# ==============================================================================
+# 4. Filter out junk from the allowed directories
+# (Rules here override the !includes above because they come later)
+# ==============================================================================
+# Python/Bytecode
+**/__pycache__
+**/*.pyc
+**/*.pyo
+**/*.pyd
+
+# Mac
+**/.DS_Store
+
+# Logs/Tmp
+**/logs
+**/tmp
+**/.cache
+**/.pytest_cache
+**/.mypy_cache
+**/.ruff_cache
+
+# Node
+**/node_modules
+
+# DBT
+**/dbt_packages
+**/target
+
+# Compiled Go binaries (built inside Docker)
+src/services/go/**/github-scraper
+src/services/go/**/ost-fetcher
+src/services/go/**/ost-scraper
+
+# dbt user config
+dbt/.user.yml
+
+# Git (redundant with * but safe)
+.git
+.gitignore
+.github

@@ -1,0 +1,89 @@
+name: 'ost_linker'
+version: '1.0.0'
+config-version: 2
+
+profile: 'ost_linker'
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+vars:
+  global_reco_top_n: 20
+  # Blend weights (sum to 1.0)
+  w_similarity: 0.40
+  w_preference: 0.35
+  w_freshness: 0.15
+  w_popularity: 0.10
+  # Preference sub-weights (sum to 1.0)
+  w_pref_tech: 0.30
+  w_pref_category: 0.45
+  w_pref_domain: 0.25
+  # Thresholds
+  similarity_threshold: 0.25
+  reco_top_n: 30
+  freshness_decay_days: 90
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+models:
+  ost_linker:
+
+    staging:
+      +materialized: table
+      stg_github__project:
+        +schema: github
+        +meta: { dagster: { group: ingestion } }
+      stg_github__readme:
+        +schema: github
+        +meta: { dagster: { group: ingestion } }
+      stg_github__topics:
+        +schema: github
+        +meta: { dagster: { group: ingestion } }
+      stg_github__languages:
+        +schema: github
+        +meta: { dagster: { group: ingestion } }
+      stg_github__detection:
+        +schema: github
+        +meta: { dagster: { group: ingestion } }
+      stg_public__user:
+        +schema: ml
+        +meta: { dagster: { group: ml_preparation } }
+      stg_public__project:
+        +schema: ml
+        +meta: { dagster: { group: ml_preparation } }
+
+    intermediate:
+      +materialized: table
+      int_project_enriched:
+        +schema: github
+        +meta: { dagster: { group: ingestion } }
+      int_user_enriched:
+        +schema: ml
+        +meta: { dagster: { group: ml_preparation } }
+      int_project_contextualized:
+        +schema: ml
+        +meta: { dagster: { group: ml_preparation } }
+      int_project_embedding_candidate:
+        +schema: ml
+        +meta: { dagster: { group: ml_preparation } }
+
+    marts:
+      +materialized: table
+      fct_github_project:
+        +schema: github
+        +meta: { dagster: { group: ingestion } }
+      fct_public_user:
+        +schema: ml
+        +meta: { dagster: { group: ml_preparation } }
+      match_global_recommendation:
+        +schema: public
+        +meta: { dagster: { group: matching } }
+      match_user_recommendation:
+        +schema: public
+        +meta: { dagster: { group: matching } }

@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: match_user_recommendation
+    description: >
+      Hybrid personalized recommendations. Computes a continuous preference_score
+      measuring weighted overlap between user preferences and project attributes
+      (tech stacks 0.30, categories 0.45, domains 0.25), then blends it alongside
+      cosine similarity, freshness, and popularity into a final score. Returns
+      top N per user.
+    columns:
+      - name: user_id
+        description: "FK to the user table"
+        tests:
+          - not_null
+      - name: project_id
+        description: "FK to the project table"
+        tests:
+          - not_null
+      - name: similarity_score
+        description: "Cosine similarity between user and project embeddings (0 to 1 after threshold)"
+        tests:
+          - not_null
+      - name: preference_score
+        description: "Weighted overlap of user preferences with project attributes (0 to 1)"
+        tests:
+          - not_null
+      - name: freshness_score
+        description: "Linear decay score based on pushed_at (1 = just pushed, 0 = older than decay window)"
+        tests:
+          - not_null
+      - name: popularity_score
+        description: "Log-normalized star count scaled to 0-1"
+        tests:
+          - not_null
+      - name: final_score
+        description: "Weighted blend of similarity, preference, freshness, and popularity"
+        tests:
+          - not_null
+      - name: calculated_at
+        description: "Timestamp when the recommendation was computed"

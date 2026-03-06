@@ -1,0 +1,20 @@
+version: 2
+
+models:
+  - name: stg_github__languages
+    description: >
+      Staging model for detailed GitHub language statistics (bytes per language).
+    columns:
+      - name: id
+        description: "Unique record identifier"
+        tests:
+          - unique
+          - not_null
+      - name: project_id
+        description: "FK to stg_github__project"
+      - name: repo_url
+        description: "Repository URL"
+      - name: languages
+        description: "JSONB object {Language: Bytes}"
+      - name: created_at
+        description: "Record creation timestamp"

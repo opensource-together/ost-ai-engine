@@ -6,43 +6,48 @@ Recommender-system of the [OpenSource Together](https://github.com/opensource-to
 
 </div>
 
-[![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/4ZDhm3dQAC) [![Follow](https://img.shields.io/twitter/follow/OpenSTogether?style=social)](https://x.com/OpenSTogether) [![GitHub](https://img.shields.io/badge/GitHub-OpenSource%20Together-black.svg)](https://github.com/opensource-together)  
+[![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/4ZDhm3dQAC) [![Follow](https://img.shields.io/twitter/follow/OpenSTogether?style=social)](https://x.com/OpenSTogether) [![GitHub](https://img.shields.io/badge/GitHub-OpenSource%20Together-black.svg)](https://github.com/opensource-together) [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 </div>
 
 ---
 
 ## What is it?
 
-An AI‑powered data pipeline that discovers, understands, and curates open‑source projects to power OST’s recommendation system and provide high-quality projects to contribute on.
+**OST Linker** is the AI brain behind [OpenSourceTogether](https://opensource-together.com/). It scrapes GitHub, classifies projects with LLMs, computes embeddings, and delivers personalized open-source recommendations — so you find your next contribution in seconds, not hours.
 
-What it does :
-- **Discover**: scan GitHub at scale with Golang scrapers
-- **Understand**: detect language and semantics (fastText + transformers)
-- **Assess**: score quality and relevance from activity and metadata signals
-- **Enrich**: normalize topics, tech stacks, and fields into a coherent schema
-
-**Deliver**: output a clean, queryable dataset (PostgreSQL via Prisma)
+**How it works:** GitHub scraping (Go) → dbt transformations → LLM classification → vector embeddings → cosine similarity matching.
 
 ## Quick Start
 
-1. Copy `.env.example` into `.env` and fill it.
-2. Copy `config/cfg_example.py` to `config/cfg.py` and adjust the config to your personal parameters.
-3. Start
 ```bash
-# Start the engine
-docker compose up
+cp .env.example .env              # configure
+make setup                        # install deps + compile Go binaries
+docker compose up --build -d      # start services (Dagster UI at :3000)
+make db-init                      # apply schema + seed data
 ```
 
-Dagster UI : http://localhost:3000
+See the full [Contributing Guide](CONTRIBUTING.md) for local development setup.
 
-## Status
-Work in progress.  
-Build in public here : [@spideyX](https://x.com/spideyai_X)
+## Tech Stack
+
+| Layer | Tech |
+|---|---|
+| Orchestration | Dagster |
+| Scraping | Go (scraper + fetcher) |
+| Transformations | dbt (PostgreSQL) |
+| Classification | LLM via OpenRouter |
+| Embeddings | SentenceTransformers (MiniLM-L6-v2) |
+| Similarity | pgvector (cosine) |
+| Database | PostgreSQL + Prisma |
+
+## License
+
+[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — See [LICENSE](LICENSE).
 
 ---
 
 <div align="center">
 
-Made with love by [@spideyX](https://x.com/spideyai_X) & the [OST team](https://github.com/opensource-together) for the OSS community
+Built in public by [@spideystreet](https://x.com/spideystreet) & the [OST team](https://github.com/opensource-together)
 
 </div>

@@ -1,0 +1,5 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Contributing Guide
+    url: https://github.com/opensource-together/ost-linker/blob/staging/CONTRIBUTING.md
+    about: Read our contributing guide before opening an issue

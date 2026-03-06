@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: int_user_enriched
+    description: "Intermediate model joining users with their domains, tech stacks, and categories"
+    columns:
+      - name: user_id
+        tests:
+          - unique
+          - not_null
+      - name: tech_stacks
+        description: "Comma-separated list of tech stack names"
+      - name: domains
+        description: "Comma-separated list of domain names"
+      - name: categories
+        description: "Comma-separated list of category names"

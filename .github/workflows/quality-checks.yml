@@ -1,0 +1,174 @@
+name: Quality checks
+
+on:
+  workflow_call:
+    secrets:
+      OST_DOCS_TOKEN:
+        required: true
+
+jobs:
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Lint
+        run: uv run ruff check src/
+
+      - name: Format check
+        run: uv run ruff format --check src/
+
+      - name: Type check
+        run: uv run mypy src/
+
+      - name: Unit tests
+        run: uv run pytest -m unit --cov-fail-under=80
+
+  dbt-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: dbt parse
+        run: |
+          cd dbt
+          uv run dbt deps
+          uv run dbt parse
+
+  go-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.24"
+
+      - name: Vet and build scraper
+        run: |
+          cd src/services/go/scraper
+          go vet ./...
+          go build -o /dev/null .
+
+      - name: Vet and build fetcher
+        run: |
+          cd src/services/go/fetcher
+          go vet ./...
+          go build -o /dev/null .
+
+  docker-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build image (no push)
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ./Dockerfile
+          push: false
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  prisma-validate:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "18"
+
+      - name: Validate Prisma schema
+        run: npx prisma validate --schema prisma/schema.prisma
+        env:
+          DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
+
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Dependency audit
+        run: uv run pip-audit
+
+      - name: Install gitleaks
+        run: |
+          curl -sSL https://github.com/gitleaks/gitleaks/releases/download/v8.30.0/gitleaks_8.30.0_linux_x64.tar.gz | tar xz
+          sudo mv gitleaks /usr/local/bin/
+
+      - name: Secret leak scan
+        run: gitleaks detect --source . --no-git --verbose
+
+  docs-submodule:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.OST_DOCS_TOKEN }}
+
+      - name: Check docs submodule SHA exists on remote
+        run: |
+          SUBMODULE_SHA=$(git -C docs rev-parse HEAD)
+          echo "Submodule SHA: $SUBMODULE_SHA"
+          if git ls-remote https://x-access-token:${{ secrets.OST_DOCS_TOKEN }}@github.com/opensource-together/ost-docs.git | grep -q "$SUBMODULE_SHA"; then
+            echo "docs submodule SHA exists on ost-docs remote"
+          else
+            echo "::error::docs submodule points to $SUBMODULE_SHA which does not exist on ost-docs remote"
+            echo "Make sure your submodule commits are pushed to ost-docs"
+            exit 1
+          fi

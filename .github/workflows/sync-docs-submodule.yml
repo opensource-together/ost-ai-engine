@@ -1,0 +1,67 @@
+name: Sync docs submodule to ost-docs
+
+on:
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - docs
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          fetch-depth: 0
+          token: ${{ secrets.OST_DOCS_TOKEN }}
+
+      - name: Check if docs submodule changed
+        id: check
+        run: |
+          BASE_SHA=$(git merge-base origin/${{ github.base_ref }} HEAD)
+          DOCS_CHANGED=$(git diff --name-only "$BASE_SHA" HEAD -- docs)
+          if [ -z "$DOCS_CHANGED" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Push submodule branch and create PR on ost-docs
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          cd docs
+          BRANCH="sync/ost-linker-${{ github.head_ref }}"
+
+          git remote set-url origin https://x-access-token:${{ secrets.OST_DOCS_TOKEN }}@github.com/opensource-together/ost-docs.git
+          git checkout -b "$BRANCH"
+          git push -u origin "$BRANCH" --force
+
+          # Skip PR creation if branch has no new commits vs main
+          if git diff --quiet origin/main..HEAD 2>/dev/null; then
+            echo "No new commits vs main — skipping PR creation"
+            exit 0
+          fi
+
+          # Create PR if one doesn't already exist
+          EXISTING=$(gh pr list --repo opensource-together/ost-docs --head "$BRANCH" --state open --json number -q '.[0].number' || echo "")
+          if [ -z "$EXISTING" ]; then
+            gh pr create \
+              --repo opensource-together/ost-docs \
+              --head "$BRANCH" \
+              --base main \
+              --title "docs: sync from ost-linker (${{ github.head_ref }})" \
+              --body "$(cat <<'EOF'
+          ## Summary
+          Automated docs sync from [ost-linker](${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.pull_request.number }}).
+
+          This PR contains documentation changes made in the ost-linker repository.
+          EOF
+          )"
+            echo "PR created on ost-docs"
+          else
+            echo "PR #$EXISTING already exists on ost-docs"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.OST_DOCS_TOKEN }}

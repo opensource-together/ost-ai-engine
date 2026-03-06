@@ -1,184 +1,90 @@
-# Centralized config (généré dynamiquement)
-config/cfg.py
-config/cfg.yaml
-# Ignore everything in docs/ost-docs except ai and docs.json
-docs/ost-docs/*
-
-# Byte-compiled / optimized / DLL files / Temp files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-*tmp*
-
-# C extensions
 *.so
-
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
-.installed.cfg
 *.egg
-MANIFEST
+dist/
+build/
+.mypy_cache/
+.ruff*
 
-# PyInstaller
-#  Usually these files are written by a CI, but they should be ignored by default.
-*.manifest
-*.spec
+# Environments
+.env
+.env.local
+.docker.env
+.secrets*
+.venv
+venv/
+
+# Test / coverage
+htmlcov/
+.coverage
+.coverage.*
+coverage.xml
+.pytest_cache/
 
 # Logs
 logs/
-mlruns/
-pip-log.txt
-pip-delete-this-directory.txt
-
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-reco.txt
-
-# Translations
-*.mo
-*.pot
-
-# Django stuff:
 *.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+mlruns/
 
-# Flask stuff:
-instance/
-.webassets-cache
-
-# Scrapy stuff:
-.scrapy
-
-# Sphinx documentation
-docs/_build/
-
-# PyBuilder
-target/
-
-# Jupyter Notebook
-.ipynb_checkpoints
-
-# IPython
-profile_default/
-ipython_config.py
-
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
-
-# Environments
-.secrets*
-.env
-.env.local
-.venv
-env/
-venv/
-ENV/
-env.bak
-venv.bak
-src/dbt/.user.yml
-.docker.env
-
-# IDE / Editor specific
+# IDE / Editor
 .idea/
 .vscode/
+.cursor/
 *.swp
 *.swo
 *~
-.cursor/
 
-# OS specific
+# OS
 .DS_Store
 Thumbs.db
 
-# Personal
+# Model artifacts (downloaded at build time)
+models/*
+!models/README.md
+
+# Go binaries
+src/services/go/scraper/github-scraper
+src/services/go/fetcher/ost-fetcher
+
+# Dagster runtime
+dagster_home/
+dagster/
+.tmp*
+
+# dbt
+dbt/.user.yml
+dbt/target/
+dbt/dbt_packages/
+dbt/logs/
+
+# Cache
+.cache/
+
+# Node (only used for Prisma seeding)
+node_modules/
+package-lock.json
+package.json
+
+# Database
+postgres-data/
+*.db
+
+# Docker
+postgres-data/
+
+# Legacy / unused
+config/cfg.py
+config/cfg.yaml
+poetry.lock
+
+# Personal notes
 PR.md
 PR.txt
 TODO.md
 
-# Linters
-.ruff*
-
-# SQL
-postgres-data/
-
-# Model artifacts & db schema
-# Ignore generated embeddings but keep Hugging Face models
-models/*.npy
-models/*.pkl
-src/models
-
-# Scripts (local-only for now)
-scripts/!cfg_cron.py
-*.sh
-!docker-entrypoint.sh
-*.old
-
-# DB test
-*.db
-
-# Claude
-CLAUDE.md
-
-# Turbo
-node_modules/
-apps/
-turbo.json
-
-# Go binaries
-src/infrastructure/services/go/github/scraper
-src/infrastructure/services/go/gitlab/scraper
-github-scraper
-gitlab-scraper
-
-# Local git backups
-**/.git_backups/**
-**/git_backups/**
-**/.git-backups/**
-**/git-backups/**
-
-# Model artifacts (do not track)
-models/sentence-transformers/
-models/mlruns/
-
 # Local
 .actrc
-
-# Lock files
-uv.lock
-
-# Dagster
-.tmp*
-.dagster_home/*
-!.dagster_home/dagster.yaml
-
-# Docker entrypoint scripts
-entrypoint.sh

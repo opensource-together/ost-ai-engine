@@ -1,0 +1,16 @@
+version: 2
+
+models:
+  - name: stg_public__user
+    description: "Staging model cleaning raw user data from public.user"
+    columns:
+      - name: user_id
+        description: "Primary key (UUID)"
+        tests:
+          - unique
+          - not_null
+      - name: name
+      - name: bio
+      - name: job_title
+      - name: experiences
+      - name: created_at

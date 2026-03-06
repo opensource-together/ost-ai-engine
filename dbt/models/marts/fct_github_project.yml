@@ -1,0 +1,37 @@
+version: 2
+
+models:
+  - name: fct_github_project
+    description: >
+      Central fact table aggregating all GitHub project data. This model serves as the primary
+      source for downstream ML and application layers, providing enriched metadata and
+      pre-computed LLM context.
+    columns:
+      - name: id
+        description: "Project UUID"
+        tests: [unique, not_null]
+      - name: name
+        description: "Repository name"
+      - name: description
+        description: "Repository description"
+      - name: url
+        description: "GitHub URL"
+      - name: stars
+        description: "Star count (popularity metric)"
+      - name: forks
+        description: "Fork count"
+      - name: open_issues_count
+        description: "Number of open issues at scrape time"
+      - name: pushed_at
+        description: "Timestamp of the most recent push to the repository"
+      - name: language
+        description: "Primary language (coalesced from GitHub source and FastText detection)"
+      - name: language_confidence
+        description: "Confidence score of the language detection (0-1)"
+      - name: context
+        description: "Structured markdown context for embeddings (## Title, Description, Topics, Tech stacks, Readme)"
+        tests: [not_null]
+      - name: created_at
+        description: "Creation timestamp"
+      - name: updated_at
+        description: "Last update timestamp"

@@ -5,8 +5,7 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider        = "prisma-client-py"
-  interface       = "sync"
+  provider        = "prisma-client-js"
   binaryTargets   = ["native", "linux-musl-arm64-openssl-3.0.x"]
   previewFeatures = ["postgresqlExtensions"]
 }
@@ -14,17 +13,22 @@ generator client {
 datasource db {
   provider   = "postgresql"
   url        = env("DATABASE_URL")
-  extensions = [uuidOssp(map: "uuid-ossp")]
+  schemas    = ["github", "public", "ml", "match"]
+  extensions = [uuidOssp(map: "uuid-ossp"), vector]
 }
 
 enum Provider {
   GITHUB
   GITLAB
+
+  @@schema("public")
 }
 
 enum TechStackType {
   TECH
   LANGUAGE
+
+  @@schema("public")
 }
 
 model Skeleton {
@@ -34,36 +38,45 @@ model Skeleton {
   myAttribute String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  @@schema("public")
 }
 
 model User {
-  id             String          @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name           String
-  email          String
-  emailVerified  Boolean         @default(false)
-  image          String?
-  createdAt      DateTime        @default(now())
-  updatedAt      DateTime        @default(now()) @updatedAt
-  bio            String?
-  jobTitle       String?
-  sessions       Session[]
-  accounts       Account[]
-  techStacks     UserTechStack[]
+  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name            String
+  email           String
+  emailVerified   Boolean           @default(false)
+  image           String?
+  banner          String?
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @default(now()) @updatedAt
+  bio             String?
+  jobTitle        String?
+  experiences     Json?
+  sessions        Session[]
+  accounts        Account[]
+  techStacks      UserTechStack[]
   // Social Links URLs
-  githubUrl      String?
-  gitlabUrl      String?
-  twitterUrl     String?
-  linkedinUrl    String?
-  discordUrl     String?
-  websiteUrl     String?
-  githubUsername String?         @unique
-  gitlabUsername String?         @unique
-  githubId       String?         @unique
-  gitlabId       String?         @unique
-  Project        Project[]
+  githubUrl       String?
+  gitlabUrl       String?
+  twitterUrl      String?
+  linkedinUrl     String?
+  discordUrl      String?
+  websiteUrl      String?
+  githubUsername  String?           @unique
+  gitlabUsername  String?           @unique
+  githubId        String?           @unique
+  gitlabId        String?           @unique
+  Project         Project[]
+  categories      UserCategories[]
+  domain          UserDomains[]
+  projectBookmark ProjectBookmark[]
+  betaTester      Boolean           @default(false)
 
   @@unique([email])
   @@map("user")
+  @@schema("public")
 }
 
 model Session {
@@ -79,6 +92,7 @@ model Session {
 
   @@unique([token])
   @@map("session")
+  @@schema("public")
 }
 
 model Account {
@@ -98,6 +112,7 @@ model Account {
   updatedAt             DateTime  @updatedAt
 
   @@map("account")
+  @@schema("public")
 }
 
 model Verification {
@@ -109,6 +124,7 @@ model Verification {
   updatedAt  DateTime @default(now()) @updatedAt
 
   @@map("verification")
+  @@schema("public")
 }
 
 model TechStack {
@@ -122,6 +138,7 @@ model TechStack {
   ProjectTechStack ProjectTechStack[]
 
   @@map("tech_stack")
+  @@schema("public")
 }
 
 model UserTechStack {
@@ -134,6 +151,33 @@ model UserTechStack {
 
   @@unique([userId, techStackId])
   @@map("user_tech_stack")
+  @@schema("public")
+}
+
+model UserCategories {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String   @db.Uuid
+  categoryId String   @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  category   Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, categoryId])
+  @@map("user_categories")
+  @@schema("public")
+}
+
+model UserDomains {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @db.Uuid
+  domainId  String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, domainId])
+  @@map("user_domain")
+  @@schema("public")
 }
 
 model ProjectTechStack {
@@ -146,14 +190,19 @@ model ProjectTechStack {
 
   @@unique([projectId, techStackId])
   @@map("project_tech_stack")
+  @@schema("public")
 }
 
 model Category {
-  id              String            @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  name            String            @unique
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  ProjectCategory ProjectCategory[]
+  id                     String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                   String                  @unique
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  ProjectCategory        ProjectCategory[]
+  UserCategories         UserCategories[]
+  projectClassifications ProjectClassification[]
+
+  @@schema("public")
 }
 
 model ProjectCategory {
@@ -166,28 +215,208 @@ model ProjectCategory {
 
   @@unique([projectId, categoryId])
   @@map("project_category")
+  @@schema("public")
+}
+
+model Domain {
+  id                     String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  name                   String                  @unique
+  createdAt              DateTime                @default(now())
+  updatedAt              DateTime                @updatedAt
+  ProjectDomain          ProjectDomain[]
+  UserDomains            UserDomains[]
+  projectClassifications ProjectClassification[]
+
+  @@schema("public")
+}
+
+model ProjectDomain {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String   @db.Uuid
+  domainId  String   @db.Uuid
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  domain    Domain   @relation(fields: [domainId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([projectId, domainId])
+  @@map("project_domain")
+  @@schema("public")
+}
+
+model ProjectClassification {
+  id                 String    @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId          String    @unique @db.Uuid
+  categoryId         String?   @db.Uuid
+  domainId           String?   @db.Uuid
+  categoryConfidence Float?
+  domainConfidence   Float?
+  project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  domain             Domain?   @relation(fields: [domainId], references: [id], onDelete: SetNull)
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+
+  @@map("project_classification")
+  @@schema("match")
 }
 
 model Project {
-  id             String             @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
-  title          String
-  description    String?
-  repoUrl        String?
-  provider       Provider
-  githubUrl      String?
-  gitlabUrl      String?
-  twitterUrl     String?
-  linkedinUrl    String?
-  discordUrl     String?
-  websiteUrl     String?
-  published      Boolean            @default(false)
-  trending       Boolean            @default(false)
-  techStacks     ProjectTechStack[]
-  categories     ProjectCategory[]
-  ownerId        String?            @db.Uuid
-  ownerOst       User?              @relation(fields: [ownerId], references: [id], onDelete: Cascade)
-  logoUrl        String?
-  imagesUrls     String[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
+  id                    String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  title                 String
+  description           String?
+  repoUrl               String?                @unique
+  provider              Provider
+  githubUrl             String?
+  gitlabUrl             String?
+  twitterUrl            String?
+  linkedinUrl           String?
+  discordUrl            String?
+  websiteUrl            String?
+  published             Boolean                @default(false)
+  trending              Boolean                @default(false)
+  techStacks            ProjectTechStack[]
+  categories            ProjectCategory[]
+  domains               ProjectDomain[]
+  ownerId               String?                @db.Uuid
+  owner                 User?                  @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  logoUrl               String?
+  imagesUrls            String[]
+  createdAt             DateTime               @default(now())
+  updatedAt             DateTime               @updatedAt
+  projectBookmark       ProjectBookmark[]
+  projectClassification ProjectClassification?
+
+  @@schema("public")
+}
+
+model ProjectBookmark {
+  id        String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String   @db.Uuid
+  projectId String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@unique([userId, projectId])
+  @@map("project_bookmark")
+  @@schema("public")
+}
+
+model BetaSignup {
+  id    String @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  email String @unique
+
+  @@map("beta_signup")
+  @@schema("public")
+}
+
+// ------ MATCH (dbt-materialized, read-only from backend) ------
+
+/// Global top-N project recommendations (dbt-managed table).
+model MatchGlobalRecommendation {
+  project_id     String   @db.Uuid
+  stars          Int?
+  last_synced_at DateTime?
+
+  @@id([project_id])
+  @@map("match_global_recommendation")
+  @@schema("public")
+}
+
+/// Per-user personalized recommendations (dbt-managed table).
+model MatchUserRecommendation {
+  user_id          String   @db.Uuid
+  project_id       String   @db.Uuid
+  similarity_score Float?
+  preference_score Float?
+  freshness_score  Float?
+  popularity_score Float?
+  final_score      Float?
+  calculated_at    DateTime?
+
+  @@id([user_id, project_id])
+  @@map("match_user_recommendation")
+  @@schema("public")
+}
+
+// ------ LINKER ------
+// Raw / Embedding tables, not managed by dbt
+
+model RawGithubReadme {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String
+  repo_url   String?
+  content    String?
+  created_at DateTime @default(now())
+
+  @@unique([project_id])
+  @@map("raw_github_readme")
+  @@schema("github")
+}
+
+model RawGithubTopics {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String
+  repo_url   String?
+  topics     Json?
+  created_at DateTime @default(now())
+
+  @@unique([project_id])
+  @@map("raw_github_topics")
+  @@schema("github")
+}
+
+model RawGithubLanguages {
+  id         String   @id @default(uuid()) @db.Uuid
+  project_id String
+  repo_url   String?
+  languages  Json?
+  created_at DateTime @default(now())
+
+  @@unique([project_id])
+  @@map("raw_github_languages")
+  @@schema("github")
+}
+
+model RawGithubProject {
+  id        String   @id @default(uuid()) @db.Uuid
+  data      Json
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("raw_github_project")
+  @@schema("github")
+}
+
+model IntGithubDetection {
+  id                  String   @id @default(uuid())
+  project_id          String   @unique
+  repo_url            String?
+  language_detected   String?
+  language_confidence Float?
+  created_at          DateTime @default(now())
+
+  @@map("int_github_detection")
+  @@schema("github")
+}
+
+model EmbdGithubProject {
+  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId String                 @unique @db.Uuid
+  vector    Unsupported("vector")?
+  createdAt DateTime               @default(now())
+
+  @@map("embd_github_project")
+  @@schema("ml")
+}
+
+model EmbdUser {
+  id        String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId    String                 @unique @db.Uuid
+  vector    Unsupported("vector")?
+  createdAt DateTime               @default(now())
+  updatedAt DateTime               @updatedAt
+
+  @@map("embd_user")
+  @@schema("ml")
 }
