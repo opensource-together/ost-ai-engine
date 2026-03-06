@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -124,28 +125,31 @@ func scrapeQuery(ctx context.Context, pool *pgxpool.Pool, client *http.Client, r
 	return res
 }
 
-// parseQueries resolves the list of queries from env vars.
+// parseQueriesFromEnv resolves the list of queries from env vars.
 // Priority: GITHUB_SCRAPING_QUERIES (JSON array) > GITHUB_SCRAPING_QUERY (single string).
-func parseQueries() []string {
+// Returns an error instead of calling log.Fatal so it can be tested.
+func parseQueriesFromEnv() ([]string, error) {
 	if raw := os.Getenv("GITHUB_SCRAPING_QUERIES"); raw != "" {
 		var queries []string
 		if err := json.Unmarshal([]byte(raw), &queries); err != nil {
-			log.Fatalf("Failed to parse GITHUB_SCRAPING_QUERIES as JSON array: %v", err)
+			return nil, fmt.Errorf("failed to parse GITHUB_SCRAPING_QUERIES as JSON array: %w", err)
 		}
 		if len(queries) == 0 {
-			log.Fatal("GITHUB_SCRAPING_QUERIES is an empty array")
+			return nil, fmt.Errorf("GITHUB_SCRAPING_QUERIES is an empty array")
 		}
-		return queries
+		return queries, nil
 	}
 	if q := os.Getenv("GITHUB_SCRAPING_QUERY"); q != "" {
-		return []string{q}
+		return []string{q}, nil
 	}
-	log.Fatal("Either GITHUB_SCRAPING_QUERIES or GITHUB_SCRAPING_QUERY must be set")
-	return nil
+	return nil, fmt.Errorf("either GITHUB_SCRAPING_QUERIES or GITHUB_SCRAPING_QUERY must be set")
 }
 
 func main() {
-	queries := parseQueries()
+	queries, err := parseQueriesFromEnv()
+	if err != nil {
+		log.Fatal(err)
+	}
 	log.Printf("[INFO] Running %d queries", len(queries))
 	for i, q := range queries {
 		log.Printf("[INFO]   query[%d]: %s", i, q)
