@@ -25,16 +25,16 @@ OST Linker is a data pipeline (Dagster + dbt + Go) that scrapes GitHub, classifi
 | Profiles | Hardcoded passwords | `dbt/profiles.yml` |
 | Go HTTP | Unbounded `io.ReadAll` (OOM) | `src/services/go/fetcher/` |
 
-### Known vulnerabilities (from last review)
+### Known vulnerabilities (from last review — 2026-03-06)
 
-1. **SQL injection** — `io_manager.py:39-44` uses `f"SELECT * FROM {full_table_name}"` from asset key path
-2. **SQL injection (Go)** — `fetcher/common.go:97-104` uses `fmt.Sprintf` for table name in query
-3. **Credential leak** — `scripts/check_db.py:9` prints full `DATABASE_URL` including password
-4. **Hardcoded secrets** — `dbt/profiles.yml:8-9` has default password `'postgres'`
-5. **Hardcoded paths** — `scripts/go_binary_gen.sh`, `scripts/clean_dagster.sh` have developer-specific absolute paths
-6. **Force push** — `sync-docs-submodule.yml:39` and `sync-prisma-backend.yml:56` use `git push --force`
-7. **No body size limit** — Go fetcher uses `io.ReadAll` without `io.LimitReader`
-8. **Version mismatch** — `pyproject.toml` targets Python 3.13 for ruff/mypy but runtime is 3.11
+1. ~~**SQL injection** — `io_manager.py`~~ FIXED: table name allowlist validation added
+2. ~~**SQL injection (Go)** — `fetcher/common.go`~~ FIXED: table name allowlist map added
+3. ~~**Credential leak** — `scripts/check_db.py`~~ FIXED: password masked before printing
+4. ~~**Hardcoded secrets** — `dbt/profiles.yml`~~ FIXED: defaults removed
+5. ~~**Hardcoded paths** — `scripts/go_binary_gen.sh`, `scripts/clean_dagster.sh`~~ FIXED: relative paths
+6. **Force push** — `sync-docs-submodule.yml:39` and `sync-prisma-backend.yml:56` use `git push --force` (accepted risk for sync branches)
+7. ~~**No body size limit** — Go fetcher `io.ReadAll`~~ FIXED: `io.LimitReader` (10MB) added
+8. ~~**Version mismatch** — `pyproject.toml` ruff/mypy target~~ FIXED: aligned to Python 3.11
 
 ## Audit workflow
 

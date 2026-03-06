@@ -8,6 +8,10 @@ from src.services.python.db import get_db_cursor
 DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 
 
+class _CriticalSyncError(Exception):
+    """Raised for DB errors that must propagate and not be swallowed."""
+
+
 @asset(
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
@@ -131,7 +135,7 @@ def core_public__sync_projects(
                     context.log.error(
                         f"DB Error upserting classification for {p['id']}: {db_err}"
                     )
-                    raise db_err
+                    raise _CriticalSyncError(str(db_err)) from db_err
 
                 # C. Relations
 
@@ -175,6 +179,8 @@ def core_public__sync_projects(
 
             synced_count += 1
 
+        except _CriticalSyncError:
+            raise
         except Exception as e:
             context.log.error(f"Failed to sync '{p.get('title')}': {e}")
 

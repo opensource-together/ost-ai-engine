@@ -69,8 +69,13 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 COPY --from=go-builder /app/bin/ost-fetcher /usr/local/bin/ost-fetcher
 COPY --from=go-builder /app/bin/ost-scraper /usr/local/bin/ost-scraper
 
-# Copy project code
-COPY . .
+# Copy project code (targeted — avoid copying unnecessary files)
+COPY src/ ./src/
+COPY dbt/ ./dbt/
+COPY scripts/ ./scripts/
+COPY models/ ./models/
+COPY prisma/ ./prisma/
+COPY workspace.yaml pyproject.toml dagster.prod.yaml ./
 
 # Set environment
 ENV DAGSTER_HOME=/app/dagster_home

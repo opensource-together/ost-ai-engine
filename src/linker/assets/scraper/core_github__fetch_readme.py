@@ -68,7 +68,7 @@ def core_github__fetch_readme(
     context.log.info(f"Running command: {' '.join(cmd)}")
     try:
         result = subprocess.run(
-            cmd, env=env, capture_output=True, text=True, check=True
+            cmd, env=env, capture_output=True, text=True, check=True, timeout=600
         )
         context.log.info(f"Go fetcher stdout:\n{result.stdout}")
         if result.stderr:

@@ -28,7 +28,6 @@ func newRateLimiter() *rateLimiter {
 
 func (rl *rateLimiter) wait() {
 	rl.mu.Lock()
-	defer rl.mu.Unlock()
 	if rl.remaining <= 1 && time.Now().Before(rl.resetAt) {
 		sleepDur := time.Until(rl.resetAt) + time.Second
 		log.Printf("[RATE-LIMIT] Exhausted, sleeping %s until reset", sleepDur)
@@ -36,6 +35,7 @@ func (rl *rateLimiter) wait() {
 		time.Sleep(sleepDur)
 		rl.mu.Lock()
 	}
+	rl.mu.Unlock()
 }
 
 func (rl *rateLimiter) update(resp *http.Response) {
@@ -93,8 +93,21 @@ func extractOwnerRepo(rawURL string) (string, string) {
 	return parts[0], parts[1]
 }
 
-// getNewProjects fetches only projects not yet present in targetTable (incremental fetch).
-func (f *GitHubFetcher) getNewProjects(ctx context.Context, limit int, targetTable string) ([]Project, error) {
+// validTargetTables is an allowlist of mode keys to fully-qualified table names used by
+// getNewProjects. Only these values may be interpolated into the SQL query.
+var validTargetTables = map[string]string{
+	"readme":    "github.raw_github_readme",
+	"languages": "github.raw_github_languages",
+	"topics":    "github.raw_github_topics",
+}
+
+// getNewProjects fetches only projects not yet present in the table identified by modeKey
+// (incremental fetch). modeKey must be one of the keys in validTargetTables.
+func (f *GitHubFetcher) getNewProjects(ctx context.Context, limit int, modeKey string) ([]Project, error) {
+	targetTable, ok := validTargetTables[modeKey]
+	if !ok {
+		return nil, fmt.Errorf("getNewProjects: unknown mode key %q", modeKey)
+	}
 	query := fmt.Sprintf(`
 		SELECT d.project_id, d.repo_url
 		FROM github.int_github_detection d
@@ -207,7 +220,10 @@ func (f *GitHubFetcher) retryRequest(ctx context.Context, reqURL string, maxAtte
 		resp.Body.Close()
 
 		if resp.StatusCode == 200 {
-			return body, readErr
+			if readErr != nil {
+				return nil, readErr
+			}
+			return body, nil
 		}
 		if resp.StatusCode == 404 || resp.StatusCode == 422 {
 			return nil, fmt.Errorf("status %d", resp.StatusCode)

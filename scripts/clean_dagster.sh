@@ -1,10 +1,11 @@
 #!/bin/bash
 
-# Définir le chemin du dossier .dagster_home
-HOME="/Users/hich/Desktop/git.nosync/ost-linker"
-DAGSTER_HOME_DIR="$HOME/dagster"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_ROOT="$(dirname "$SCRIPT_DIR")"
 
-echo "Nettoyage du dossier $DAGSTER_HOME_DIR..."
+DAGSTER_HOME_DIR="$PROJECT_ROOT/dagster"
+
+echo "Cleaning directory $DAGSTER_HOME_DIR..."
 find "$DAGSTER_HOME_DIR" -mindepth 1 -not -name 'dagster.yaml' -exec rm -rf {} +
 
-echo "Nettoyage terminé. Seul le fichier dagster.yaml a été conservé."
+echo "Cleanup complete. Only dagster.yaml was preserved."

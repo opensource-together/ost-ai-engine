@@ -11,7 +11,7 @@ import (
 )
 
 func (f *GitHubFetcher) FetchTopics(ctx context.Context, limit int) (int, error) {
-	projects, err := f.getNewProjects(ctx, limit, "github.raw_github_topics")
+	projects, err := f.getNewProjects(ctx, limit, "topics")
 	if err != nil {
 		return 0, err
 	}

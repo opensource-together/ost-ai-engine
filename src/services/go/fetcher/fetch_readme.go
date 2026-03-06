@@ -37,7 +37,7 @@ func (f *GitHubFetcher) fetchReadmeContent(ctx context.Context, owner, repo stri
 		}
 		f.rl.update(resp)
 
-		body, readErr := io.ReadAll(resp.Body)
+		body, readErr := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 		resp.Body.Close()
 
 		if resp.StatusCode == 200 {
@@ -58,7 +58,7 @@ func (f *GitHubFetcher) fetchReadmeContent(ctx context.Context, owner, repo stri
 }
 
 func (f *GitHubFetcher) FetchReadmes(ctx context.Context, limit int) (int, error) {
-	projects, err := f.getNewProjects(ctx, limit, "github.raw_github_readme")
+	projects, err := f.getNewProjects(ctx, limit, "readme")
 	if err != nil {
 		return 0, err
 	}
