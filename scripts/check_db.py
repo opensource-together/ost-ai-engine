@@ -1,12 +1,23 @@
 
 import os
+from urllib.parse import urlparse, urlunparse
+
 import psycopg2
 from dotenv import load_dotenv
 
 load_dotenv()
 
 DB_URL = os.getenv("DATABASE_URL")
-print(f"Testing connection to: {DB_URL}")
+
+parsed = urlparse(DB_URL)
+if parsed.password:
+    masked = parsed._replace(
+        netloc=f"{parsed.username}:****@{parsed.hostname}:{parsed.port}"
+    )
+    url_display = urlunparse(masked)
+else:
+    url_display = DB_URL
+print(f"Testing connection to: {url_display}")
 
 try:
     conn = psycopg2.connect(DB_URL)

@@ -118,7 +118,8 @@ jobs:
       - name: Validate Prisma schema
         run: npx prisma validate --schema prisma/schema.prisma
         env:
-          DATABASE_URL: "postgresql://user:pass@localhost:5432/db"
+          # Prisma validate only checks schema syntax, it does not connect to a database
+          DATABASE_URL: "postgresql://validate:validate@localhost:5432/validate"
 
   security:
     runs-on: ubuntu-latest

@@ -4,11 +4,54 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"net/http"
 	"net/url"
 	"strconv"
+	"sync"
 	"time"
 )
+
+// searchRateLimiter serializes access to the GitHub Search API across goroutines.
+// The Search API is limited to 30 req/min for authenticated requests.
+type searchRateLimiter struct {
+	mu        sync.Mutex
+	remaining int
+	resetAt   time.Time
+}
+
+func newSearchRateLimiter() *searchRateLimiter {
+	return &searchRateLimiter{remaining: 30}
+}
+
+// wait blocks the caller until a Search API request slot is available.
+func (rl *searchRateLimiter) wait() {
+	rl.mu.Lock()
+	if rl.remaining <= 1 && time.Now().Before(rl.resetAt) {
+		sleepDur := time.Until(rl.resetAt) + time.Second
+		log.Printf("[RATE-LIMIT] Search API exhausted, sleeping %s until reset", sleepDur)
+		rl.mu.Unlock()
+		time.Sleep(sleepDur)
+		rl.mu.Lock()
+	}
+	rl.mu.Unlock()
+}
+
+// update reads X-RateLimit-* headers from the response to keep the limiter accurate.
+func (rl *searchRateLimiter) update(resp *http.Response) {
+	rl.mu.Lock()
+	defer rl.mu.Unlock()
+	if v := resp.Header.Get("X-RateLimit-Remaining"); v != "" {
+		if n, err := strconv.Atoi(v); err == nil {
+			rl.remaining = n
+		}
+	}
+	if v := resp.Header.Get("X-RateLimit-Reset"); v != "" {
+		if ts, err := strconv.ParseInt(v, 10, 64); err == nil {
+			rl.resetAt = time.Unix(ts, 0)
+		}
+	}
+}
 
 type githubRepo struct {
 	ID          int64   `json:"id"`
@@ -51,7 +94,7 @@ func newHTTPClient() *http.Client {
 	return &http.Client{Timeout: 30 * time.Second}
 }
 
-func fetchGitHubRepos(ctx context.Context, client *http.Client, token string, apiURL string, query string, perPage, page int) (githubSearchResponse, error) {
+func fetchGitHubRepos(ctx context.Context, client *http.Client, rl *searchRateLimiter, token string, apiURL string, query string, perPage, page int) (githubSearchResponse, error) {
 	var result githubSearchResponse
 	if apiURL == "" {
 		return result, fmt.Errorf("GITHUB_API_URL is required but not set")
@@ -67,6 +110,9 @@ func fetchGitHubRepos(ctx context.Context, client *http.Client, token string, ap
 	q.Set("per_page", strconv.Itoa(perPage))
 	q.Set("page", strconv.Itoa(page))
 	base.RawQuery = q.Encode()
+
+	// Block until the shared rate limiter grants a slot.
+	rl.wait()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", base.String(), nil)
 	if err != nil {
@@ -84,6 +130,9 @@ func fetchGitHubRepos(ctx context.Context, client *http.Client, token string, ap
 		return result, err
 	}
 	defer resp.Body.Close()
+
+	// Update the limiter with headers from this response regardless of status.
+	rl.update(resp)
 
 	if resp.StatusCode == 403 {
 		retryAfter := resp.Header.Get("Retry-After")

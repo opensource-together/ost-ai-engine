@@ -8,22 +8,27 @@ from psycopg2.extras import RealDictCursor
 
 
 @contextmanager
-def get_db_connection() -> Generator[Any]:
+def get_db_connection(commit: bool = False) -> Generator[Any]:
     """
     Context manager for a database connection.
     Yields a connection object.
+
+    Args:
+        commit: If True, commits the transaction on success.
+                If False, rolls back on exit (read-only usage).
     """
     conn = None
     try:
-        # Connect to the database using the DATABASE_URL environment variable
-        # or fallback to a default if not set (though it should be set)
         db_url = os.environ.get("DATABASE_URL")
         if not db_url:
             raise ValueError("DATABASE_URL environment variable is not set")
 
         conn = psycopg2.connect(db_url)
         yield conn
-        conn.commit()
+        if commit:
+            conn.commit()
+        else:
+            conn.rollback()
     except Exception as e:
         if conn:
             conn.rollback()
@@ -38,6 +43,13 @@ def get_db_cursor(commit: bool = False) -> Generator[Any]:
     """
     Context manager for a database cursor.
     Yields a cursor object (RealDictCursor).
+
+    Args:
+        commit: If True, commits the transaction on success.
+                If False, rolls back on exit (read-only usage).
     """
-    with get_db_connection() as conn, conn.cursor(cursor_factory=RealDictCursor) as cur:
+    with (
+        get_db_connection(commit=commit) as conn,
+        conn.cursor(cursor_factory=RealDictCursor) as cur,
+    ):
         yield cur

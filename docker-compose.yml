@@ -14,9 +14,6 @@ x-common-env: &common-env
 
 x-common-volumes: &common-volumes
   - dagster_data:/app/dagster_home
-  - ./src:/app/src
-  - ./dbt:/app/dbt
-  - ./scripts:/app/scripts
 
 services:
   # ============================================================================

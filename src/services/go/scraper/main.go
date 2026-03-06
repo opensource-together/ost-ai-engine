@@ -32,7 +32,7 @@ type scrapeSummary struct {
 }
 
 // scrapeQuery runs the paginated scrape+upsert loop for a single GitHub search query.
-func scrapeQuery(ctx context.Context, pool *pgxpool.Pool, client *http.Client,
+func scrapeQuery(ctx context.Context, pool *pgxpool.Pool, client *http.Client, rl *searchRateLimiter,
 	token, apiURL, query string, maxRepos, perPage int) queryResult {
 
 	res := queryResult{Query: query}
@@ -42,7 +42,7 @@ func scrapeQuery(ctx context.Context, pool *pgxpool.Pool, client *http.Client,
 		var ghRes githubSearchResponse
 		var fetchErr error
 		for attempt := 1; attempt <= maxRetries; attempt++ {
-			ghRes, fetchErr = fetchGitHubRepos(ctx, client, token, apiURL, query, perPage, page)
+			ghRes, fetchErr = fetchGitHubRepos(ctx, client, rl, token, apiURL, query, perPage, page)
 			if fetchErr == nil {
 				break
 			}
@@ -180,6 +180,7 @@ func main() {
 	defer pool.Close()
 
 	client := newHTTPClient()
+	rl := newSearchRateLimiter()
 	start := time.Now()
 
 	results := make([]queryResult, len(queries))
@@ -189,7 +190,7 @@ func main() {
 		wg.Add(1)
 		go func(i int, query string) {
 			defer wg.Done()
-			results[i] = scrapeQuery(ctx, pool, client, token, apiURL, query, maxRepos, perPage)
+			results[i] = scrapeQuery(ctx, pool, client, rl, token, apiURL, query, maxRepos, perPage)
 		}(idx, q)
 	}
 

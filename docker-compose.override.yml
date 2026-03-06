@@ -8,6 +8,10 @@ services:
     volumes:
       # Dev override: mount local SQLite dagster.yaml over the prod Postgres config
       - ./dagster.yaml:/app/dagster_home/dagster.yaml
+      # Dev override: bind-mount source code for live reload
+      - ./src:/app/src
+      - ./dbt:/app/dbt
+      - ./scripts:/app/scripts
     depends_on:
       db:
         condition: service_healthy
@@ -17,6 +21,10 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
     volumes:
       - ./dagster.yaml:/app/dagster_home/dagster.yaml
+      # Dev override: bind-mount source code for live reload
+      - ./src:/app/src
+      - ./dbt:/app/dbt
+      - ./scripts:/app/scripts
 
   # ============================================================================
   # DATABASE (Postgres + PGVector) — dev only

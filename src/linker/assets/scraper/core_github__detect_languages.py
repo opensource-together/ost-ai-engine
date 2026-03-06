@@ -208,6 +208,7 @@ def core_github__detect_languages(
             )
     except Exception as e:
         context.log.error(f"Failed to insert detection records: {e}")
+        raise
 
     # Build helpful metadata for debugging
     lang_counts: dict = {}
