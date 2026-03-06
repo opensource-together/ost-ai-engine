@@ -12,11 +12,12 @@
 
 ## Jobs
 
-- `run_all_job` — runs all assets (scheduled 5x daily Europe/Paris)
-- `project_scraper_job` — ingestion only
-- `project_classification_job` — triggered by sensor after scraper succeeds
-- `project_embedding_job` — ML embedding
-- `cleanup_dagster_history_job` — housekeeping
+- `run_all_job` — runs all asset groups (scheduled 1x daily at 3 AM Europe/Paris)
+- `project_scraper_job` — ingestion only (with retry policy)
+- `project_classification_job` — classification + sync (triggered by sensor after scraper succeeds, with retry policy)
+- `project_embedding_job` — ml_preparation + ml + matching
+- `user_recommendation_job` — user embeddings + matching + sync (scheduled every 2h)
+- `cleanup_dagster_history_job` — housekeeping (scheduled every 2 days at 23h)
 
 ## Sensor
 

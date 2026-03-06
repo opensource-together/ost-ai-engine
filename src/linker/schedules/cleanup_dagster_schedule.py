@@ -7,6 +7,7 @@ cleanup_dagster_history_schedule = ScheduleDefinition(
     name="cleanup_dagster_history_schedule",
     job=cleanup_dagster_history_job,
     cron_schedule="0 23 */2 * *",
+    execution_timezone="Europe/Paris",
     default_status=DefaultScheduleStatus.RUNNING,
     run_config={},
 )
