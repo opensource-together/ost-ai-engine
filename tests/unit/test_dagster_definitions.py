@@ -10,7 +10,6 @@ EXPECTED_ASSET_GROUPS = {
 }
 EXPECTED_JOB_NAMES = {
     "run_all_job",
-    "project_scraper_job",
     "project_enrichment_job",
     "cleanup_dagster_history_job",
     "user_recommendation_job",

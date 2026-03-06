@@ -9,6 +9,7 @@ from dagster import (
 project_enrichment_job = define_asset_job(
     name="project_enrichment_job",
     selection=AssetSelection.groups(
+        "ingestion",
         "classification",
         "sync",
         "project_ml",
@@ -21,7 +22,7 @@ project_enrichment_job = define_asset_job(
     ),
     tags={"dagster/max_concurrent_runs": "1"},
     description=(
-        "Classifies projects via LLM, syncs to public, computes embeddings, "
-        "and materializes project recommendations."
+        "Full project flow: scrapes GitHub, classifies via LLM, "
+        "syncs to public, embeds, and materializes recommendations."
     ),
 )
