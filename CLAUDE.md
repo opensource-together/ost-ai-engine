@@ -85,8 +85,23 @@ When fixing a bug, always follow this order:
 2. Fix the code until the test passes
 3. Never skip step 1 — no test, no fix
 
+## Git Flow
+
+`feature-branch` → `develop` (test) → `staging` (deploy) → `main` (release)
+
 ## CI/CD
 
 - `publish-prod.yml` — on release, pushes Docker image to `ghcr.io/opensource-together/ia`
 - `publish-develop.yml` — develop branch deployment
 - `deploy-docs.yml` — auto-syncs `docs/ai/**` to external docs repo
+- `claude-code-review.yml` — automatic Claude review on every PR (Sonnet)
+- `claude.yml` — `@claude` assistant in issues and PR comments
+
+## Custom Agents (`.claude/agents/`)
+
+| Agent | Model | Purpose |
+|---|---|---|
+| `pipeline-doctor` | opus | Dagster pipeline debugging and diagnostics |
+| `dbt-analyst` | sonnet | dbt model review, debugging, and conventions |
+| `security-auditor` | opus | Security audit (SQL injection, secrets, Docker, CI) |
+| `go-service-reviewer` | sonnet | Go scraper/fetcher review (concurrency, rate limiting) |
