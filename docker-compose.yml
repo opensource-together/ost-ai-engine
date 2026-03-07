@@ -1,52 +1,56 @@
-# ========================================
-# DOCKER COMPOSE - OST AI ENGINE
-# ========================================
+# Shared environment variables for Dagster services
+x-common-env: &common-env
+  DATABASE_URL: ${DATABASE_URL}
+  DAGSTER_HOME: /app/dagster_home
+  DAGSTER_STORAGE_DIR: /app/dagster_home/storage
+  DAGSTER_LOGS_DIR: /app/dagster_home/logs
+  DAGSTER_PG_URL: ${DAGSTER_PG_URL:-${DATABASE_URL}}
+  GITHUB_ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
+  GO_SCRAPER_PATH: /usr/local/bin/ost-scraper
+  GO_FETCHER_PATH: /usr/local/bin/ost-fetcher
+  DBT_TARGET: docker
+  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+  FASTTEXT_MODEL_PATH: models/lid.176.ftz
+
+x-common-volumes: &common-volumes
+  - dagster_data:/app/dagster_home
+
 services:
-  postgres:
-    image: postgres:16
-    container_name: ost-db
+  # ============================================================================
+  # DAGSTER WEBSERVER (UI + GraphQL API)
+  # ============================================================================
+  webserver:
+    build: .
+    container_name: ost-linker-webserver
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
     environment:
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
-      POSTGRES_USER: ${POSTGRES_USER}
-      POSTGRES_DB: ${POSTGRES_DB}
-    ports:
-      - "7777:5432"
-    volumes:
-      - pgdata:/var/lib/postgresql/data
+      <<: *common-env
+    volumes: *common-volumes
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/server_info"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 120s
+    command: ["./scripts/init.sh", "dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-w", "/app/workspace.yaml"]
 
-  dagster-daemon:
-    build:
-      context: .
-    container_name: dagster-daemon
-    env_file:
-      - .env
+  # ============================================================================
+  # DAGSTER DAEMON (schedules, sensors, run queue)
+  # ============================================================================
+  daemon:
+    build: .
+    container_name: ost-linker-daemon
+    restart: unless-stopped
+    environment:
+      <<: *common-env
+      DAGSTER_ROLE: daemon
+    volumes: *common-volumes
     depends_on:
-      - postgres
-    volumes:
-      - ./config/cfg.py:/app/config/cfg.py
-      - ./config/cfg.yaml:/app/config/cfg.yaml
-      # Mount the whole dagster package for code changes and local history/logs
-      - ./src/:/app/src/
-      # Dagster instance storage (matches src/pipeline/dagster.yaml base_dir)
-      - ./.dagster_home:/app/.dagster_home
-    command: ["dagster-daemon", "run"]
-
-  dagster-webserver:
-    build:
-      context: .
-    container_name: dagster-webserver
-    env_file:
-      - .env
-    depends_on:
-      - postgres
-    ports:
-      - "7778:3000"
-    volumes:
-      - ./config/cfg.py:/app/config/cfg.py
-      - ./config/cfg.yaml:/app/config/cfg.yaml
-      - ./src/:/app/src
-      - ./.dagster_home:/app/.dagster_home
-    command: ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000"]
+      webserver:
+        condition: service_healthy
+    command: ["./scripts/init.sh", "dagster-daemon", "run", "-w", "/app/workspace.yaml"]
 
 volumes:
-  pgdata:
+  dagster_data:

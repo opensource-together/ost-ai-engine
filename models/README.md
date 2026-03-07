@@ -1,26 +1,24 @@
+# Models
 
-lid.176.ftz — FastText language identification model
-===============================================
+Binary model artifacts needed by the pipeline. **Not tracked in git** — downloaded at build time or manually.
 
-What
-- A pre-trained FastText language identification model (the "lid.176" model supporting 176 languages).
+## lid.176.ftz
 
-Why it's in this repo
-- The pipeline uses this model to detect the language of repository content and other text assets so it can tag, filter, or route data correctly during processing.
+FastText language identification model (176 languages).
 
-Where it's used
-- Loaded by `src/pipeline/assets/core/assets.py` (calls `fasttext.load_model`); the default path in code is `/app/models/lid.176.ftz` and can be overridden via the `fasttext_model_path` configuration key.
+**Used by:** `FastTextModelResource` (`src/linker/resources/fasttext_resource.py`)
+**Config:** `FASTTEXT_MODEL_PATH` env var (default: `models/lid.176.ftz`)
 
-How to update or replace the file
-- Download the official model from fastText (see: https://fasttext.cc/docs/en/language-identification.html). The file to use is typically named `lid.176.ftz`.
-- Place the file at `models/lid.176.ftz` in the project root (or point `fasttext_model_path` in your config to another location).
-- Restart the pipeline/Dagster worker to pick up the new model.
+### Download
 
-Quick example
-- Python:
-	from fasttext import load_model
-	m = load_model("models/lid.176.ftz")
-	lang = m.predict("some text")[0][0].replace("__label__","")
+```bash
+curl -o models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
+```
 
-Notes
-- This is a binary model artifact; keep large model files out of git (see `.gitignore` — `models/*`).
+### Usage
+
+```python
+from fasttext import load_model
+m = load_model("models/lid.176.ftz")
+lang = m.predict("some text")[0][0].replace("__label__", "")
+```

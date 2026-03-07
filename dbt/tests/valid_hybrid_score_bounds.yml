@@ -1,0 +1,8 @@
+version: 2
+
+data_tests:
+  - name: valid_hybrid_score_bounds
+    description: >
+      Verifies all score components (similarity, preference, freshness, popularity, final)
+      in match_user_recommendation are within the expected [0, 1] range.
+      Any row outside bounds indicates a clamping or normalization bug.

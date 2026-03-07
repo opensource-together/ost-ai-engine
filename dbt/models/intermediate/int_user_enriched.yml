@@ -1,0 +1,25 @@
+version: 2
+
+models:
+  - name: int_user_enriched
+    description: "Intermediate model joining users with their domains, tech stacks, and categories"
+    columns:
+      - name: user_id
+        description: "Primary key — UUID from public.User"
+        tests:
+          - unique
+          - not_null
+      - name: name
+        description: "User display name"
+      - name: bio
+        description: "User biography"
+      - name: job_title
+        description: "User job title"
+      - name: experiences
+        description: "User experience level (JSON or scalar from public.User.experiences)"
+      - name: tech_stacks
+        description: "Comma-separated list of tech stack names"
+      - name: domains
+        description: "Comma-separated list of domain names"
+      - name: categories
+        description: "Comma-separated list of category names"

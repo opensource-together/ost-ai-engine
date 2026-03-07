@@ -1,0 +1,13 @@
+version: 2
+
+models:
+  - name: int_project_embedding_candidate
+    description: "Selects all published or trending projects and enriches them with classification context for embedding."
+    columns:
+      - name: project_id
+        description: "FK projects"
+        tests:
+          - unique
+          - not_null
+      - name: rich_context_string
+        description: "Enriched context string combining original metadata, readme, topics, category, and domain."

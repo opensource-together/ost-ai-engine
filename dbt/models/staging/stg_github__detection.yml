@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: stg_github__detection
+    description: >
+      Staging model for FastText language detection results.
+    columns:
+      - name: id
+        description: "Unique record identifier"
+        tests:
+          - unique
+          - not_null
+      - name: project_id
+        description: "FK to stg_github__project"
+      - name: repo_url
+        description: "Repository URL"
+      - name: language_detected
+        description: "Detected language code (e.g., 'en', 'python')"
+      - name: language_confidence
+        description: "Confidence score (0.0 - 1.0)"
+      - name: created_at
+        description: "Record creation timestamp"

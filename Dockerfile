@@ -1,154 +1,106 @@
-# ========================================
-# OST AI ENGINE - DOCKERFILE
-# ========================================
 
 # ==============================================================================
-# STAGE 1: Builder - install build deps and build the app
+# Stage 1: Go Builder
+# Compiles the separate Go services (fetcher and scraper)
 # ==============================================================================
-FROM python:3.11-slim AS builder
-
-# Install heavy system packages required only for build
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        build-essential \
-        gcc \
-        libpq-dev \
-        git \
-        curl \
-        ca-certificates \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 && \
-    rm -rf /var/lib/apt/lists/*
-
-# Install Poetry
-RUN pip install poetry==2.2.1
+FROM golang:1.24-alpine AS go-builder
 
 WORKDIR /app
 
-ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
-ENV XDG_CACHE_HOME=/app/.cache
-RUN mkdir -p /app/.cache/prisma
+# Copy Go service definitions
+# We assume the structure: src/services/go/{service}/go.mod
+COPY src/services/go/fetcher ./src/services/go/fetcher
+COPY src/services/go/scraper ./src/services/go/scraper
 
-# Configure Poetry to create the virtualenv inside the project
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true
+# Build Scraper
+WORKDIR /app/src/services/go/scraper
+RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-scraper .
 
-# Install Python dependencies
-COPY pyproject.toml poetry.lock ./
-RUN poetry install --no-root --only main
-
-# Copy source and generate Prisma client
-# Generate Prisma client and prefetch binaries into /app/.cache/prisma
-COPY src/ src/
-COPY prisma/ prisma/
-# Generate Prisma client and prefetch binaries into /app/.cache/prisma
-RUN poetry run prisma generate
-RUN poetry run prisma py fetch
-
-RUN mkdir -p /app/models && \
-    curl -fL -o /app/models/lid.176.ftz https://dl.fbaipublicfiles.com/fasttext/supervised-models/lid.176.ftz
+# Build Fetcher
+WORKDIR /app/src/services/go/fetcher
+RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-fetcher .
 
 # ==============================================================================
-# STAGE 2: Go builder - compile Go binaries
+# Stage 2: Python Builder
+# Exports requirements via uv
 # ==============================================================================
-FROM golang:1.25.3 AS go-builder
+FROM python:3.11-slim AS python-builder
 
-WORKDIR /go
+WORKDIR /app
 
-# Build args/env for proxy and module fetching
-ARG GOPROXY=https://proxy.golang.org,direct
-ARG HTTP_PROXY
-ARG HTTPS_PROXY
-ARG NO_PROXY
-ENV GOPROXY=${GOPROXY}
-ENV CGO_ENABLED=0
-ENV GOOS=linux
-ENV GOARCH=amd64
-ENV GOTOOLCHAIN=auto
+COPY --from=ghcr.io/astral-sh/uv:0.10 /uv /usr/local/bin/uv
 
-# Copy sources
-COPY src/services/go/github/ /go/github/
-COPY src/services/go/gitlab/ /go/gitlab/
+COPY pyproject.toml uv.lock ./
 
-# Build binaries (modules will be fetched automatically by go build)
-WORKDIR /go/github
-RUN go build -ldflags="-s -w" -o /go/github-scraper .
-WORKDIR /go/gitlab
-RUN go build -ldflags="-s -w" -o /go/gitlab-scraper .
+RUN uv export --frozen --no-dev --no-hashes --output-file requirements.txt
 
 # ==============================================================================
-# STAGE 3: Production - create lightweight final image
+# Stage 3: Runtime
+# Final lightweight image
 # ==============================================================================
-FROM python:3.11-slim AS production
+FROM python:3.11-slim
 
-# Install only runtime system libraries
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-        libpq5 \
-        libatomic1 \
-        libstdc++6 \
-        libgcc-s1 \
-        ca-certificates \
+WORKDIR /app
+
+# Install system dependencies
+# libpq-dev: psycopg2, git: dbt deps, curl: healthcheck, g++: fasttext C++ extension
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libpq-dev \
+    git \
+    curl \
+    g++ \
     && rm -rf /var/lib/apt/lists/*
 
-WORKDIR /app
+# Install Python dependencies
+# 1. Install torch CPU-only first (avoids downloading ~2GB of CUDA libs)
+# 2. Strip the `-e .` editable self-install line — the project is COPY'd later
+#    and discovered via PYTHONPATH, so there's no need for an editable install.
+# 3. Install remaining deps (torch is already satisfied, pip skips it)
+COPY --from=python-builder /app/requirements.txt .
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu \
+    && sed -i '/^-e \./d' requirements.txt \
+    && sed -i '/^torch==/d' requirements.txt \
+    && sed -i '/^nvidia-/d' requirements.txt \
+    && sed -i '/^triton==/d' requirements.txt \
+    && sed -i '/^cuda-/d' requirements.txt \
+    && pip install --no-cache-dir -r requirements.txt
 
-# Set environment variables
-ENV PROJECT_ROOT=.
-ENV CFG_PATH=config/cfg.py
-ENV OST_CONFIG_PATH=/app/config/cfg.yaml
-ENV DAGSTER_HOME=/app/.dagster_home
-ENV DAGSTER_STORAGE_DIR=/app/.dagster_home/history
-ENV DAGSTER_LOGS_DIR=/app/.dagster_home/logs
-ENV PRISMA_BINARY_CACHE_DIR=/app/.cache/prisma
-ENV XDG_CACHE_HOME=/app/.cache
+# Copy Go binaries from Stage 1
+COPY --from=go-builder /app/bin/ost-fetcher /usr/local/bin/ost-fetcher
+COPY --from=go-builder /app/bin/ost-scraper /usr/local/bin/ost-scraper
 
-# Configure Poetry to create the virtualenv inside the project
-ENV POETRY_VIRTUALENVS_IN_PROJECT=true
-ENV PATH="/app/.venv/bin:$PATH"
+# Copy project code (targeted — avoid copying unnecessary files)
+COPY src/ ./src/
+COPY dbt/ ./dbt/
+COPY scripts/ ./scripts/
+COPY models/ ./models/
+COPY prisma/ ./prisma/
+COPY workspace.yaml pyproject.toml dagster.prod.yaml ./
 
-# Create a non-root user for the app
-RUN addgroup --system app && adduser --system --group app
+# Set environment
+ENV DAGSTER_HOME=/app/dagster_home
+ENV DAGSTER_STORAGE_DIR=/app/dagster_home/storage
+ENV DAGSTER_LOGS_DIR=/app/dagster_home/logs
+ENV PYTHONPATH=/app
+ENV DBT_PROJECT_DIR=/app/dbt
 
-# Copy project configuration
-COPY --from=builder --chown=app:app /app/pyproject.toml ./pyproject.toml
-COPY --from=builder --chown=app:app /app/poetry.lock ./poetry.lock
+# Create Dagster home, copy prod config as default
+RUN mkdir -p $DAGSTER_HOME \
+    && cp dagster.prod.yaml $DAGSTER_HOME/dagster.yaml
 
-# Reuse the virtualenv built in the builder stage (no reinstall here)
-COPY --from=builder --chown=app:app /app/.venv /app/.venv
+# Create non-root user and set ownership for writable directories
+RUN groupadd -g 1000 appuser \
+    && useradd -u 1000 -g appuser -s /bin/bash appuser \
+    && chown -R appuser:appuser $DAGSTER_HOME /app/dbt /app/models /app/scripts
 
-# Copy required artifacts from previous stages
-COPY --chown=app:app src/pipeline/resources/ src/pipeline/resources/
-COPY --from=builder --chown=app:app /app/src src
+USER appuser
 
-COPY --from=builder --chown=app:app /app/prisma prisma
-COPY --from=builder --chown=app:app /app/.cache/prisma /app/.cache/prisma
-
-COPY --from=builder --chown=app:app /app/models /app/models
-
-# Copy helper scripts
-COPY --chown=app:app scripts/ /app/scripts/
-# Make entrypoint and helper scripts executable
-RUN chmod +x /app/scripts/cfg_cron.py /app/scripts/docker-entrypoint.sh || true
-
-COPY --from=go-builder --chown=app:app /go/github-scraper github-scraper
-COPY --from=go-builder --chown=app:app /go/gitlab-scraper gitlab-scraper
-
-# Create cache dirs and set ownership to 'app'
-RUN mkdir -p /app/.cache/prisma /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR} && \
-    chown -R app:app /app/.cache /app/.dagster_home /app/src/pipeline ${DAGSTER_STORAGE_DIR} ${DAGSTER_LOGS_DIR}
-
-# Create config dir and set owner
-RUN mkdir config/ && chown app:app config
-
-# Ensure Go binaries are executable (fix permission issues)
-RUN chmod +x /app/github-scraper /app/gitlab-scraper || true
-
-# Switch to non-root user for runtime (safer)
-USER app
-
+# Expose Dagster webserver port
 EXPOSE 3000
 
-ENTRYPOINT [ "/app/scripts/docker-entrypoint.sh" ]
-CMD ["dagster", "dev", "-m", "src.pipeline.definitions", "--host", "0.0.0.0", "--port", "3000" ]
+# Healthcheck for Dagster webserver
+HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
+    CMD curl -f http://localhost:3000/server_info || exit 1
+
+# Default command: run dagster-webserver (production mode)
+CMD ["dagster-webserver", "-h", "0.0.0.0", "-p", "3000", "-w", "/app/workspace.yaml"]

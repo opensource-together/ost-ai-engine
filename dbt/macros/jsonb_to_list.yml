@@ -1,0 +1,18 @@
+version: 2
+
+macros:
+  - name: jsonb_to_list
+    description: >
+      Converts a JSONB array (or object keys) to a comma-separated string.
+      Handles null, arrays, and {key: value} objects (e.g. GitHub languages API format).
+      Optionally normalizes (lowercase + trim + dedup).
+    arguments:
+      - name: column_name
+        type: string
+        description: "JSONB column to convert"
+      - name: separator
+        type: string
+        description: "Delimiter between values (default: ', ')"
+      - name: normalize
+        type: boolean
+        description: "If true, lowercase + trim + dedup (default: true)"

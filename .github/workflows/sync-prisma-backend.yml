@@ -1,0 +1,81 @@
+name: Sync prisma/ to ost-backend
+
+on:
+  pull_request:
+    branches: [main, staging]
+    paths:
+      - "prisma/**"
+
+jobs:
+  sync-prisma:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout ost-linker
+        uses: actions/checkout@v4
+        with:
+          path: linker
+
+      - name: Checkout ost-backend
+        uses: actions/checkout@v4
+        with:
+          repository: opensource-together/ost-backend
+          token: ${{ secrets.OST_LINKER_SYNC_TOKEN }}
+          path: backend
+
+      - name: Check if prisma changed
+        id: check
+        run: |
+          BASE_SHA=$(cd linker && git merge-base origin/${{ github.base_ref }} HEAD)
+          PRISMA_CHANGED=$(cd linker && git diff --name-only "$BASE_SHA" HEAD -- prisma/)
+          if [ -z "$PRISMA_CHANGED" ]; then
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Sync prisma/ and create PR on ost-backend
+        if: steps.check.outputs.changed == 'true'
+        run: |
+          BRANCH="sync/ost-linker-prisma-${{ github.head_ref }}"
+
+          cd backend
+          git config user.name "spideystreet"
+          git config user.email "dhicham.pro@gmail.com"
+          git checkout -b "$BRANCH"
+
+          # Replace backend prisma/ with linker prisma/
+          rm -rf prisma/
+          cp -r ../linker/prisma/ prisma/
+
+          # Check if there are actual changes
+          if git diff --quiet && [ -z "$(git ls-files --others --exclude-standard prisma/)" ]; then
+            echo "No changes to sync — skipping"
+            exit 0
+          fi
+
+          git add prisma/
+          git commit -m "chore(prisma): sync schema from ost-linker (${{ github.head_ref }})"
+          git push -u origin "$BRANCH" --force
+
+          # Create PR if one doesn't already exist
+          EXISTING=$(gh pr list --repo opensource-together/ost-backend --head "$BRANCH" --state open --json number -q '.[0].number' || echo "")
+          if [ -z "$EXISTING" ]; then
+            gh pr create \
+              --repo opensource-together/ost-backend \
+              --head "$BRANCH" \
+              --base develop \
+              --title "chore(prisma): sync from ost-linker (${{ github.head_ref }})" \
+              --body "$(cat <<'EOF'
+          ## Summary
+          Automated prisma sync from [ost-linker](${{ github.server_url }}/${{ github.repository }}/pull/${{ github.event.pull_request.number }}).
+
+          This PR contains schema/migration changes made in the ost-linker repository.
+          Please review and merge to keep the backend schema in sync.
+          EOF
+          )"
+            echo "PR created on ost-backend"
+          else
+            echo "PR #$EXISTING already exists on ost-backend"
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.OST_LINKER_SYNC_TOKEN }}

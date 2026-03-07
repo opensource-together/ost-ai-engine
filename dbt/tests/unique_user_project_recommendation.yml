@@ -1,0 +1,7 @@
+version: 2
+
+data_tests:
+  - name: unique_user_project_recommendation
+    description: >
+      Ensures no duplicate (user_id, project_id) pairs exist in match_user_recommendation.
+      A user should receive at most one recommendation per project.
