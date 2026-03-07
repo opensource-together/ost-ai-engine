@@ -11,23 +11,30 @@ from sqlalchemy.engine import Engine
 _VALID_IDENTIFIERS_RE = re.compile(r"^[a-zA-Z_][a-zA-Z0-9_]*$")
 
 _ALLOWED_TABLES: set[tuple[str, str]] = {
-    # ingestion / dbt staging
+    # ingestion / dbt staging (github schema)
     ("github", "stg_github__project"),
     ("github", "stg_github__readme"),
     ("github", "stg_github__languages"),
     ("github", "stg_github__topics"),
+    ("github", "stg_github__detection"),
     ("github", "stg_public__category"),
     ("github", "stg_public__domain"),
-    # dbt intermediate
+    # dbt staging (ml schema)
+    ("ml", "stg_public__user"),
+    ("ml", "stg_public__project"),
+    # dbt intermediate (github schema)
     ("github", "int_project_enriched"),
     ("github", "int_github_detection"),
-    ("github", "int_project_contextualized"),
-    ("github", "int_project_embedding_candidate"),
-    ("github", "int_user_enriched"),
+    # dbt intermediate (ml schema)
+    ("ml", "int_user_enriched"),
+    ("ml", "int_project_contextualized"),
+    ("ml", "int_project_embedding_candidate"),
     # dbt marts / facts
     ("github", "fct_github_project"),
-    ("public", "fct_public_user"),
-    # match
+    ("ml", "fct_public_user"),
+    # match (public schema per dbt config)
+    ("public", "match_global_recommendation"),
+    ("public", "match_user_recommendation"),
     ("match", "match_global_recommendation"),
     ("match", "match_user_recommendation"),
     ("match", "project_classification"),

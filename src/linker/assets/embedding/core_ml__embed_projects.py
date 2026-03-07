@@ -17,7 +17,7 @@ UPSERT_EMBEDDING_QUERY = text("""
 
 @asset(
     compute_kind="python",
-    group_name="ml",
+    group_name="project_ml",
     key=AssetKey(["ml", "embd_github_project"]),
     ins={
         "projects_df": AssetIn(key=AssetKey(["ml", "int_project_embedding_candidate"]))

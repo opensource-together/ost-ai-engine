@@ -115,9 +115,9 @@ preference_scored AS (
         cp.shared_categories,
         cp.shared_domains,
         -- Ratios (NULL when user has no items in that dimension)
-        cp.shared_tech_stacks::float / nullif(ut.total_tech_stacks, 0) AS tech_ratio,
-        cp.shared_categories::float / nullif(ut.total_categories, 0) AS cat_ratio,
-        cp.shared_domains::float / nullif(ut.total_domains, 0) AS dom_ratio,
+        {{ safe_divide('cp.shared_tech_stacks', 'ut.total_tech_stacks') }} AS tech_ratio,
+        {{ safe_divide('cp.shared_categories', 'ut.total_categories') }} AS cat_ratio,
+        {{ safe_divide('cp.shared_domains', 'ut.total_domains') }} AS dom_ratio,
         -- Active weight sum (only dimensions the user participates in)
         coalesce(
             CASE WHEN ut.total_tech_stacks > 0 THEN {{ var('w_pref_tech', 0.30) }} END, 0
@@ -130,17 +130,17 @@ preference_scored AS (
         (
             coalesce(
                 {{ var('w_pref_tech', 0.30) }}
-                * cp.shared_tech_stacks::float / nullif(ut.total_tech_stacks, 0),
+                * {{ safe_divide('cp.shared_tech_stacks', 'ut.total_tech_stacks') }},
                 0
             )
             + coalesce(
                 {{ var('w_pref_category', 0.45) }}
-                * cp.shared_categories::float / nullif(ut.total_categories, 0),
+                * {{ safe_divide('cp.shared_categories', 'ut.total_categories') }},
                 0
             )
             + coalesce(
                 {{ var('w_pref_domain', 0.25) }}
-                * cp.shared_domains::float / nullif(ut.total_domains, 0),
+                * {{ safe_divide('cp.shared_domains', 'ut.total_domains') }},
                 0
             )
         ) / nullif(
@@ -210,11 +210,10 @@ scored AS (
         s.project_id,
         s.similarity_score,
         s.preference_score,
-        greatest(0, least(1.0,
-            1.0 - extract(EPOCH FROM (now() - ps.pushed_at))
-            / ({{ var('freshness_decay_days', 90) }} * 86400.0)
-        )) AS freshness_score,
-        ln(ps.stars + 1) / mls.val AS popularity_score
+        ({{ clamp(
+            '1.0 - extract(EPOCH FROM (now() - ps.pushed_at)) / (' ~ var('freshness_decay_days', 90) ~ ' * 86400.0)'
+        ) }})::double precision AS freshness_score,
+        {{ clamp('ln(ps.stars + 1) / mls.val') }} AS popularity_score
     FROM similarity AS s
     INNER JOIN project_stats AS ps ON s.project_id = ps.project_id
     CROSS JOIN max_log_stars AS mls

@@ -7,6 +7,8 @@ from dagster import ConfigurableResource
 from openai import OpenAI
 from pydantic import PrivateAttr
 
+from src.linker.utils.serialization import clean_llm_json
+
 _LLM_CALL_TIMEOUT_SECONDS = 45
 
 
@@ -91,8 +93,7 @@ class LLMClassifierResource(ConfigurableResource):
                 if content is None:
                     error_container[0] = ValueError("LLM returned empty content")
                     return
-                clean_json = content.replace("```json", "").replace("```", "").strip()
-                result_container[0] = json.loads(clean_json)
+                result_container[0] = json.loads(clean_llm_json(content))
             except Exception as e:
                 error_container[0] = e
 

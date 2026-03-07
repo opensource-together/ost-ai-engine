@@ -38,6 +38,9 @@ jobs:
       - name: Unit tests
         run: uv run pytest -m unit --cov-fail-under=80
 
+      - name: Dagster startup smoke test
+        run: uv run pytest -m integration -k test_dagster_startup --no-cov
+
   dbt-check:
     runs-on: ubuntu-latest
     steps:
@@ -74,17 +77,19 @@ jobs:
         with:
           go-version: "1.24"
 
-      - name: Vet and build scraper
+      - name: Vet, build and test scraper
         run: |
           cd src/services/go/scraper
           go vet ./...
           go build -o /dev/null .
+          go test ./...
 
-      - name: Vet and build fetcher
+      - name: Vet, build and test fetcher
         run: |
           cd src/services/go/fetcher
           go vet ./...
           go build -o /dev/null .
+          go test ./...
 
   docker-build:
     runs-on: ubuntu-latest

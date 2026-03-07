@@ -42,7 +42,8 @@
 
 | Service | Image | Ports |
 |---------|-------|-------|
-| `ost-linker` | Built from Dockerfile | 3000 (Dagster UI) |
-| `db` | `ankane/pgvector:v0.4.1` | 5433→5432 |
+| `webserver` | Built from Dockerfile | 3000 (Dagster UI) |
+| `daemon` | Built from Dockerfile | — (depends on webserver) |
+| `db` (dev override only) | `ankane/pgvector:v0.4.1` | 5433→5432 |
 
-`docker-compose.override.yml` adds local dev overrides (volume mounts, env files).
+`docker-compose.override.yml` adds local dev overrides (db service, volume mounts, env files).

@@ -69,9 +69,7 @@ from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 from .assets.embedding.core_ml__embed_users import core_ml__embed_users
 from .assets.sync.core_public__sync_projects import core_public__sync_projects
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
-from .jobs.project_classification_job import project_classification_job
-from .jobs.project_embedding_job import project_embedding_job
-from .jobs.project_scraper_job import project_scraper_job
+from .jobs.project_enrichment_job import project_enrichment_job
 
 # jobs
 from .jobs.run_all_job import run_all_job
@@ -79,9 +77,8 @@ from .jobs.user_recommendation_job import user_recommendation_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 
 # schedule
-from .schedules.run_all_schedule import run_all_schedule
+from .schedules.project_enrichment_schedule import project_enrichment_schedule
 from .schedules.user_recommendation_schedule import user_recommendation_schedule
-from .sensors.classification_sensor import classification_sensor
 
 defs = Definitions(
     assets=[
@@ -113,17 +110,15 @@ defs = Definitions(
         "fs_io_manager": FilesystemIOManager(),
     },
     jobs=[
-        project_scraper_job,
         cleanup_dagster_history_job,
-        project_classification_job,
-        project_embedding_job,
+        project_enrichment_job,
         run_all_job,
         user_recommendation_job,
     ],
     schedules=[
         cleanup_dagster_history_schedule,
-        run_all_schedule,
+        project_enrichment_schedule,
         user_recommendation_schedule,
     ],
-    sensors=[classification_sensor],
+    sensors=[],
 )

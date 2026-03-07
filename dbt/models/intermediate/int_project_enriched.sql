@@ -42,7 +42,7 @@ joined AS (
         coalesce(p.language, d.language_detected) AS primary_language
 
     FROM projects AS p
-    LEFT JOIN detection AS d ON p.id = d.project_id
+    INNER JOIN detection AS d ON p.id = d.project_id
     LEFT JOIN readmes AS r ON p.id = r.project_id
     LEFT JOIN topics AS t ON p.id = t.project_id
     LEFT JOIN languages AS l ON p.id = l.project_id

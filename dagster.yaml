@@ -22,7 +22,7 @@ run_coordinator:
   module: dagster.core.run_coordinator
   class: QueuedRunCoordinator
   config:
-    max_concurrent_runs: 2
+    max_concurrent_runs: 1
 
 # enable run monitoring for better error detection
 run_monitoring:

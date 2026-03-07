@@ -53,10 +53,10 @@ models:
         +meta: { dagster: { group: ingestion } }
       stg_public__user:
         +schema: ml
-        +meta: { dagster: { group: ml_preparation } }
+        +meta: { dagster: { group: user_ml } }
       stg_public__project:
         +schema: ml
-        +meta: { dagster: { group: ml_preparation } }
+        +meta: { dagster: { group: project_ml } }
 
     intermediate:
       +materialized: table
@@ -65,13 +65,13 @@ models:
         +meta: { dagster: { group: ingestion } }
       int_user_enriched:
         +schema: ml
-        +meta: { dagster: { group: ml_preparation } }
+        +meta: { dagster: { group: user_ml } }
       int_project_contextualized:
         +schema: ml
-        +meta: { dagster: { group: ml_preparation } }
+        +meta: { dagster: { group: project_ml } }
       int_project_embedding_candidate:
         +schema: ml
-        +meta: { dagster: { group: ml_preparation } }
+        +meta: { dagster: { group: project_ml } }
 
     marts:
       +materialized: table
@@ -80,10 +80,10 @@ models:
         +meta: { dagster: { group: ingestion } }
       fct_public_user:
         +schema: ml
-        +meta: { dagster: { group: ml_preparation } }
+        +meta: { dagster: { group: user_ml } }
       match_global_recommendation:
         +schema: public
-        +meta: { dagster: { group: matching } }
+        +meta: { dagster: { group: project_ml } }
       match_user_recommendation:
         +schema: public
-        +meta: { dagster: { group: matching } }
+        +meta: { dagster: { group: user_ml } }

@@ -15,7 +15,7 @@ class _CriticalSyncError(Exception):
 @asset(
     kinds={"python", "postgres"},
     owners=DEFAULT_OWNERS,
-    group_name="classification",
+    group_name="sync",
     key=AssetKey(["public", "Project"]),  # Explicitly match DBT Source
     required_resource_keys={"io_manager"},
 )

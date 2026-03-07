@@ -19,5 +19,7 @@ models:
         description: Comma-separated domains
       - name: tech_stack
         description: Comma-separated tech stacks
+      - name: updatedAt
+        description: Last update timestamp from public.Project
       - name: readme
         description: README content from GitHub

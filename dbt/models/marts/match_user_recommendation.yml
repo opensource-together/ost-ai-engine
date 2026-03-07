@@ -8,34 +8,67 @@ models:
       (tech stacks 0.30, categories 0.45, domains 0.25), then blends it alongside
       cosine similarity, freshness, and popularity into a final score. Returns
       top N per user.
+    config:
+      contract:
+        enforced: true
     columns:
       - name: user_id
-        description: "FK to the user table"
+        description: "FK to public.User — UUID of the user receiving the recommendation"
+        data_type: uuid
+        constraints:
+          - type: not_null
         tests:
           - not_null
+          - relationships:
+              arguments:
+                to: source('public', 'user')
+                field: id
       - name: project_id
-        description: "FK to the project table"
+        description: "FK to public.Project — UUID of the recommended project"
+        data_type: uuid
+        constraints:
+          - type: not_null
         tests:
           - not_null
+          - relationships:
+              arguments:
+                to: source('public', 'Project')
+                field: id
       - name: similarity_score
-        description: "Cosine similarity between user and project embeddings (0 to 1 after threshold)"
+        description: "Cosine similarity between user and project embeddings (threshold-filtered, > 0.25 by default)"
+        data_type: double precision
+        constraints:
+          - type: not_null
         tests:
           - not_null
       - name: preference_score
-        description: "Weighted overlap of user preferences with project attributes (0 to 1)"
+        description: "Weighted overlap of user preferences with project attributes (0.0 to 1.0)"
+        data_type: double precision
+        constraints:
+          - type: not_null
         tests:
           - not_null
       - name: freshness_score
-        description: "Linear decay score based on pushed_at (1 = just pushed, 0 = older than decay window)"
+        description: "Linear decay score based on pushed_at clamped to [0, 1] (1 = just pushed, 0 = older than decay window)"
+        data_type: double precision
+        constraints:
+          - type: not_null
         tests:
           - not_null
       - name: popularity_score
-        description: "Log-normalized star count scaled to 0-1"
+        description: "Log-normalized star count scaled to [0, 1]"
+        data_type: double precision
+        constraints:
+          - type: not_null
         tests:
           - not_null
       - name: final_score
-        description: "Weighted blend of similarity, preference, freshness, and popularity"
+        description: "Weighted blend of similarity (0.40), preference (0.35), freshness (0.15), and popularity (0.10)"
+        data_type: double precision
+        constraints:
+          - type: not_null
         tests:
           - not_null
       - name: calculated_at
-        description: "Timestamp when the recommendation was computed"
+        description: "Timestamp when the recommendation batch was computed"
+        data_type: timestamp with time zone

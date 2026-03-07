@@ -47,8 +47,15 @@ mypy src/                                 # Type check (strict mode)
 pytest                                    # Run all tests (coverage included via --cov=src)
 pytest tests/test_foo.py -k test_bar      # Run a single test
 pytest -m unit                            # Run by marker (unit/integration/performance/api)
+pytest -m integration                     # Dagster startup smoke test
 ```
 Test config is in `pyproject.toml` under `[tool.pytest.ini_options]`. Tests use class-based style (`class TestXxx`).
+
+Go tests:
+```bash
+cd src/services/go/fetcher && go test ./...   # Fetcher tests
+cd src/services/go/scraper && go test ./...   # Scraper tests
+```
 
 ### Go Binaries (must be compiled before local use)
 ```bash

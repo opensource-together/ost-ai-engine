@@ -1,0 +1,15 @@
+version: 2
+
+macros:
+  - name: generate_schema_name
+    description: >
+      Overrides dbt's default schema naming to use the custom_schema_name directly
+      (without prepending the target schema). Allows models to write to exact schemas
+      like 'github', 'ml', 'public', 'match'.
+    arguments:
+      - name: custom_schema_name
+        type: string
+        description: "Schema name from model config (+schema)"
+      - name: node
+        type: object
+        description: "dbt node object (injected by dbt)"

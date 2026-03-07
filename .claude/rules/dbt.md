@@ -7,6 +7,13 @@ Models are organized under `models/` by layer (flat structure):
 - `intermediate/` — enrichment and transformation (`int_project_enriched`, `int_user_enriched`, `int_project_contextualized`, `int_project_embedding_candidate`)
 - `marts/` — final consumption models (`fct_github_project`, `fct_public_user`, `match_global_recommendation`, `match_user_recommendation`)
 
+## File Convention
+
+Every `.sql` file MUST have a matching `.yml` file — applies to models, macros, and singular tests:
+- `models/marts/fct_github_project.sql` + `fct_github_project.yml` (columns, contracts, tests)
+- `macros/clamp.sql` + `clamp.yml` (description, arguments)
+- `tests/valid_hybrid_score_bounds.sql` + `valid_hybrid_score_bounds.yml` (description)
+
 ## Profiles
 
 dbt profiles: `local` (default, port 5433) and `docker` (port 5432, host `db`). Set `DBT_TARGET` env var to switch.
@@ -15,5 +22,5 @@ dbt profiles: `local` (default, port 5433) and `docker` (port 5432, host `db`). 
 
 dbt models are assigned to Dagster groups via `+meta.dagster.group` in `dbt_project.yml`:
 - `stg_github__*`, `int_project_enriched`, `fct_github_project` -> `ingestion`
-- `stg_public__*`, `int_user_enriched`, `int_project_contextualized`, `int_project_embedding_candidate`, `fct_public_user` -> `ml_preparation`
-- `match_*` -> `matching`
+- `stg_public__project`, `int_project_contextualized`, `int_project_embedding_candidate`, `match_global_recommendation` -> `project_ml`
+- `stg_public__user`, `int_user_enriched`, `fct_public_user`, `match_user_recommendation` -> `user_ml`
