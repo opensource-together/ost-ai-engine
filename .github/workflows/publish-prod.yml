@@ -8,7 +8,7 @@ jobs:
   checks:
     uses: ./.github/workflows/quality-checks.yml
     secrets:
-      OST_SYNC_TOKEN: ${{ secrets.OST_SYNC_TOKEN }}
+      OST_LINKER_SYNC_TOKEN: ${{ secrets.OST_LINKER_SYNC_TOKEN }}
 
   publish:
     runs-on: ubuntu-latest

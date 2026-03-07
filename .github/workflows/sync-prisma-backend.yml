@@ -19,7 +19,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: opensource-together/ost-backend
-          token: ${{ secrets.OST_SYNC_TOKEN }}
+          token: ${{ secrets.OST_LINKER_SYNC_TOKEN }}
           path: backend
 
       - name: Check if prisma changed
@@ -78,4 +78,4 @@ jobs:
             echo "PR #$EXISTING already exists on ost-backend"
           fi
         env:
-          GH_TOKEN: ${{ secrets.OST_SYNC_TOKEN }}
+          GH_TOKEN: ${{ secrets.OST_LINKER_SYNC_TOKEN }}
