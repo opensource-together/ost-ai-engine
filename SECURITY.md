@@ -2,9 +2,9 @@
 
 ## Reporting a Vulnerability
 
-If you discover a security vulnerability in OST Linker, please report it responsibly by opening an issue on the [ost-linker repository](https://github.com/opensource-together/ost-linker/issues) with the label `security`.
+If you discover a security vulnerability in OST Linker, please report it responsibly by emailing **contact@opensource-together.com**.
 
-**Please do NOT include exploit details in public issues.** Use a vague title (e.g., "Security issue in authentication") and a maintainer will follow up privately.
+**Please do NOT open public issues for security vulnerabilities.** We will acknowledge your report and coordinate a fix privately.
 
 ## What to Report
 
