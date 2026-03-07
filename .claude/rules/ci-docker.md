@@ -12,7 +12,7 @@
 
 - Claude Code Action (`claude.yml`) needs `write` on `contents`, `pull-requests`, and `issues` to post comments
 - Claude Code Review (`claude-code-review.yml`) only needs `read` (it posts via the OAuth token, not GITHUB_TOKEN)
-- Sync workflows need repo-scoped PATs (`OST_DOCS_TOKEN`, `OST_BACKEND_TOKEN`) for cross-repo operations
+- Sync workflows need a repo-scoped PAT (`OST_SYNC_TOKEN`) for cross-repo operations (ost-docs + ost-backend)
 
 ### Branch CI strategy
 
@@ -27,8 +27,7 @@
 |--------|---------|
 | `CLAUDE_CODE_OAUTH_TOKEN` | `claude.yml`, `claude-code-review.yml` |
 | `OST_RELEASE_PAT` | `publish-develop.yml`, `publish-prod.yml` (GHCR push) |
-| `OST_DOCS_TOKEN` | `sync-docs-submodule.yml`, `quality-checks.yml` (docs-submodule check) |
-| `OST_BACKEND_TOKEN` | `sync-prisma-backend.yml` |
+| `OST_SYNC_TOKEN` | `sync-docs-submodule.yml`, `sync-prisma-backend.yml`, `quality-checks.yml` (cross-repo sync) |
 
 ## Docker
 
