@@ -32,6 +32,8 @@ jobs:
         if: steps.check.outputs.changed == 'true'
         run: |
           cd docs
+          git config user.name "spideystreet"
+          git config user.email "dhicham.pro@gmail.com"
           BRANCH="sync/ost-linker-${{ github.head_ref }}"
 
           git remote set-url origin https://x-access-token:${{ secrets.OST_DOCS_TOKEN }}@github.com/opensource-together/ost-docs.git

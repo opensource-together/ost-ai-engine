@@ -39,6 +39,8 @@ jobs:
           BRANCH="sync/ost-linker-prisma-${{ github.head_ref }}"
 
           cd backend
+          git config user.name "spideystreet"
+          git config user.email "dhicham.pro@gmail.com"
           git checkout -b "$BRANCH"
 
           # Replace backend prisma/ with linker prisma/
