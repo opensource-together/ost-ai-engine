@@ -8,7 +8,7 @@ from slowapi.util import get_remote_address
 
 from src.services.api.config import APIConfig
 from src.services.api.dependencies import close_pool, init_pool
-from src.services.api.routes import health, references
+from src.services.api.routes import health, projects, references
 
 
 def _get_config() -> APIConfig:
@@ -46,3 +46,4 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)  # type: ignor
 
 app.include_router(health.router)
 app.include_router(references.router)
+app.include_router(projects.router)
