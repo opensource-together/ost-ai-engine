@@ -23,4 +23,4 @@ def get_trending(
                LIMIT %s""",
             (limit,),
         )
-        return cur.fetchall()
+        return list(cur.fetchall())

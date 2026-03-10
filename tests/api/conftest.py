@@ -14,12 +14,14 @@ def client() -> Generator[TestClient, None, None]:
     mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
     mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
 
-    with patch("src.services.api.dependencies._pool", mock_pool):
-        with patch("src.services.api.main._get_config") as mock_cfg:
-            mock_cfg.return_value = MagicMock(
-                database_url="postgresql://test:test@localhost:5432/test",
-            )
-            with patch("src.services.api.dependencies.init_pool"):
-                from src.services.api.main import app
+    with (
+        patch("src.services.api.dependencies._pool", mock_pool),
+        patch("src.services.api.main._get_config") as mock_cfg,
+        patch("src.services.api.dependencies.init_pool"),
+    ):
+        mock_cfg.return_value = MagicMock(
+            database_url="postgresql://test:test@localhost:5432/test",
+        )
+        from src.services.api.main import app
 
-                yield TestClient(app)
+        yield TestClient(app)

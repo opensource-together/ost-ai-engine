@@ -12,7 +12,7 @@ from src.services.api.routes import health, projects, recommendations, reference
 
 
 def _get_config() -> APIConfig:
-    return APIConfig()
+    return APIConfig()  # type: ignore[call-arg]
 
 
 @asynccontextmanager

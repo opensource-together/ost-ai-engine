@@ -98,6 +98,7 @@ select = [
 
 [tool.ruff.lint.per-file-ignores]
 "src/linker/definitions.py" = ["E402"]
+"src/services/api/routes/*.py" = ["B008"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]

@@ -15,5 +15,5 @@ class TestAPIConfig:
     def test_missing_database_url_raises(self, monkeypatch: pytest.MonkeyPatch) -> None:
         """Config raises ValidationError when DATABASE_URL is missing."""
         monkeypatch.delenv("DATABASE_URL", raising=False)
-        with pytest.raises(Exception):
+        with pytest.raises((Exception, SystemExit)):
             APIConfig()

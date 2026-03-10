@@ -129,7 +129,7 @@ class TestGetProject:
 
 class TestFindSimilar:
     def test_find_similar_returns_list(self, client: TestClient) -> None:
-        """GET /projects/{id}/similar returns similar projects with similarity scores."""
+        """GET /projects/{id}/similar returns similar projects."""
         mock_cursor = MagicMock()
         mock_cursor.fetchone.side_effect = [
             {"vector": "[0.1, 0.2]"},

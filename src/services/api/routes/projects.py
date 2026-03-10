@@ -53,7 +53,7 @@ def search_projects(
 
     with pool.get_cursor() as cur:
         cur.execute(query, params)
-        return cur.fetchall()
+        return list(cur.fetchall())
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
@@ -133,4 +133,4 @@ def find_similar(
                LIMIT %s""",
             (project_id, project_id, limit),
         )
-        return cur.fetchall()
+        return list(cur.fetchall())
