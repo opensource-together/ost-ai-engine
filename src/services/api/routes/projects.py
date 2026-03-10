@@ -34,7 +34,8 @@ def search_projects(
         WHERE (p.published = true OR p.trending = true)
           AND (p.title ILIKE %s OR p.description ILIKE %s)
     """
-    pattern = f"%{q}%"
+    escaped = q.replace("%", "\\%").replace("_", "\\_")
+    pattern = f"%{escaped}%"
     params: list[Any] = [pattern, pattern]
 
     if category:

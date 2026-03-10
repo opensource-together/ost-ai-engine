@@ -28,7 +28,7 @@ def list_techstacks(pool: ConnectionPool = Depends(get_pool)) -> list[dict]:
     """List all tech stacks."""
     with pool.get_cursor() as cur:
         cur.execute(
-            """SELECT id, name, "iconUrl" AS icon_url, type
+            """SELECT id, name, "iconUrl" AS icon_url, type::text
                FROM public.tech_stack
                ORDER BY name"""
         )
