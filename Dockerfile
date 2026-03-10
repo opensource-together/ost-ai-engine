@@ -96,7 +96,7 @@ RUN groupadd -g 1000 appuser \
 USER appuser
 
 # Expose Dagster webserver port
-EXPOSE 3000
+EXPOSE 3000 8000
 
 # Healthcheck for Dagster webserver
 HEALTHCHECK --interval=30s --timeout=5s --start-period=120s --retries=3 \
