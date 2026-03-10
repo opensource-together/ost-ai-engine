@@ -49,16 +49,29 @@ class TestSearchProjects:
         response = client.get("/projects/search")
         assert response.status_code == 422
 
-    def test_search_with_filters(self, client: TestClient) -> None:
-        """GET /projects/search with category filter narrows results."""
-        pool = _make_pool([])
-        app.dependency_overrides[get_pool] = lambda: pool
+    def test_search_with_filters_passes_category_to_sql(
+        self, client: TestClient
+    ) -> None:
+        """GET /projects/search with category filter adds AND c.name = %s."""
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_pool = MagicMock()
+        mock_pool.get_cursor.return_value.__enter__ = MagicMock(
+            return_value=mock_cursor
+        )
+        mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+
+        app.dependency_overrides[get_pool] = lambda: mock_pool
         try:
             response = client.get("/projects/search?q=test&category=Web+Development")
         finally:
             app.dependency_overrides.pop(get_pool, None)
 
         assert response.status_code == 200
+        sql = mock_cursor.execute.call_args[0][0]
+        params = mock_cursor.execute.call_args[0][1]
+        assert "AND c.name = %s" in sql
+        assert "Web Development" in params
 
     def test_search_limit_over_max_returns_422(self, client: TestClient) -> None:
         """GET /projects/search?limit=100 returns 422 since limit exceeds max (50)."""
@@ -106,7 +119,12 @@ class TestGetProject:
             app.dependency_overrides.pop(get_pool, None)
 
         assert response.status_code == 200
-        assert response.json()["title"] == "My Project"
+        data = response.json()
+        assert data["title"] == "My Project"
+        assert data["categories"] == [{"id": "c1", "name": "Web"}]
+        assert data["domains"] == [{"id": "d1", "name": "Finance"}]
+        assert len(data["tech_stacks"]) == 1
+        assert data["tech_stacks"][0]["name"] == "Python"
 
     def test_get_nonexistent_project_returns_404(self, client: TestClient) -> None:
         """GET /projects/{id} returns 404 for unknown ID."""
