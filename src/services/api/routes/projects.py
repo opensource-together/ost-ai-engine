@@ -1,9 +1,10 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from src.services.api.database import ConnectionPool
 from src.services.api.dependencies import get_pool
+from src.services.api.rate_limit import limiter
 from src.services.api.schemas import ProjectOut, ProjectSimilarOut
 
 router = APIRouter(prefix="/projects")
@@ -12,7 +13,9 @@ MAX_LIMIT = 50
 
 
 @router.get("/search", response_model=list[ProjectOut])
+@limiter.limit("60/minute")
 def search_projects(
+    request: Request,
     q: str = Query(..., min_length=1),
     category: str | None = None,
     domain: str | None = None,
@@ -57,7 +60,9 @@ def search_projects(
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
+@limiter.limit("60/minute")
 def get_project(
+    request: Request,
     project_id: str,
     pool: ConnectionPool = Depends(get_pool),
 ) -> dict[str, Any]:
@@ -107,7 +112,9 @@ def get_project(
 
 
 @router.get("/{project_id}/similar", response_model=list[ProjectSimilarOut])
+@limiter.limit("60/minute")
 def find_similar(
+    request: Request,
     project_id: str,
     limit: int = Query(default=10, ge=1, le=MAX_LIMIT),
     pool: ConnectionPool = Depends(get_pool),

@@ -1,16 +1,19 @@
 from typing import Any
 
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, Query, Request
 
 from src.services.api.database import ConnectionPool
 from src.services.api.dependencies import get_pool
+from src.services.api.rate_limit import limiter
 from src.services.api.schemas import TrendingProjectOut
 
 router = APIRouter(prefix="/recommendations")
 
 
 @router.get("/trending", response_model=list[TrendingProjectOut])
+@limiter.limit("60/minute")
 def get_trending(
+    request: Request,
     limit: int = Query(default=20, ge=1, le=50),
     pool: ConnectionPool = Depends(get_pool),
 ) -> list[dict[str, Any]]:

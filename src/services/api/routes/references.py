@@ -1,14 +1,18 @@
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 
 from src.services.api.database import ConnectionPool
 from src.services.api.dependencies import get_pool
+from src.services.api.rate_limit import limiter
 from src.services.api.schemas import CategoryOut, DomainOut, TechStackOut
 
 router = APIRouter()
 
 
 @router.get("/categories", response_model=list[CategoryOut])
-def list_categories(pool: ConnectionPool = Depends(get_pool)) -> list[dict]:
+@limiter.limit("60/minute")
+def list_categories(
+    request: Request, pool: ConnectionPool = Depends(get_pool)
+) -> list[dict]:
     """List all project categories."""
     with pool.get_cursor() as cur:
         cur.execute('SELECT id, name FROM public."Category" ORDER BY name')
@@ -16,7 +20,10 @@ def list_categories(pool: ConnectionPool = Depends(get_pool)) -> list[dict]:
 
 
 @router.get("/domains", response_model=list[DomainOut])
-def list_domains(pool: ConnectionPool = Depends(get_pool)) -> list[dict]:
+@limiter.limit("60/minute")
+def list_domains(
+    request: Request, pool: ConnectionPool = Depends(get_pool)
+) -> list[dict]:
     """List all project domains."""
     with pool.get_cursor() as cur:
         cur.execute('SELECT id, name FROM public."Domain" ORDER BY name')
@@ -24,7 +31,10 @@ def list_domains(pool: ConnectionPool = Depends(get_pool)) -> list[dict]:
 
 
 @router.get("/techstacks", response_model=list[TechStackOut])
-def list_techstacks(pool: ConnectionPool = Depends(get_pool)) -> list[dict]:
+@limiter.limit("60/minute")
+def list_techstacks(
+    request: Request, pool: ConnectionPool = Depends(get_pool)
+) -> list[dict]:
     """List all tech stacks."""
     with pool.get_cursor() as cur:
         cur.execute(
