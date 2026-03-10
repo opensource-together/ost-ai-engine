@@ -26,6 +26,13 @@ uv sync                                   # Install Python dependencies
 dagster dev -h 0.0.0.0 -p 3000           # Run Dagster locally (outside Docker)
 ```
 
+### REST API (FastAPI)
+```bash
+uvicorn src.services.api.main:app --host 0.0.0.0 --port 8000   # Run API locally
+pytest -m api                                                    # Run API tests only
+```
+The API is a lightweight, read-only service consumed by the [ost-mcp](https://github.com/opensource-together/ost-mcp) MCP server. It exposes project search, similarity, trending recommendations, and reference data.
+
 ### dbt
 ```bash
 cd dbt && dbt deps                        # Install dbt packages
@@ -84,6 +91,9 @@ scripts/clean_docker_images.sh            # Docker image cleanup
 | `DBT_TARGET` | dbt target profile (`local` by default, `docker` in container) |
 | `DBT_PROJECT_DIR` | dbt project directory (default: `<repo>/dbt`, set to `/app/dbt` in Docker) |
 | `DAGSTER_HOME` | Dagster metadata directory (default: `./dagster_home`) |
+| `API_HOST` | API listen host (default: `0.0.0.0`) |
+| `API_PORT` | API listen port (default: `8000`) |
+| `API_RATE_LIMIT` | Requests per minute per IP (default: `60`) |
 
 ## Bug Fixing
 

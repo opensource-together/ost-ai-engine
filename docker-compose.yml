@@ -52,5 +52,29 @@ services:
         condition: service_healthy
     command: ["./scripts/init.sh", "dagster-daemon", "run", "-w", "/app/workspace.yaml"]
 
+  # ============================================================================
+  # REST API (FastAPI — lightweight, read-only)
+  # Minimal env: only DATABASE_URL, no Dagster/GitHub/LLM secrets
+  # ============================================================================
+  api:
+    build: .
+    container_name: ost-linker-api
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: ${DATABASE_URL}
+      API_HOST: ${API_HOST:-0.0.0.0}
+      API_PORT: ${API_PORT:-8000}
+      API_RATE_LIMIT: ${API_RATE_LIMIT:-60}
+      DAGSTER_ROLE: api
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    command: ["./scripts/init.sh", "uvicorn", "src.services.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+
 volumes:
   dagster_data:

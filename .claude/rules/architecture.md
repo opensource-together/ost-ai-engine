@@ -17,6 +17,10 @@ GitHub API (Go scraper)                    [ingestion]
 User profiles (public.User)                [user_ml]
   -> dbt user ML prep + embeddings
   -> user recommendations
+
+REST API (FastAPI, read-only)              [serving]
+  -> consumed by ost-mcp (MCP server)
+  -> surfaces data to AI assistants
 ```
 
 ## Resources (`src/linker/resources/`)
@@ -44,7 +48,7 @@ Both are invoked as subprocesses by Dagster assets via `subprocess.run()`.
 2. **Python Builder** (`python:3.11-slim`) — exports deps via uv to `requirements.txt`
 3. **Runtime** (`python:3.11-slim`) — installs deps, copies Go binaries to `/usr/local/bin/`, runs Dagster
 
-`docker-compose.yml` runs two services: `ost-linker` (app) and `db` (PostgreSQL with pgvector via `ankane/pgvector:v0.4.1`). DB is exposed on port 5433 by default.
+`docker-compose.yml` runs four services: `webserver` (Dagster UI), `daemon` (Dagster daemon), `api` (FastAPI REST API on port 8000), and `db` (PostgreSQL with pgvector, dev only via override). DB is exposed on port 5433 by default.
 
 ## Database Schema
 
@@ -62,6 +66,20 @@ Seed data lives in `prisma/seed/` (categories, domains, techstacks).
 
 - `language_detection.py` — `has_non_latin_chars()`, `parse_fasttext_labels()`, `is_blacklisted()` + constants (`NON_LATIN_LANGS`, `NON_LATIN_CHAR_RE`)
 - `serialization.py` — `make_serializable()` (datetime/UUID → string), `clean_llm_json()` (strip markdown fences)
+
+## REST API (`src/services/api/`)
+
+Lightweight, read-only FastAPI service consumed by the [ost-mcp](https://github.com/opensource-together/ost-mcp) MCP server. Runs as a separate Docker container with minimal env (only `DATABASE_URL`, no Dagster/LLM secrets).
+
+- `main.py` — FastAPI app with lifespan (connection pool), rate limit handler
+- `config.py` — `APIConfig` (pydantic-settings) reads env vars
+- `database.py` — `ConnectionPool` wrapper around psycopg2 `SimpleConnectionPool`
+- `dependencies.py` — FastAPI dependency injection (`get_pool`)
+- `schemas.py` — Pydantic v2 response models
+- `rate_limit.py` — slowapi `Limiter` instance (60 req/min/IP)
+- `routes/` — `health.py`, `projects.py`, `recommendations.py`, `references.py`
+
+**Endpoints:** `/health`, `/projects/search`, `/projects/{id}`, `/projects/{id}/similar`, `/recommendations/trending`, `/categories`, `/domains`, `/techstacks`
 
 ## Python Services (`src/services/python/`)
 

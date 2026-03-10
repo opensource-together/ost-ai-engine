@@ -26,6 +26,15 @@ services:
       - ./dbt:/app/dbt
       - ./scripts:/app/scripts
 
+  api:
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@db:5432/${POSTGRES_DB}
+    volumes:
+      - ./src:/app/src
+    depends_on:
+      db:
+        condition: service_healthy
+
   # ============================================================================
   # DATABASE (Postgres + PGVector) — dev only
   # ============================================================================
