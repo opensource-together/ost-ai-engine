@@ -92,6 +92,13 @@ jobs:
           go build -o /dev/null .
           go test ./...
 
+      - name: Vet, build and test trending
+        run: |
+          cd src/services/go/trending
+          go vet ./...
+          go build -o /dev/null .
+          go test ./...
+
   docker-build:
     runs-on: ubuntu-latest
     steps:
