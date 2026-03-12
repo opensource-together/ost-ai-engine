@@ -60,10 +60,12 @@ func fetchTrendingPage(ctx context.Context, pageURL string) ([]trendingRepo, err
 	return parseTrendingPage(resp.Body)
 }
 
-// upsertBatch inserts/updates all repos into github.raw_trending_project in one batch.
+// upsertBatch inserts/updates repos into both github.raw_trending_project (for the
+// trending endpoint) and github.raw_github_project (so they enter the standard pipeline
+// and eventually land in public.Project).
 // Returns the number of successfully upserted rows and failed rows.
 func upsertBatch(ctx context.Context, pool *pgxpool.Pool, repos []trendingRepo, ghClient *gitHubClient, trendingDate string) (int, int) {
-	const upsertSQL = `
+	const trendingSQL = `
 		INSERT INTO "github"."raw_trending_project"
 			("id", "project_id", "trending_date", "repo_url", "data", "stars_today", "created_at")
 		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())
@@ -71,6 +73,14 @@ func upsertBatch(ctx context.Context, pool *pgxpool.Pool, repos []trendingRepo, 
 		SET "data"       = EXCLUDED."data",
 		    "stars_today" = EXCLUDED."stars_today",
 		    "repo_url"   = EXCLUDED."repo_url"
+	`
+
+	const rawProjectSQL = `
+		INSERT INTO "github"."raw_github_project" ("id", "data", "createdAt", "updatedAt")
+		VALUES ($1, $2, NOW(), NOW())
+		ON CONFLICT ("id") DO UPDATE
+		SET "data" = EXCLUDED."data",
+		    "updatedAt" = NOW()
 	`
 
 	batch := &pgx.Batch{}
@@ -86,12 +96,19 @@ func upsertBatch(ctx context.Context, pool *pgxpool.Pool, repos []trendingRepo, 
 
 		projectID := uuid.NewSHA1(uuid.NameSpaceURL, []byte(repo.RepoURL))
 
-		batch.Queue(upsertSQL,
+		// Upsert into trending table
+		batch.Queue(trendingSQL,
 			projectID.String(),
 			trendingDate,
 			repo.RepoURL,
 			rawJSON,
 			repo.StarsToday,
+		)
+
+		// Also upsert into raw_github_project so the standard pipeline picks them up
+		batch.Queue(rawProjectSQL,
+			projectID.String(),
+			rawJSON,
 		)
 	}
 
@@ -103,11 +120,15 @@ func upsertBatch(ctx context.Context, pool *pgxpool.Pool, repos []trendingRepo, 
 		defer dbCancel()
 
 		br := pool.SendBatch(dbCtx, batch)
+		// Each repo produces 2 batch items (trending + raw_github_project).
+		// We count a repo as upserted only if the trending insert succeeds.
 		for i := 0; i < batch.Len(); i++ {
 			if _, err := br.Exec(); err != nil {
 				log.Printf("[ERROR] upsert batch item %d: %v", i, err)
-				failed++
-			} else {
+				if i%2 == 0 { // trending insert failed
+					failed++
+				}
+			} else if i%2 == 0 { // trending insert succeeded
 				upserted++
 			}
 		}
