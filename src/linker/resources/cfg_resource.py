@@ -70,6 +70,7 @@ class PipelineConfig(ConfigurableResource):
     # Go binary paths
     go_scraper_path: str
     go_fetcher_path: str
+    go_trending_path: str = ""
 
 
 def build_scraper_env(cfg: PipelineConfig) -> dict[str, str]:
@@ -104,3 +105,11 @@ def build_fetcher_env(cfg: PipelineConfig) -> dict[str, str]:
         "DATABASE_URL": cfg.db_url,
         "GITHUB_ACCESS_TOKEN": cfg.github_token,
     }
+
+
+def build_trending_env(cfg: PipelineConfig) -> dict[str, str]:
+    """Return environment dict for the Go trending scraper subprocess."""
+    env: dict[str, str] = {"DATABASE_URL": cfg.db_url}
+    if cfg.github_token:
+        env["GITHUB_ACCESS_TOKEN"] = cfg.github_token
+    return env
