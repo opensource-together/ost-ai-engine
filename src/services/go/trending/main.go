@@ -65,12 +65,12 @@ func fetchTrendingPage(ctx context.Context, pageURL string) ([]trendingRepo, err
 func upsertBatch(ctx context.Context, pool *pgxpool.Pool, repos []trendingRepo, ghClient *gitHubClient, trendingDate string) (int, int) {
 	const upsertSQL = `
 		INSERT INTO "github"."raw_trending_project"
-			("project_id", "trending_date", "repo_url", "data", "stars_today", "createdAt", "updatedAt")
-		VALUES ($1, $2, $3, $4, $5, NOW(), NOW())
+			("id", "project_id", "trending_date", "repo_url", "data", "stars_today", "created_at")
+		VALUES (gen_random_uuid(), $1, $2, $3, $4, $5, NOW())
 		ON CONFLICT ("project_id", "trending_date") DO UPDATE
 		SET "data"       = EXCLUDED."data",
 		    "stars_today" = EXCLUDED."stars_today",
-		    "updatedAt"  = NOW()
+		    "repo_url"   = EXCLUDED."repo_url"
 	`
 
 	batch := &pgx.Batch{}
