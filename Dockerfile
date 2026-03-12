@@ -11,6 +11,7 @@ WORKDIR /app
 # We assume the structure: src/services/go/{service}/go.mod
 COPY src/services/go/fetcher ./src/services/go/fetcher
 COPY src/services/go/scraper ./src/services/go/scraper
+COPY src/services/go/trending ./src/services/go/trending
 
 # Build Scraper
 WORKDIR /app/src/services/go/scraper
@@ -19,6 +20,10 @@ RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-s
 # Build Fetcher
 WORKDIR /app/src/services/go/fetcher
 RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-fetcher .
+
+# Build Trending Scraper
+WORKDIR /app/src/services/go/trending
+RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-trending .
 
 # ==============================================================================
 # Stage 2: Python Builder
@@ -68,6 +73,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 # Copy Go binaries from Stage 1
 COPY --from=go-builder /app/bin/ost-fetcher /usr/local/bin/ost-fetcher
 COPY --from=go-builder /app/bin/ost-scraper /usr/local/bin/ost-scraper
+COPY --from=go-builder /app/bin/ost-trending /usr/local/bin/ost-trending
 
 # Copy project code (targeted — avoid copying unnecessary files)
 COPY src/ ./src/
