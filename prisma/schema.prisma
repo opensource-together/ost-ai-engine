@@ -250,6 +250,7 @@ model ProjectClassification {
   domainId           String?   @db.Uuid
   categoryConfidence Float?
   domainConfidence   Float?
+  modelVersion       String?
   project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   domain             Domain?   @relation(fields: [domainId], references: [id], onDelete: SetNull)
@@ -257,6 +258,20 @@ model ProjectClassification {
   updatedAt          DateTime  @updatedAt
 
   @@map("project_classification")
+  @@schema("match")
+}
+
+model ProjectClassificationFailure {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId      String   @unique @db.Uuid
+  attempts       Int      @default(1)
+  lastError      String
+  lastAttemptAt  DateTime @default(now())
+  nextRetryAt    DateTime @default(now())
+  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([nextRetryAt])
+  @@map("project_classification_failure")
   @@schema("match")
 }
 
@@ -283,8 +298,9 @@ model Project {
   imagesUrls            String[]
   createdAt             DateTime               @default(now())
   updatedAt             DateTime               @updatedAt
-  projectBookmark       ProjectBookmark[]
-  projectClassification ProjectClassification?
+  projectBookmark              ProjectBookmark[]
+  projectClassification        ProjectClassification?
+  projectClassificationFailure ProjectClassificationFailure?
 
   @@schema("public")
 }

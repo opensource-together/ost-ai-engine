@@ -1,6 +1,7 @@
 import json
 import logging
 import threading
+from dataclasses import dataclass
 
 from dagster import ConfigurableResource
 from mistralai import Mistral
@@ -16,11 +17,33 @@ from src.linker.utils.serialization import clean_llm_json
 
 _LLM_CALL_TIMEOUT_SECONDS = 45
 _LLM_CLIENT_TIMEOUT_MS = 30000
+_DEFAULT_CONTEXT_CHARS = 8000
+
+
+class RateLimitError(Exception):
+    """Raised on Mistral 429 — callers should back off longer than a normal retry."""
+
+
+@dataclass(frozen=True)
+class ClassificationResult:
+    """Structured output of a classify_project call.
+
+    Includes the model + usage so the pipeline can track cost and attribute
+    each persisted classification to the model that produced it.
+    """
+
+    category: str | None
+    domain: str | None
+    model: str
+    prompt_tokens: int
+    completion_tokens: int
+    total_tokens: int
 
 
 class LLMClassifierResource(ConfigurableResource):
     api_key: str
     model_id: str = "mistral-small-latest"
+    context_chars: int = _DEFAULT_CONTEXT_CHARS
 
     _client: Mistral | None = PrivateAttr(default=None)
 
@@ -40,15 +63,12 @@ class LLMClassifierResource(ConfigurableResource):
         project_context: str,
         categories: list[str],
         domains: list[str],
-    ) -> dict:
+    ) -> ClassificationResult:
         """Classify a project using its context and valid labels.
-
-        Takes a project in context (title, description, topics, readme)
-        and the list of valid categories/domains from OST.
-        Returns a Dict with the classification.
 
         Raises:
             ValueError: If API key is missing or LLM returns empty content.
+            RateLimitError: If Mistral returns a 429 — use a longer backoff.
             TimeoutError: If the LLM call exceeds the hard timeout.
             RuntimeError: For API errors or unknown failures.
         """
@@ -58,8 +78,7 @@ class LLMClassifierResource(ConfigurableResource):
             )
 
         client = self.client
-
-        truncated_context = (project_context or "")[:8000]
+        truncated_context = (project_context or "")[: self.context_chars]
 
         cats_str = ", ".join(categories)
         doms_str = ", ".join(domains)
@@ -78,7 +97,7 @@ class LLMClassifierResource(ConfigurableResource):
 
         user_content = f"Title: {title}\n\nProject Context:\n{truncated_context}"
 
-        result_container: list[dict[str, object] | None] = [None]
+        result_container: list[ClassificationResult | None] = [None]
         error_container: list[Exception | None] = [None]
 
         def _call_api() -> None:
@@ -114,9 +133,22 @@ class LLMClassifierResource(ConfigurableResource):
                         f"LLM returned unexpected content type: {type(content)}"
                     )
                     return
-                result_container[0] = json.loads(clean_llm_json(content_str))
+                parsed = json.loads(clean_llm_json(content_str))
+                usage = completion.usage
+                result_container[0] = ClassificationResult(
+                    category=parsed.get("category"),
+                    domain=parsed.get("domain"),
+                    model=self.model_id,
+                    prompt_tokens=(usage.prompt_tokens if usage else 0) or 0,
+                    completion_tokens=(usage.completion_tokens if usage else 0) or 0,
+                    total_tokens=(usage.total_tokens if usage else 0) or 0,
+                )
             except Exception as e:
-                error_container[0] = e
+                msg = str(e).lower()
+                if "429" in msg or "rate limit" in msg or "too many requests" in msg:
+                    error_container[0] = RateLimitError(str(e))
+                else:
+                    error_container[0] = e
 
         thread = threading.Thread(target=_call_api, daemon=True)
         thread.start()
@@ -133,6 +165,8 @@ class LLMClassifierResource(ConfigurableResource):
 
         if error_container[0] is not None:
             logging.error(f"Mistral API Error for {title}: {error_container[0]}")
+            if isinstance(error_container[0], RateLimitError):
+                raise error_container[0]
             raise RuntimeError(
                 f"Mistral API error for {title}: {error_container[0]}"
             ) from error_container[0]

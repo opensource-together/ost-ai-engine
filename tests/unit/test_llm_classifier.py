@@ -1,6 +1,9 @@
 import pytest
 
-from src.linker.resources.llm_classifier_resource import LLMClassifierResource
+from src.linker.resources.llm_classifier_resource import (
+    LLMClassifierResource,
+    RateLimitError,
+)
 
 
 class TestLLMClassifierValidation:
@@ -14,9 +17,10 @@ class TestLLMClassifierValidation:
                 domains=["Backend"],
             )
 
-    def test_context_truncation(self) -> None:
-        """Verify that project_context is truncated to 8000 chars internally."""
-        resource = LLMClassifierResource(api_key="test-key")
-        long_context = "x" * 10000
-        truncated = (long_context or "")[:8000]
-        assert len(truncated) == 8000
+
+class TestRateLimitError:
+    def test_rate_limit_is_distinguishable(self) -> None:
+        """RateLimitError is its own exception type so callers can back off longer."""
+        err = RateLimitError("429 Too Many Requests")
+        assert isinstance(err, Exception)
+        assert "429" in str(err)
