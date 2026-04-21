@@ -1,0 +1,9 @@
+version: 2
+
+data_tests:
+  - name: no_ignored_projects_in_recos
+    description: >
+      Ensures no (user_id, project_id) pair appears in match_user_recommendation
+      if the user was shown the project ≥N times in the lookback window
+      without ever clicking or starring it. Protects users from seeing the
+      same uninteresting project on repeat visits.

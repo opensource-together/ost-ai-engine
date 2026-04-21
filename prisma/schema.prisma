@@ -285,7 +285,23 @@ model Project {
   updatedAt             DateTime               @updatedAt
   projectBookmark       ProjectBookmark[]
   projectClassification ProjectClassification?
+  recommendationEvents  RecommendationEvent[]
 
+  @@schema("public")
+}
+
+model RecommendationEvent {
+  id         String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String   @db.Uuid
+  projectId  String   @db.Uuid
+  eventType  String
+  context    Json?
+  occurredAt DateTime @default(now())
+  project    Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, projectId])
+  @@index([userId, occurredAt])
+  @@map("recommendation_event")
   @@schema("public")
 }
 

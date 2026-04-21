@@ -1,0 +1,31 @@
+version: 2
+
+models:
+  - name: stg_public__recommendation_event
+    description: "Staging for public.recommendation_event — captures user clicks/shows for feedback-loop scoring."
+    columns:
+      - name: id
+        description: "Primary key"
+        tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: "User who triggered the event"
+        tests:
+          - not_null
+      - name: project_id
+        description: "Project the event refers to"
+        tests:
+          - not_null
+      - name: event_type
+        description: "shown | clicked | dismissed | starred_after_reco"
+        tests:
+          - not_null
+          - accepted_values:
+              values: ["shown", "clicked", "dismissed", "starred_after_reco"]
+      - name: context
+        description: "Free-form metadata (rank, source, etc.)"
+      - name: occurred_at
+        description: "Event timestamp"
+        tests:
+          - not_null
