@@ -41,6 +41,15 @@ class ProjectSimilarOut(BaseModel):
     similarity: float
 
 
+class ProjectSemanticOut(BaseModel):
+    id: str
+    title: str
+    description: str | None = None
+    repo_url: str | None = None
+    logo_url: str | None = None
+    similarity: float
+
+
 class TrendingProjectOut(BaseModel):
     project_id: str
     stars: int | None = None
