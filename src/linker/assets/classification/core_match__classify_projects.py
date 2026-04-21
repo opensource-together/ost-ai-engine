@@ -1,3 +1,5 @@
+import random
+import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime, timedelta
 from typing import Any, cast
@@ -18,6 +20,11 @@ _MAX_WORKERS = 5
 _DLQ_MAX_ATTEMPTS = 5
 _DLQ_BACKOFF_BASE_HOURS = 2  # exponential: 2h, 4h, 8h, 16h, 32h, capped at 7d
 _DLQ_BACKOFF_CAP_HOURS = 24 * 7
+
+# Rate-limit cooldown: on 429, sleep (+ jitter) and retry once per project.
+# Avoids losing a whole batch to a short 429 window.
+_RATE_LIMIT_COOLDOWN_SECONDS = 60
+_RATE_LIMIT_JITTER_SECONDS = 30
 
 # Rough Mistral Small pricing ($/1M tokens, as of 2026-04) — ballpark only.
 _COST_INPUT_PER_M = 0.20
@@ -48,7 +55,14 @@ def _upsert_failure(cur: Any, project_id: str, error: str) -> None:
 
 def _classify_one(
     llm: Any, project: dict[str, Any], cat_names: list[str], dom_names: list[str]
-) -> tuple[dict[str, Any], ClassificationResult | None, Exception | None]:
+) -> tuple[dict[str, Any], ClassificationResult | None, Exception | None, bool]:
+    """Returns (project, result, error, rate_limited_then_recovered).
+
+    On RateLimitError: sleep for a cooldown (+ jitter) and retry once. If the
+    second attempt succeeds, the project is NOT sent to the DLQ even though
+    a 429 was hit. This prevents a short 429 window from poisoning the DLQ
+    for the whole batch.
+    """
     try:
         result = llm.classify_project(
             title=project["title"],
@@ -56,9 +70,27 @@ def _classify_one(
             categories=cat_names,
             domains=dom_names,
         )
-        return project, result, None
+        return project, result, None, False
+    except RateLimitError as first_err:
+        cooldown = _RATE_LIMIT_COOLDOWN_SECONDS + random.uniform(
+            0, _RATE_LIMIT_JITTER_SECONDS
+        )
+        time.sleep(cooldown)
+        try:
+            result = llm.classify_project(
+                title=project["title"],
+                project_context=project.get("context") or "",
+                categories=cat_names,
+                domains=dom_names,
+            )
+            return project, result, None, True
+        except Exception as retry_err:
+            return project, None, retry_err, True
+        finally:
+            # Keep the first error reference alive for log context if needed.
+            _ = first_err
     except Exception as e:
-        return project, None, e
+        return project, None, e, False
 
 
 @asset(
@@ -142,12 +174,16 @@ def core_match__classify_projects(
             for p in projects
         }
         for idx, future in enumerate(as_completed(futures), start=1):
-            project, result, error = future.result()
+            project, result, error, rate_limited = future.result()
             title = str(project.get("title", ""))[:60]
 
+            if rate_limited:
+                rate_limit_hits += 1
+                context.log.warning(
+                    f"[{idx}/{total}] '{title}' hit rate-limit; retried after cooldown"
+                )
+
             if error is not None:
-                if isinstance(error, RateLimitError):
-                    rate_limit_hits += 1
                 failures.append(
                     (str(project["id"]), f"{type(error).__name__}: {error}")
                 )
