@@ -1,10 +1,11 @@
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI, Request, Response
+from fastapi import Depends, FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 
+from src.services.api.auth import require_service_token
 from src.services.api.config import APIConfig
 from src.services.api.dependencies import close_pool, init_pool
 from src.services.api.rate_limit import limiter
@@ -48,6 +49,15 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)  # type: ignor
 # backend, not by browsers. Add CORSMiddleware if browser access is needed later.
 
 app.include_router(health.router)
-app.include_router(references.router)
-app.include_router(projects.router)
-app.include_router(recommendations.router)
+app.include_router(
+    references.router,
+    dependencies=[Depends(require_service_token)],
+)
+app.include_router(
+    projects.router,
+    dependencies=[Depends(require_service_token)],
+)
+app.include_router(
+    recommendations.router,
+    dependencies=[Depends(require_service_token)],
+)
