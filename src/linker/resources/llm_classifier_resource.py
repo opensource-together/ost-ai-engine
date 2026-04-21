@@ -2,31 +2,35 @@ import json
 import logging
 import threading
 
-import httpx
 from dagster import ConfigurableResource
-from openai import OpenAI
+from mistralai import Mistral
+from mistralai.models import (
+    AssistantMessage,
+    SystemMessage,
+    ToolMessage,
+    UserMessage,
+)
 from pydantic import PrivateAttr
 
 from src.linker.utils.serialization import clean_llm_json
 
 _LLM_CALL_TIMEOUT_SECONDS = 45
+_LLM_CLIENT_TIMEOUT_MS = 30000
 
 
 class LLMClassifierResource(ConfigurableResource):
     api_key: str
-    model_id: str = "mistralai/mistral-small-3.2-24b-instruct"
+    model_id: str = "mistral-small-latest"
 
-    _client: OpenAI | None = PrivateAttr(default=None)
+    _client: Mistral | None = PrivateAttr(default=None)
 
     @property
-    def client(self) -> OpenAI:
-        """Lazy-initialized singleton OpenAI client."""
+    def client(self) -> Mistral:
+        """Lazy-initialized singleton Mistral client."""
         if self._client is None:
-            self._client = OpenAI(
-                base_url="https://openrouter.ai/api/v1",
+            self._client = Mistral(
                 api_key=self.api_key,
-                timeout=httpx.Timeout(30.0, connect=10.0, read=20.0, write=10.0),
-                max_retries=1,
+                timeout_ms=_LLM_CLIENT_TIMEOUT_MS,
             )
         return self._client
 
@@ -50,12 +54,11 @@ class LLMClassifierResource(ConfigurableResource):
         """
         if not self.api_key:
             raise ValueError(
-                "LLMResource: No OPENROUTER_API_KEY found in environment variables."
+                "LLMResource: No MISTRAL_API_KEY found in environment variables."
             )
 
         client = self.client
 
-        # Truncate context to keep it snappy and cheap
         truncated_context = (project_context or "")[:8000]
 
         cats_str = ", ".join(categories)
@@ -80,20 +83,38 @@ class LLMClassifierResource(ConfigurableResource):
 
         def _call_api() -> None:
             try:
-                completion = client.chat.completions.create(
+                messages: list[
+                    AssistantMessage | SystemMessage | ToolMessage | UserMessage
+                ] = [
+                    SystemMessage(content=system_prompt),
+                    UserMessage(content=user_content),
+                ]
+                completion = client.chat.complete(
                     model=self.model_id,
-                    messages=[
-                        {"role": "system", "content": system_prompt},
-                        {"role": "user", "content": user_content},
-                    ],
+                    messages=messages,
                     temperature=0.0,
                     response_format={"type": "json_object"},
                 )
+                if completion.choices is None or len(completion.choices) == 0:
+                    error_container[0] = ValueError("LLM returned no choices")
+                    return
                 content = completion.choices[0].message.content
-                if content is None:
+                if content is None or content == "":
                     error_container[0] = ValueError("LLM returned empty content")
                     return
-                result_container[0] = json.loads(clean_llm_json(content))
+                if isinstance(content, list):
+                    content_str = "".join(
+                        chunk.text if hasattr(chunk, "text") else str(chunk)
+                        for chunk in content
+                    )
+                elif isinstance(content, str):
+                    content_str = content
+                else:
+                    error_container[0] = ValueError(
+                        f"LLM returned unexpected content type: {type(content)}"
+                    )
+                    return
+                result_container[0] = json.loads(clean_llm_json(content_str))
             except Exception as e:
                 error_container[0] = e
 
@@ -103,18 +124,17 @@ class LLMClassifierResource(ConfigurableResource):
 
         if thread.is_alive():
             logging.error(
-                "OpenRouter API hard timeout "
-                f"({_LLM_CALL_TIMEOUT_SECONDS}s) for {title}"
+                f"Mistral API hard timeout ({_LLM_CALL_TIMEOUT_SECONDS}s) for {title}"
             )
             raise TimeoutError(
-                f"OpenRouter API hard timeout after {_LLM_CALL_TIMEOUT_SECONDS}s "
+                f"Mistral API hard timeout after {_LLM_CALL_TIMEOUT_SECONDS}s "
                 f"for project: {title}"
             )
 
         if error_container[0] is not None:
-            logging.error(f"OpenRouter API Error for {title}: {error_container[0]}")
+            logging.error(f"Mistral API Error for {title}: {error_container[0]}")
             raise RuntimeError(
-                f"OpenRouter API error for {title}: {error_container[0]}"
+                f"Mistral API error for {title}: {error_container[0]}"
             ) from error_container[0]
 
         if result_container[0] is not None:

@@ -6,7 +6,7 @@ from src.linker.resources.llm_classifier_resource import LLMClassifierResource
 class TestLLMClassifierValidation:
     def test_empty_api_key_raises(self) -> None:
         resource = LLMClassifierResource(api_key="")
-        with pytest.raises(ValueError, match="No OPENROUTER_API_KEY"):
+        with pytest.raises(ValueError, match="No MISTRAL_API_KEY"):
             resource.classify_project(
                 title="test",
                 project_context="context",

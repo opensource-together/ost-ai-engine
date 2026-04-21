@@ -85,7 +85,7 @@ scripts/clean_docker_images.sh            # Docker image cleanup
 |---|---|
 | `DATABASE_URL` | PostgreSQL connection string |
 | `GITHUB_ACCESS_TOKEN` | GitHub fine-grained token for scraping |
-| `OPENROUTER_API_KEY` | LLM classifier API key |
+| `MISTRAL_API_KEY` | LLM classifier API key (Mistral AI) |
 | `GO_SCRAPER_PATH` / `GO_FETCHER_PATH` | Paths to compiled Go binaries |
 | `FASTTEXT_MODEL_PATH` | Path to `lid.176.ftz` (default: `models/lid.176.ftz`) |
 | `DBT_TARGET` | dbt target profile (`local` by default, `docker` in container) |

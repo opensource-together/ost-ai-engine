@@ -9,7 +9,7 @@ x-common-env: &common-env
   GO_SCRAPER_PATH: /usr/local/bin/ost-scraper
   GO_FETCHER_PATH: /usr/local/bin/ost-fetcher
   DBT_TARGET: docker
-  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+  MISTRAL_API_KEY: ${MISTRAL_API_KEY}
   FASTTEXT_MODEL_PATH: models/lid.176.ftz
 
 x-common-volumes: &common-volumes

@@ -100,7 +100,7 @@ defs = Definitions(
             model_path=EnvVar("FASTTEXT_MODEL_PATH"),
         ),
         "llm_classifier": LLMClassifierResource(
-            api_key=EnvVar("OPENROUTER_API_KEY"),
+            api_key=EnvVar("MISTRAL_API_KEY"),
         ),
         "sentence_transformer": SentenceTransformerResource(
             device="cpu"

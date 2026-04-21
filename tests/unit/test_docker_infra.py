@@ -94,7 +94,7 @@ class TestDockerCompose:
         env_anchor = config.get("x-common-env", {})
         if not env_anchor:
             return
-        secret_keys = {"DATABASE_URL", "GITHUB_ACCESS_TOKEN", "OPENROUTER_API_KEY"}
+        secret_keys = {"DATABASE_URL", "GITHUB_ACCESS_TOKEN", "MISTRAL_API_KEY"}
         for key in secret_keys:
             if key in env_anchor:
                 val = str(env_anchor[key])

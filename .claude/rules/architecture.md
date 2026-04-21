@@ -28,7 +28,7 @@ REST API (FastAPI, read-only)              [serving]
 | Resource | Purpose |
 |---|---|
 | `config_resource` (`PipelineConfig`) | Reads all env vars; injected as `"config"` |
-| `LLMClassifierResource` | OpenRouter API (OpenAI-compatible) — uses `mistralai/mistral-small-3.2-24b-instruct` |
+| `LLMClassifierResource` | Mistral AI API (official `mistralai` SDK) — default model `mistral-small-latest` |
 | `SentenceTransformerResource` | `all-MiniLM-L6-v2` for 384-dim embeddings; device defaults to `"cpu"` |
 | `FastTextModelResource` | Language detection from `models/lid.176.ftz` |
 | `PandasPostgresIOManager` | Custom IO manager passing DataFrames between assets via Postgres |
