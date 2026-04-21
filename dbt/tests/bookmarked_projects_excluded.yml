@@ -1,0 +1,8 @@
+version: 2
+
+data_tests:
+  - name: bookmarked_projects_excluded
+    description: >
+      Ensures no (user_id, project_id) pair appears in match_user_recommendation
+      if the user has already bookmarked that project. Bookmarked projects are
+      considered "already saved" and should never be re-recommended.

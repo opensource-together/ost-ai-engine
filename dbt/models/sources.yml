@@ -92,3 +92,6 @@ sources:
         description: "Join table linking projects to tech stacks."
       - name: recommendation_event
         description: "User interactions with recommendations (shown, clicked, dismissed, starred_after_reco)."
+      - name: project_bookmark
+        description: "User bookmarks on projects — strong explicit preference signal."
+
