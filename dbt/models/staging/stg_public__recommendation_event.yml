@@ -2,7 +2,7 @@ version: 2
 
 models:
   - name: stg_public__recommendation_event
-    description: "Staging for public.recommendation_event — captures user clicks/shows for feedback-loop scoring."
+    description: "Staging for public.recommendation_event — captures user clicks/shows for feedback-loop scoring and surface-level analytics."
     columns:
       - name: id
         description: "Primary key"
@@ -18,14 +18,23 @@ models:
         tests:
           - not_null
       - name: event_type
-        description: "shown | clicked | dismissed | starred_after_reco"
+        description: "Enum: SHOWN | CLICKED | DISMISSED | STARRED_AFTER_RECO"
         tests:
           - not_null
           - accepted_values:
-              values: ["shown", "clicked", "dismissed", "starred_after_reco"]
+              values: ["SHOWN", "CLICKED", "DISMISSED", "STARRED_AFTER_RECO"]
+      - name: source
+        description: "Reco surface that produced the event (PERSONALIZED | TRENDING | SIMILAR | SEMANTIC_SEARCH)"
+        tests:
+          - accepted_values:
+              values: ["PERSONALIZED", "TRENDING", "SIMILAR", "SEMANTIC_SEARCH"]
+              config:
+                where: "source is not null"
+      - name: rank
+        description: "0-indexed position of the project in the reco list at the time of the event"
       - name: context
-        description: "Free-form metadata (rank, source, etc.)"
+        description: "Free-form metadata (variant A/B, session_id, etc.)"
       - name: occurred_at
-        description: "Event timestamp"
+        description: "Event timestamp (server-side)"
         tests:
           - not_null

@@ -7,7 +7,7 @@ FROM {{ ref('match_user_recommendation') }} AS mur
 INNER JOIN (
     SELECT user_id, project_id, count(*) AS n_shown
     FROM {{ ref('stg_public__recommendation_event') }}
-    WHERE event_type = 'shown'
+    WHERE event_type = 'SHOWN'
       AND occurred_at >= now() - interval '{{ var("ignored_lookback_days", 30) }} days'
     GROUP BY user_id, project_id
     HAVING count(*) >= {{ var('ignored_min_shown', 3) }}
@@ -16,7 +16,7 @@ INNER JOIN (
 LEFT JOIN (
     SELECT DISTINCT user_id, project_id
     FROM {{ ref('stg_public__recommendation_event') }}
-    WHERE event_type IN ('clicked', 'starred_after_reco')
+    WHERE event_type IN ('CLICKED', 'STARRED_AFTER_RECO')
       AND occurred_at >= now() - interval '{{ var("ignored_lookback_days", 30) }} days'
 ) AS clicked
     ON shown.user_id = clicked.user_id AND shown.project_id = clicked.project_id
