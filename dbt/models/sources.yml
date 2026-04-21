@@ -90,3 +90,5 @@ sources:
         description: "Join table linking projects to domains."
       - name: project_tech_stack
         description: "Join table linking projects to tech stacks."
+      - name: recommendation_event
+        description: "User interactions with recommendations (shown, clicked, dismissed, starred_after_reco)."

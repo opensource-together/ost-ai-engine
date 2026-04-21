@@ -104,6 +104,30 @@ candidate_pairs AS (
     GROUP BY user_id, project_id
 ),
 
+-- Projects the user has seen ≥N times in the lookback window without clicking.
+-- Keeps the reco surface fresh — if a user ignored a project 3 times, stop pushing it.
+user_shown_ignored AS (
+    SELECT
+        shown.user_id,
+        shown.project_id
+    FROM (
+        SELECT user_id, project_id, count(*) AS n_shown
+        FROM {{ ref('stg_public__recommendation_event') }}
+        WHERE event_type = 'SHOWN'
+          AND occurred_at >= now() - interval '{{ var("ignored_lookback_days", 30) }} days'
+        GROUP BY user_id, project_id
+    ) AS shown
+    LEFT JOIN (
+        SELECT DISTINCT user_id, project_id
+        FROM {{ ref('stg_public__recommendation_event') }}
+        WHERE event_type IN ('CLICKED', 'STARRED_AFTER_RECO')
+          AND occurred_at >= now() - interval '{{ var("ignored_lookback_days", 30) }} days'
+    ) AS clicked
+        ON shown.user_id = clicked.user_id AND shown.project_id = clicked.project_id
+    WHERE clicked.project_id IS NULL
+      AND shown.n_shown >= {{ var('ignored_min_shown', 3) }}
+),
+
 -- Weighted preference score with active-signal normalization.
 -- If a user has 0 items in a dimension, that dimension is excluded
 -- and its weight is redistributed proportionally among active signals.
@@ -155,9 +179,13 @@ preference_scored AS (
         ) AS preference_score
     FROM candidate_pairs AS cp
     INNER JOIN user_totals AS ut ON cp.user_id = ut.user_id
+    LEFT JOIN user_shown_ignored AS usi
+        ON cp.user_id = usi.user_id AND cp.project_id = usi.project_id
     WHERE
         -- At least one shared signal
         cp.shared_tech_stacks + cp.shared_categories + cp.shared_domains > 0
+        -- Not already shown repeatedly without engagement
+        AND usi.project_id IS NULL
 ),
 
 -- Vectors
