@@ -53,6 +53,27 @@ def _upsert_failure(cur: Any, project_id: str, error: str) -> None:
     )
 
 
+def _persist_failures(failures: list[tuple[str, str]], log: Any) -> int:
+    """Write DLQ entries one-by-one in isolated transactions.
+
+    The DLQ is a monitoring table — a single failed write (historically an FK
+    violation on a not-yet-synced project) must not abort the classifier's
+    output. Each row runs in its own commit so a sibling row can't poison
+    the shared transaction.
+    """
+    persisted = 0
+    for project_id, error_msg in failures:
+        try:
+            with get_db_cursor(commit=True) as cur:
+                _upsert_failure(cur, project_id, error_msg)
+            persisted += 1
+        except Exception as e:
+            log.warning(
+                f"DLQ write failed for project {project_id}: {type(e).__name__}: {e}"
+            )
+    return persisted
+
+
 def _classify_one(
     llm: Any, project: dict[str, Any], cat_names: list[str], dom_names: list[str]
 ) -> tuple[dict[str, Any], ClassificationResult | None, Exception | None, bool]:
@@ -209,6 +230,7 @@ def core_match__classify_projects(
                             "categoryName": result.category,
                             "domainName": result.domain,
                             "modelVersion": result.model,
+                            "promptVersion": result.prompt_version,
                         },
                     }
                 )
@@ -231,10 +253,7 @@ def core_match__classify_projects(
                     f"cat='{result.category}' dom='{result.domain}'"
                 )
 
-    if failures:
-        with get_db_cursor() as cur:
-            for project_id, error_msg in failures:
-                _upsert_failure(cur, project_id, error_msg)
+    dlq_persisted = _persist_failures(failures, context.log)
 
     estimated_cost_usd = round(
         (total_prompt_tokens / 1_000_000) * _COST_INPUT_PER_M
@@ -244,7 +263,7 @@ def core_match__classify_projects(
 
     context.log.info(
         f"Classified {len(results_payload)}/{total}. "
-        f"Failures routed to DLQ: {len(failures)} "
+        f"Failures: {len(failures)} attempted, {dlq_persisted} persisted to DLQ "
         f"(rate-limited: {rate_limit_hits}, unknown labels: {unknown_labels}). "
         f"Tokens: in={total_prompt_tokens} out={total_completion_tokens} "
         f"est cost ~${estimated_cost_usd}."
@@ -255,6 +274,7 @@ def core_match__classify_projects(
         metadata={
             "count": len(results_payload),
             "failed": len(failures),
+            "dlq_persisted": dlq_persisted,
             "rate_limit_hits": rate_limit_hits,
             "unknown_labels": unknown_labels,
             "prompt_tokens": total_prompt_tokens,
@@ -262,6 +282,7 @@ def core_match__classify_projects(
             "total_tokens": total_prompt_tokens + total_completion_tokens,
             "estimated_cost_usd": estimated_cost_usd,
             "model_version": llm.model_id,
+            "prompt_version": llm.prompt.fingerprint,
             "max_workers": _MAX_WORKERS,
             "preview": [str(x["project"]["title"]) for x in results_payload[:10]],
         },

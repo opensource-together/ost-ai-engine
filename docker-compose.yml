@@ -11,6 +11,9 @@ x-common-env: &common-env
   DBT_TARGET: docker
   MISTRAL_API_KEY: ${MISTRAL_API_KEY}
   FASTTEXT_MODEL_PATH: models/lid.176.ftz
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
 
 x-common-volumes: &common-volumes
   - dagster_data:/app/dagster_home

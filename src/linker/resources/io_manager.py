@@ -1,4 +1,5 @@
 import re
+from collections.abc import Iterable, Iterator
 
 import pandas as pd
 from dagster import ConfigurableIOManager, InputContext, OutputContext
@@ -63,8 +64,27 @@ def _validate_identifier(schema: str, table: str) -> None:
         )
 
 
+def _resolve_schema_table(asset_key_path: list[str]) -> tuple[str, str]:
+    if len(asset_key_path) > 1:
+        return asset_key_path[-2], asset_key_path[-1]
+    return "public", asset_key_path[-1]
+
+
 class PandasPostgresIOManager(ConfigurableIOManager):
+    """Pass pandas DataFrames between assets via Postgres.
+
+    When `chunk_size` is None (default) the manager loads and writes full
+    DataFrames — backward-compatible with assets typed as `pd.DataFrame`.
+
+    When `chunk_size` is set, `load_input` returns an `Iterator[pd.DataFrame]`
+    (server-side cursor via `pandas.read_sql(..., chunksize=N)`) and
+    `handle_output` accepts either a DataFrame or any iterable of DataFrames,
+    writing chunk-by-chunk. Downstream assets that opt in must type their
+    input as `Iterator[pd.DataFrame]` and iterate over it.
+    """
+
     db_url: str
+    chunk_size: int | None = None
 
     _engine: Engine | None = PrivateAttr(default=None)
 
@@ -74,39 +94,69 @@ class PandasPostgresIOManager(ConfigurableIOManager):
             self._engine = create_engine(self.db_url)
         return self._engine
 
-    def handle_output(self, context: OutputContext, obj: pd.DataFrame | None) -> None:
+    def handle_output(
+        self,
+        context: OutputContext,
+        obj: pd.DataFrame | Iterable[pd.DataFrame] | None,
+    ) -> None:
         if obj is None:
             context.log.info("Skipping output write because obj is None")
             return
 
-        # Map AssetKey to Schema/Table
-        if len(context.asset_key.path) > 1:
-            schema, table = context.asset_key.path[-2], context.asset_key.path[-1]
-        else:
-            schema = "public"
-            table = context.asset_key.path[-1]
-
+        schema, table = _resolve_schema_table(list(context.asset_key.path))
         _validate_identifier(schema, table)
 
         context.log.info(f"Writing dataframe to {schema}.{table}")
 
-        # Truncate-then-append instead of replace (which drops the table)
+        # Truncate-then-append: truncate once, then append each chunk.
         with self.engine.begin() as conn:
             conn.execute(text(f'TRUNCATE TABLE "{schema}"."{table}"'))
-        obj.to_sql(table, self.engine, schema=schema, if_exists="append", index=False)
 
-    def load_input(self, context: InputContext) -> pd.DataFrame:
-        # Map AssetKey to Schema/Table
-        if len(context.asset_key.path) > 1:
-            schema = context.asset_key.path[-2]
-            table = context.asset_key.path[-1]
-        else:
-            schema = "public"
-            table = context.asset_key.path[-1]
+        written_rows = 0
+        for chunk_idx, chunk in enumerate(_iter_chunks(obj)):
+            if chunk is None or chunk.empty:
+                continue
+            chunk.to_sql(
+                table,
+                self.engine,
+                schema=schema,
+                if_exists="append",
+                index=False,
+                chunksize=self.chunk_size,
+                method="multi" if self.chunk_size else None,
+            )
+            written_rows += len(chunk)
+            if self.chunk_size:
+                context.log.debug(
+                    f"Wrote chunk {chunk_idx} ({len(chunk)} rows) to {schema}.{table}"
+                )
 
+        context.log.info(f"Wrote {written_rows} rows to {schema}.{table}")
+
+    def load_input(
+        self, context: InputContext
+    ) -> pd.DataFrame | Iterator[pd.DataFrame]:
+        schema, table = _resolve_schema_table(list(context.asset_key.path))
         _validate_identifier(schema, table)
 
         full_table_name = f'"{schema}"."{table}"'
-        context.log.info(f"Loading input from {full_table_name}")
         query = f"SELECT * FROM {full_table_name}"
+
+        if self.chunk_size:
+            context.log.info(
+                f"Streaming input from {full_table_name} (chunk_size={self.chunk_size})"
+            )
+            return pd.read_sql(query, self.engine, chunksize=self.chunk_size)
+
+        context.log.info(f"Loading input from {full_table_name}")
         return pd.read_sql(query, self.engine)
+
+
+def _iter_chunks(
+    obj: pd.DataFrame | Iterable[pd.DataFrame],
+) -> Iterator[pd.DataFrame]:
+    """Normalize input to an iterator of DataFrames."""
+    if isinstance(obj, pd.DataFrame):
+        yield obj
+        return
+    yield from obj

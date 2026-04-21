@@ -34,6 +34,20 @@ class TestDockerfile:
         assert "ost-scraper" in content
         assert "ost-fetcher" in content
 
+    def test_hf_cache_dirs_configured(self) -> None:
+        """SentenceTransformer (used by embedding assets) needs writable cache
+        dirs. The non-root `appuser` has no home dir, so the default
+        ~/.cache/huggingface fails with PermissionError. Pin HF_HOME and
+        SENTENCE_TRANSFORMERS_HOME to a writable /app path."""
+        content = (PROJECT_ROOT / "Dockerfile").read_text()
+        assert "HF_HOME=/app/" in content, "HF_HOME must be set to a writable /app path"
+        assert "SENTENCE_TRANSFORMERS_HOME=/app/" in content, (
+            "SENTENCE_TRANSFORMERS_HOME must be set to a writable /app path"
+        )
+        assert "chown" in content and "/app/.cache" in content, (
+            "HF cache dir must be chown'd to appuser"
+        )
+
     def test_no_hardcoded_secrets(self) -> None:
         """Dockerfile must not contain hardcoded passwords or tokens."""
         content = (PROJECT_ROOT / "Dockerfile").read_text().lower()

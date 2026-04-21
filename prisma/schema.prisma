@@ -251,6 +251,7 @@ model ProjectClassification {
   categoryConfidence Float?
   domainConfidence   Float?
   modelVersion       String?
+  promptVersion      String?
   project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   domain             Domain?   @relation(fields: [domainId], references: [id], onDelete: SetNull)
@@ -261,6 +262,11 @@ model ProjectClassification {
   @@schema("match")
 }
 
+/// Monitoring-only DLQ for failed classifications. `projectId` is intentionally
+/// NOT a Prisma relation: the classifier writes here BEFORE the public.Project
+/// row exists (classify runs before sync), so an FK would cause
+/// ForeignKeyViolation and lose the batch. See migration
+/// 20260421130000_drop_classification_failure_project_fk.
 model ProjectClassificationFailure {
   id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   projectId      String   @unique @db.Uuid
@@ -268,7 +274,6 @@ model ProjectClassificationFailure {
   lastError      String
   lastAttemptAt  DateTime @default(now())
   nextRetryAt    DateTime @default(now())
-  project        Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([nextRetryAt])
   @@map("project_classification_failure")
@@ -300,7 +305,6 @@ model Project {
   updatedAt             DateTime               @updatedAt
   projectBookmark              ProjectBookmark[]
   projectClassification        ProjectClassification?
-  projectClassificationFailure ProjectClassificationFailure?
 
   @@schema("public")
 }

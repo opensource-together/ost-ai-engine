@@ -107,6 +107,10 @@ defs = Definitions(
         ),  # Using CPU for embedding for now, or mps
         "dbt": dbt_resource,
         "io_manager": PandasPostgresIOManager(db_url=EnvVar("DATABASE_URL")),
+        "streaming_io_manager": PandasPostgresIOManager(
+            db_url=EnvVar("DATABASE_URL"),
+            chunk_size=10_000,
+        ),
         "fs_io_manager": FilesystemIOManager(),
     },
     jobs=[

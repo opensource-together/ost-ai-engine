@@ -83,15 +83,22 @@ ENV DAGSTER_STORAGE_DIR=/app/dagster_home/storage
 ENV DAGSTER_LOGS_DIR=/app/dagster_home/logs
 ENV PYTHONPATH=/app
 ENV DBT_PROJECT_DIR=/app/dbt
+# Force HuggingFace / sentence-transformers to cache inside the writable /app
+# volume. The default (~/.cache/huggingface) points at /home/appuser, which
+# does not exist for our non-root user and caused ml__embd_user to crash with
+# PermissionError the first time it tried to download the MiniLM model.
+ENV HF_HOME=/app/.cache/huggingface
+ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence-transformers
 
-# Create Dagster home, copy prod config as default
-RUN mkdir -p $DAGSTER_HOME \
+# Create Dagster home + HF cache dirs, copy prod config as default
+RUN mkdir -p $DAGSTER_HOME $HF_HOME $SENTENCE_TRANSFORMERS_HOME \
     && cp dagster.prod.yaml $DAGSTER_HOME/dagster.yaml
 
 # Create non-root user and set ownership for writable directories
 RUN groupadd -g 1000 appuser \
     && useradd -u 1000 -g appuser -s /bin/bash appuser \
-    && chown -R appuser:appuser $DAGSTER_HOME /app/dbt /app/models /app/scripts
+    && chown -R appuser:appuser \
+        $DAGSTER_HOME /app/dbt /app/models /app/scripts /app/.cache
 
 USER appuser
 

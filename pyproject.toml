@@ -61,6 +61,7 @@ dev = [
     "pip-audit>=2.7.0,<3",
     "pandas-stubs>=3.0.0.260204",
     "types-psycopg2>=2.9.21.20260223",
+    "types-PyYAML>=6.0",
 ]
 
 [build-system]
