@@ -104,6 +104,15 @@ candidate_pairs AS (
     GROUP BY user_id, project_id
 ),
 
+-- Exclude projects the user has already bookmarked — they're already saved,
+-- no value in re-recommending them.
+user_bookmarks AS (
+    SELECT
+        user_id,
+        project_id
+    FROM {{ ref('stg_public__project_bookmark') }}
+),
+
 -- Weighted preference score with active-signal normalization.
 -- If a user has 0 items in a dimension, that dimension is excluded
 -- and its weight is redistributed proportionally among active signals.
@@ -155,9 +164,13 @@ preference_scored AS (
         ) AS preference_score
     FROM candidate_pairs AS cp
     INNER JOIN user_totals AS ut ON cp.user_id = ut.user_id
+    LEFT JOIN user_bookmarks AS ub
+        ON cp.user_id = ub.user_id AND cp.project_id = ub.project_id
     WHERE
         -- At least one shared signal
         cp.shared_tech_stacks + cp.shared_categories + cp.shared_domains > 0
+        -- Not already bookmarked by the user
+        AND ub.project_id IS NULL
 ),
 
 -- Vectors
