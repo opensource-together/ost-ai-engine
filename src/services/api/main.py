@@ -7,6 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from src.services.api.config import APIConfig
 from src.services.api.dependencies import close_pool, init_pool, init_semantic
+
 from src.services.api.rate_limit import limiter
 from src.services.api.routes import health, projects, recommendations, references
 
@@ -21,6 +22,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     config = _get_config()
     init_pool(config.database_url)
     init_semantic()
+
     yield
     close_pool()
 

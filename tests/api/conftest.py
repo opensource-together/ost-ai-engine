@@ -24,6 +24,7 @@ def client() -> Generator[TestClient, None, None]:
         patch("src.services.api.dependencies.init_pool"),
         patch("src.services.api.dependencies.init_semantic"),
     ):
+
         mock_cfg.return_value = MagicMock(
             database_url="postgresql://test:test@localhost:5432/test",
         )

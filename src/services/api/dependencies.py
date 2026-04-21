@@ -5,6 +5,7 @@ _pool: ConnectionPool | None = None
 _semantic: SemanticSearchService | None = None
 
 
+
 def init_pool(database_url: str) -> None:
     """Initialize the global connection pool."""
     global _pool
@@ -22,13 +23,11 @@ def get_pool() -> ConnectionPool:
     if _pool is None:
         raise RuntimeError("Connection pool not initialized")
     return _pool
-
-
 def init_semantic() -> None:
     """Initialize the global semantic search service (eager model load)."""
     global _semantic
-    _semantic = SemanticSearchService()
-    _semantic.load()
+    if _semantic is None:
+        _semantic = SemanticSearchService()
 
 
 def get_semantic() -> SemanticSearchService:
@@ -36,3 +35,4 @@ def get_semantic() -> SemanticSearchService:
     if _semantic is None:
         raise RuntimeError("Semantic search service not initialized")
     return _semantic
+

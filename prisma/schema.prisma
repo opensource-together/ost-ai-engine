@@ -448,6 +448,20 @@ model RawGithubProject {
   @@schema("github")
 }
 
+model RawTrendingProject {
+  id            String   @id @default(uuid()) @db.Uuid
+  project_id    String
+  repo_url      String
+  data          Json
+  trending_date DateTime @db.Date
+  stars_today   Int?
+  created_at    DateTime @default(now())
+
+  @@unique([project_id, trending_date])
+  @@map("raw_trending_project")
+  @@schema("github")
+}
+
 model IntGithubDetection {
   id                  String   @id @default(uuid())
   project_id          String   @unique

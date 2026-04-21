@@ -8,6 +8,7 @@ x-common-env: &common-env
   GITHUB_ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
   GO_SCRAPER_PATH: /usr/local/bin/ost-scraper
   GO_FETCHER_PATH: /usr/local/bin/ost-fetcher
+  GO_TRENDING_PATH: /usr/local/bin/ost-trending
   DBT_TARGET: docker
   MISTRAL_API_KEY: ${MISTRAL_API_KEY}
   FASTTEXT_MODEL_PATH: models/lid.176.ftz

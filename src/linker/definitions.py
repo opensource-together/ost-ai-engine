@@ -42,6 +42,7 @@ from .assets.scraper import (
     core_github__fetch_repo_languages,
     core_github__fetch_repo_topics,
     raw_github__extract_projects,
+    raw_github__extract_trending,
 )
 from .resources.cfg_resource import PipelineConfig
 from .resources.fasttext_resource import FastTextModelResource
@@ -52,6 +53,7 @@ from .resources.sentence_transformer_resource import SentenceTransformerResource
 scraper_assets = load_assets_from_modules(
     [
         raw_github__extract_projects,
+        raw_github__extract_trending,
         core_github__detect_languages,
         core_github__fetch_readme,
         core_github__fetch_repo_languages,
@@ -95,6 +97,13 @@ defs = Definitions(
             github_token=EnvVar("GITHUB_ACCESS_TOKEN"),
             go_scraper_path=EnvVar("GO_SCRAPER_PATH"),
             go_fetcher_path=EnvVar("GO_FETCHER_PATH"),
+            **(
+                {
+                    "go_trending_path": EnvVar("GO_TRENDING_PATH"),
+                }
+                if os.getenv("GO_TRENDING_PATH")
+                else {}
+            ),
         ),
         "fasttext_model": FastTextModelResource(
             model_path=EnvVar("FASTTEXT_MODEL_PATH"),

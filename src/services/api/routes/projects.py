@@ -8,6 +8,7 @@ from src.services.api.rate_limit import limiter
 from src.services.api.schemas import ProjectOut, ProjectSemanticOut, ProjectSimilarOut
 from src.services.api.semantic import SemanticSearchService
 
+
 router = APIRouter(prefix="/projects")
 
 MAX_LIMIT = 50
@@ -122,7 +123,6 @@ def search_natural(
     with pool.get_cursor() as cur:
         cur.execute(sql, params)
         return list(cur.fetchall())
-
 
 @router.get("/{project_id}", response_model=ProjectOut)
 @limiter.limit("60/minute")
