@@ -121,8 +121,8 @@ def build_resources() -> dict[str, Any]:
         "llm_classifier": LLMClassifierResource(
             api_key=EnvVar("MISTRAL_API_KEY"),
         ),
+        # force CPU usage to avoid relying on GPU availability in runtime env
         "sentence_transformer": SentenceTransformerResource(
-            # forcing CPU usage for embedding , prod constraints
             device="cpu"
         ),
         "dbt": dbt_resource,
