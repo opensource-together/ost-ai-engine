@@ -113,13 +113,7 @@ def build_resources() -> dict[str, Any]:
             github_token=EnvVar("GITHUB_ACCESS_TOKEN"),
             go_scraper_path=EnvVar("GO_SCRAPER_PATH"),
             go_fetcher_path=EnvVar("GO_FETCHER_PATH"),
-            **(
-                {
-                    "go_trending_path": EnvVar("GO_TRENDING_PATH"),
-                }
-                if os.getenv("GO_TRENDING_PATH")
-                else {}
-            ),
+            go_trending_path=EnvVar("GO_TRENDING_PATH"),
         ),
         "fasttext_model": FastTextModelResource(
             model_path=EnvVar("FASTTEXT_MODEL_PATH"),
@@ -128,8 +122,9 @@ def build_resources() -> dict[str, Any]:
             api_key=EnvVar("MISTRAL_API_KEY"),
         ),
         "sentence_transformer": SentenceTransformerResource(
+            # forcing CPU usage for embedding , prod constraints
             device="cpu"
-        ),  # Using CPU for embedding for now, or mps
+        ),
         "dbt": dbt_resource,
         "io_manager": PandasPostgresIOManager(db_url=EnvVar("DATABASE_URL")),
         "streaming_io_manager": PandasPostgresIOManager(
