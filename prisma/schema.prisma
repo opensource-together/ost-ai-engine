@@ -68,11 +68,12 @@ model User {
   gitlabUsername  String?           @unique
   githubId        String?           @unique
   gitlabId        String?           @unique
-  Project         Project[]
-  categories      UserCategories[]
-  domain          UserDomains[]
-  projectBookmark ProjectBookmark[]
-  betaTester      Boolean           @default(false)
+  Project              Project[]
+  categories           UserCategories[]
+  domain               UserDomains[]
+  projectBookmark      ProjectBookmark[]
+  recommendationEvents RecommendationEvent[]
+  betaTester           Boolean               @default(false)
 
   @@unique([email])
   @@map("user")
@@ -250,6 +251,8 @@ model ProjectClassification {
   domainId           String?   @db.Uuid
   categoryConfidence Float?
   domainConfidence   Float?
+  modelVersion       String?
+  promptVersion      String?
   project            Project   @relation(fields: [projectId], references: [id], onDelete: Cascade)
   category           Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
   domain             Domain?   @relation(fields: [domainId], references: [id], onDelete: SetNull)
@@ -257,6 +260,24 @@ model ProjectClassification {
   updatedAt          DateTime  @updatedAt
 
   @@map("project_classification")
+  @@schema("match")
+}
+
+/// Monitoring-only DLQ for failed classifications. `projectId` is intentionally
+/// NOT a Prisma relation: the classifier writes here BEFORE the public.Project
+/// row exists (classify runs before sync), so an FK would cause
+/// ForeignKeyViolation and lose the batch. See migration
+/// 20260421130000_drop_classification_failure_project_fk.
+model ProjectClassificationFailure {
+  id             String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  projectId      String   @unique @db.Uuid
+  attempts       Int      @default(1)
+  lastError      String
+  lastAttemptAt  DateTime @default(now())
+  nextRetryAt    DateTime @default(now())
+
+  @@index([nextRetryAt])
+  @@map("project_classification_failure")
   @@schema("match")
 }
 
@@ -285,7 +306,46 @@ model Project {
   updatedAt             DateTime               @updatedAt
   projectBookmark       ProjectBookmark[]
   projectClassification ProjectClassification?
+  recommendationEvents  RecommendationEvent[]
 
+
+  @@schema("public")
+}
+
+enum RecommendationEventType {
+  SHOWN
+  CLICKED
+  DISMISSED
+  STARRED_AFTER_RECO
+
+  @@schema("public")
+}
+
+enum RecommendationSource {
+  PERSONALIZED
+  TRENDING
+  SIMILAR
+  SEMANTIC_SEARCH
+
+  @@schema("public")
+}
+
+model RecommendationEvent {
+  id         String                  @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  userId     String                  @db.Uuid
+  projectId  String                  @db.Uuid
+  eventType  RecommendationEventType
+  source     RecommendationSource?
+  rank       Int?
+  context    Json?
+  occurredAt DateTime                @default(now())
+  user       User                    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  project    Project                 @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([userId, projectId])
+  @@index([userId, occurredAt])
+  @@index([source, occurredAt])
+  @@map("recommendation_event")
   @@schema("public")
 }
 
@@ -385,6 +445,20 @@ model RawGithubProject {
   updatedAt DateTime @updatedAt
 
   @@map("raw_github_project")
+  @@schema("github")
+}
+
+model RawTrendingProject {
+  id            String   @id @default(uuid()) @db.Uuid
+  project_id    String
+  repo_url      String
+  data          Json
+  trending_date DateTime @db.Date
+  stars_today   Int?
+  created_at    DateTime @default(now())
+
+  @@unique([project_id, trending_date])
+  @@map("raw_trending_project")
   @@schema("github")
 }
 

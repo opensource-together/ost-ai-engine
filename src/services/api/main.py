@@ -7,7 +7,8 @@ from slowapi.errors import RateLimitExceeded
 
 from src.services.api.auth import require_service_token
 from src.services.api.config import APIConfig
-from src.services.api.dependencies import close_pool, init_pool
+from src.services.api.dependencies import close_pool, init_pool, init_semantic
+
 from src.services.api.rate_limit import limiter
 from src.services.api.routes import health, projects, recommendations, references
 
@@ -18,9 +19,11 @@ def _get_config() -> APIConfig:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Startup: init pool. Shutdown: close pool."""
+    """Startup: init pool + load semantic search model. Shutdown: close pool."""
     config = _get_config()
     init_pool(config.database_url)
+    init_semantic()
+
     yield
     close_pool()
 

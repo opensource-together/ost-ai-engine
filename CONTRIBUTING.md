@@ -21,7 +21,7 @@ cd ost-linker
 
 # 2. Configure environment
 cp .env.example .env
-# Fill in DATABASE_URL, GITHUB_ACCESS_TOKEN, OPENROUTER_API_KEY, paths, etc.
+# Fill in DATABASE_URL, GITHUB_ACCESS_TOKEN, MISTRAL_API_KEY, paths, etc.
 
 # 3. Install Python dependencies
 uv sync

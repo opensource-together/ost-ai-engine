@@ -1,6 +1,13 @@
+"""
+Dagster definitions for the linker package.
+
+This module is imported at process startup, before Dagster resources are
+constructed. For that reason, bootstrap values needed at import time are
+read from `settings.py`.
+"""
+
 import os
 from collections.abc import Iterator
-from pathlib import Path
 from typing import Any
 
 from dagster import (
@@ -12,8 +19,11 @@ from dagster import (
 )
 from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
 
-DEFAULT_DBT_DIR = Path(__file__).parent.parent.parent / "dbt"
-DBT_PROJECT_DIR = Path(os.getenv("DBT_PROJECT_DIR", DEFAULT_DBT_DIR)).resolve()
+from .settings import settings
+
+# Import-time bootstrap config belongs in settings.py.
+DBT_PROJECT_DIR = settings.dbt_project_dir
+
 dbt_project = DbtProject(
     project_dir=DBT_PROJECT_DIR,
     profiles_dir=DBT_PROJECT_DIR,
@@ -42,6 +52,7 @@ from .assets.scraper import (
     core_github__fetch_repo_languages,
     core_github__fetch_repo_topics,
     raw_github__extract_projects,
+    raw_github__extract_trending,
 )
 from .resources.cfg_resource import PipelineConfig
 from .resources.fasttext_resource import FastTextModelResource
@@ -52,6 +63,7 @@ from .resources.sentence_transformer_resource import SentenceTransformerResource
 scraper_assets = load_assets_from_modules(
     [
         raw_github__extract_projects,
+        raw_github__extract_trending,
         core_github__detect_languages,
         core_github__fetch_readme,
         core_github__fetch_repo_languages,
@@ -80,45 +92,77 @@ from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
 from .schedules.project_enrichment_schedule import project_enrichment_schedule
 from .schedules.user_recommendation_schedule import user_recommendation_schedule
 
-defs = Definitions(
-    assets=[
+
+def build_assets() -> list[Any]:
+    """Return the assets registered in the Linker Dagster repository."""
+    return [
         *scraper_assets,
         *dbt_assets_list,
         core_match__classify_projects,
         core_public__sync_projects,
         core_ml__embed_projects,
         core_ml__embed_users,
-    ],
-    resources={
+    ]
+
+
+def build_resources() -> dict[str, Any]:
+    """Return Dagster resources configured for runtime resolution."""
+    return {
         "config": PipelineConfig(
             db_url=EnvVar("DATABASE_URL"),
             github_token=EnvVar("GITHUB_ACCESS_TOKEN"),
             go_scraper_path=EnvVar("GO_SCRAPER_PATH"),
             go_fetcher_path=EnvVar("GO_FETCHER_PATH"),
+            go_trending_path=EnvVar("GO_TRENDING_PATH"),
         ),
         "fasttext_model": FastTextModelResource(
             model_path=EnvVar("FASTTEXT_MODEL_PATH"),
         ),
         "llm_classifier": LLMClassifierResource(
-            api_key=EnvVar("OPENROUTER_API_KEY"),
+            api_key=EnvVar("MISTRAL_API_KEY"),
         ),
+        # force CPU usage to avoid relying on GPU availability in runtime env
         "sentence_transformer": SentenceTransformerResource(
             device="cpu"
-        ),  # Using CPU for embedding for now, or mps
+        ),
         "dbt": dbt_resource,
         "io_manager": PandasPostgresIOManager(db_url=EnvVar("DATABASE_URL")),
+        "streaming_io_manager": PandasPostgresIOManager(
+            db_url=EnvVar("DATABASE_URL"),
+            chunk_size=10_000,
+        ),
         "fs_io_manager": FilesystemIOManager(),
-    },
-    jobs=[
+    }
+
+
+def build_jobs() -> list[Any]:
+    """Return jobs exposed by the Linker Dagster repository."""
+    return [
         cleanup_dagster_history_job,
         project_enrichment_job,
         run_all_job,
         user_recommendation_job,
-    ],
-    schedules=[
+    ]
+
+
+def build_schedules() -> list[Any]:
+    """Return schedules exposed by the Linker Dagster repository."""
+    return [
         cleanup_dagster_history_schedule,
         project_enrichment_schedule,
         user_recommendation_schedule,
-    ],
-    sensors=[],
+    ]
+
+
+def build_sensors() -> list[Any]:
+    """Return sensors exposed by the Linker Dagster repository."""
+    return []
+
+
+defs = Definitions(
+    assets=build_assets(),
+    resources=build_resources(),
+    jobs=build_jobs(),
+    schedules=build_schedules(),
+    sensors=build_sensors(),
 )

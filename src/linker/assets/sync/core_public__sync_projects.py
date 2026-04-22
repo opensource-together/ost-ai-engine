@@ -116,20 +116,32 @@ def core_public__sync_projects(
 
                 # B. Upsert match.project_classification
                 match_id = str(uuid.uuid4())
+                model_version = classification.get("modelVersion")
+                prompt_version = classification.get("promptVersion")
                 try:
                     cur.execute(
                         """
                         INSERT INTO "match"."project_classification" (
                             "id", "projectId", "categoryId",
-                            "domainId", "createdAt", "updatedAt"
+                            "domainId", "modelVersion", "promptVersion",
+                            "createdAt", "updatedAt"
                         )
-                        VALUES (%s, %s, %s, %s, NOW(), NOW())
+                        VALUES (%s, %s, %s, %s, %s, %s, NOW(), NOW())
                         ON CONFLICT ("projectId") DO UPDATE SET
                             "categoryId" = EXCLUDED."categoryId",
                             "domainId" = EXCLUDED."domainId",
+                            "modelVersion" = EXCLUDED."modelVersion",
+                            "promptVersion" = EXCLUDED."promptVersion",
                             "updatedAt" = NOW();
                     """,
-                        (match_id, str(p["id"]), cat_id, dom_id),
+                        (
+                            match_id,
+                            str(p["id"]),
+                            cat_id,
+                            dom_id,
+                            model_version,
+                            prompt_version,
+                        ),
                     )
                 except Exception as db_err:
                     context.log.error(

@@ -8,9 +8,13 @@ x-common-env: &common-env
   GITHUB_ACCESS_TOKEN: ${GITHUB_ACCESS_TOKEN}
   GO_SCRAPER_PATH: /usr/local/bin/ost-scraper
   GO_FETCHER_PATH: /usr/local/bin/ost-fetcher
+  GO_TRENDING_PATH: /usr/local/bin/ost-trending
   DBT_TARGET: docker
-  OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+  MISTRAL_API_KEY: ${MISTRAL_API_KEY}
   FASTTEXT_MODEL_PATH: models/lid.176.ftz
+  POSTGRES_USER: ${POSTGRES_USER}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+  POSTGRES_DB: ${POSTGRES_DB}
 
 x-common-volumes: &common-volumes
   - dagster_data:/app/dagster_home

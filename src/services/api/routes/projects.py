@@ -3,9 +3,11 @@ from typing import Any
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
 from src.services.api.database import ConnectionPool
-from src.services.api.dependencies import get_pool
+from src.services.api.dependencies import get_pool, get_semantic
 from src.services.api.rate_limit import limiter
-from src.services.api.schemas import ProjectOut, ProjectSimilarOut
+from src.services.api.schemas import ProjectOut, ProjectSemanticOut, ProjectSimilarOut
+from src.services.api.semantic import SemanticSearchService
+
 
 router = APIRouter(prefix="/projects")
 
@@ -58,6 +60,69 @@ def search_projects(
         cur.execute(query, params)
         return list(cur.fetchall())
 
+
+@router.get("/search-natural", response_model=list[ProjectSemanticOut])
+@limiter.limit("60/minute")
+def search_natural(
+    request: Request,
+    q: str = Query(..., min_length=1),
+    language: str | None = None,
+    domain: str | None = None,
+    category: str | None = None,
+    techstack: str | None = None,
+    limit: int = Query(default=10, ge=1, le=MAX_LIMIT),
+    pool: ConnectionPool = Depends(get_pool),
+    semantic: SemanticSearchService = Depends(get_semantic),
+) -> list[dict[str, Any]]:
+    """Natural-language semantic search.
+
+    Embeds the query text with the same SentenceTransformer used by the pipeline
+    and ranks projects by cosine similarity against their precomputed embeddings.
+    Optional hard filters narrow the candidate set before ranking.
+    """
+    query_vec = semantic.encode(q)
+    vector_literal = "[" + ",".join(f"{v:.6f}" for v in query_vec) + "]"
+
+    sql = """
+        SELECT DISTINCT p.id, p.title, p.description, p."repoUrl" AS repo_url,
+               p."logoUrl" AS logo_url,
+               1 - (e.vector <=> %s::vector) AS similarity
+        FROM ml.embd_github_project e
+        JOIN public."Project" p ON p.id = e."projectId"
+    """
+    params: list[Any] = [vector_literal]
+
+    if category:
+        sql += (
+            ' JOIN public.project_category pc ON p.id = pc."projectId"'
+            ' JOIN public."Category" c ON pc."categoryId" = c.id AND c.name = %s'
+        )
+        params.append(category)
+    if domain:
+        sql += (
+            ' JOIN public.project_domain pd ON p.id = pd."projectId"'
+            ' JOIN public."Domain" d ON pd."domainId" = d.id AND d.name = %s'
+        )
+        params.append(domain)
+    if techstack or language:
+        sql += (
+            ' JOIN public.project_tech_stack pts ON p.id = pts."projectId"'
+            ' JOIN public.tech_stack ts ON pts."techStackId" = ts.id'
+        )
+        if techstack:
+            sql += " AND ts.name = %s"
+            params.append(techstack)
+        if language:
+            sql += " AND ts.name ILIKE %s AND ts.type = 'LANGUAGE'"
+            params.append(language)
+
+    sql += " WHERE (p.published = true OR p.trending = true)"
+    sql += " ORDER BY similarity DESC LIMIT %s"
+    params.append(limit)
+
+    with pool.get_cursor() as cur:
+        cur.execute(sql, params)
+        return list(cur.fetchall())
 
 @router.get("/{project_id}", response_model=ProjectOut)
 @limiter.limit("60/minute")

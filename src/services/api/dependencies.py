@@ -1,6 +1,9 @@
 from src.services.api.database import ConnectionPool
+from src.services.api.semantic import SemanticSearchService
 
 _pool: ConnectionPool | None = None
+_semantic: SemanticSearchService | None = None
+
 
 
 def init_pool(database_url: str) -> None:
@@ -20,3 +23,16 @@ def get_pool() -> ConnectionPool:
     if _pool is None:
         raise RuntimeError("Connection pool not initialized")
     return _pool
+def init_semantic() -> None:
+    """Initialize the global semantic search service (eager model load)."""
+    global _semantic
+    if _semantic is None:
+        _semantic = SemanticSearchService()
+
+
+def get_semantic() -> SemanticSearchService:
+    """FastAPI dependency: returns the semantic search service."""
+    if _semantic is None:
+        raise RuntimeError("Semantic search service not initialized")
+    return _semantic
+

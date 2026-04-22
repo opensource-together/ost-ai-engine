@@ -1,0 +1,18 @@
+version: 2
+
+models:
+  - name: stg_public__project_bookmark
+    description: "Staging model for public.project_bookmark — user→project bookmarks used as a strong preference signal in recommendation scoring."
+    columns:
+      - name: user_id
+        description: "Bookmarking user (UUID)"
+        tests:
+          - not_null
+      - name: project_id
+        description: "Bookmarked project (UUID)"
+        tests:
+          - not_null
+      - name: created_at
+        description: "Bookmark creation timestamp"
+        tests:
+          - not_null

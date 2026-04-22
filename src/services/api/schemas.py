@@ -1,4 +1,5 @@
-from datetime import datetime
+from datetime import date, datetime
+
 
 from pydantic import BaseModel
 
@@ -41,11 +42,32 @@ class ProjectSimilarOut(BaseModel):
     similarity: float
 
 
+class ProjectSemanticOut(BaseModel):
+    id: str
+    title: str
+    description: str | None = None
+    repo_url: str | None = None
+    logo_url: str | None = None
+    similarity: float
+
 class TrendingProjectOut(BaseModel):
     project_id: str
     stars: int | None = None
     last_synced_at: datetime | None = None
 
+
+class GithubTrendingProjectOut(BaseModel):
+    repo_url: str
+    stars_today: int | None = None
+    trending_date: date
+    name: str
+    full_name: str
+    description: str | None = None
+    stars: int | None = None
+    language: str | None = None
+    linked_project_id: str | None = None
+    category_id: str | None = None
+    domain_id: str | None = None
 
 class ErrorOut(BaseModel):
     detail: str

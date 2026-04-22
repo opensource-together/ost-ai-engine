@@ -11,6 +11,7 @@ WORKDIR /app
 # We assume the structure: src/services/go/{service}/go.mod
 COPY src/services/go/fetcher ./src/services/go/fetcher
 COPY src/services/go/scraper ./src/services/go/scraper
+COPY src/services/go/trending ./src/services/go/trending
 
 # Build Scraper
 WORKDIR /app/src/services/go/scraper
@@ -19,6 +20,10 @@ RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-s
 # Build Fetcher
 WORKDIR /app/src/services/go/fetcher
 RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-fetcher .
+
+# Build Trending Scraper
+WORKDIR /app/src/services/go/trending
+RUN CGO_ENABLED=0 go mod download && go build -ldflags="-s -w" -o /app/bin/ost-trending .
 
 # ==============================================================================
 # Stage 2: Python Builder
@@ -68,6 +73,7 @@ RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/wh
 # Copy Go binaries from Stage 1
 COPY --from=go-builder /app/bin/ost-fetcher /usr/local/bin/ost-fetcher
 COPY --from=go-builder /app/bin/ost-scraper /usr/local/bin/ost-scraper
+COPY --from=go-builder /app/bin/ost-trending /usr/local/bin/ost-trending
 
 # Copy project code (targeted — avoid copying unnecessary files)
 COPY src/ ./src/
@@ -83,15 +89,22 @@ ENV DAGSTER_STORAGE_DIR=/app/dagster_home/storage
 ENV DAGSTER_LOGS_DIR=/app/dagster_home/logs
 ENV PYTHONPATH=/app
 ENV DBT_PROJECT_DIR=/app/dbt
+# Force HuggingFace / sentence-transformers to cache inside the writable /app
+# volume. The default (~/.cache/huggingface) points at /home/appuser, which
+# does not exist for our non-root user and caused ml__embd_user to crash with
+# PermissionError the first time it tried to download the MiniLM model.
+ENV HF_HOME=/app/.cache/huggingface
+ENV SENTENCE_TRANSFORMERS_HOME=/app/.cache/sentence-transformers
 
-# Create Dagster home, copy prod config as default
-RUN mkdir -p $DAGSTER_HOME \
+# Create Dagster home + HF cache dirs, copy prod config as default
+RUN mkdir -p $DAGSTER_HOME $HF_HOME $SENTENCE_TRANSFORMERS_HOME \
     && cp dagster.prod.yaml $DAGSTER_HOME/dagster.yaml
 
 # Create non-root user and set ownership for writable directories
 RUN groupadd -g 1000 appuser \
     && useradd -u 1000 -g appuser -s /bin/bash appuser \
-    && chown -R appuser:appuser $DAGSTER_HOME /app/dbt /app/models /app/scripts
+    && chown -R appuser:appuser \
+        $DAGSTER_HOME /app/dbt /app/models /app/scripts /app/.cache
 
 USER appuser
 

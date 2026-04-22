@@ -48,7 +48,7 @@ class TestBuildDefaultGithubQueries:
 
     def test_each_query_has_correct_star_range(self):
         queries = build_default_github_queries()
-        for query, (low, high) in zip(queries, STAR_RANGES):
+        for query, (low, high) in zip(queries, STAR_RANGES, strict=False):
             assert f"stars:{low}..{high}" in query
 
     def test_each_query_excludes_terms(self):

@@ -1,7 +1,15 @@
 """
-Configuration resource for Dagster pipeline.
-Consolidates all config into PipelineConfig which reads directly from environment.
-"""
+  Dagster runtime configuration for the linker pipeline.
+
+  This module defines `PipelineConfig`, a `ConfigurableResource` used by
+  Dagster assets/resources at execution time. It covers pipeline runtime
+  inputs such as database access, GitHub credentials, and Go binary paths.
+
+  It is not the bootstrap settings layer for application startup.
+  Settings needed before Dagster resources are constructed
+  (for example dbt project discovery in `definitions.py`) should live in 
+  `settings.py`.
+  """
 
 import json
 from datetime import date, timedelta
@@ -70,6 +78,7 @@ class PipelineConfig(ConfigurableResource):
     # Go binary paths
     go_scraper_path: str
     go_fetcher_path: str
+    go_trending_path: str = ""
 
 
 def build_scraper_env(cfg: PipelineConfig) -> dict[str, str]:
@@ -104,3 +113,11 @@ def build_fetcher_env(cfg: PipelineConfig) -> dict[str, str]:
         "DATABASE_URL": cfg.db_url,
         "GITHUB_ACCESS_TOKEN": cfg.github_token,
     }
+
+
+def build_trending_env(cfg: PipelineConfig) -> dict[str, str]:
+    """Return environment dict for the Go trending scraper subprocess."""
+    env: dict[str, str] = {"DATABASE_URL": cfg.db_url}
+    if cfg.github_token:
+        env["GITHUB_ACCESS_TOKEN"] = cfg.github_token
+    return env
