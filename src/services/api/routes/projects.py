@@ -6,7 +6,7 @@ from sqlalchemy.engine import Result
 from sqlalchemy.orm import Session
 
 from src.services.api.dependencies import get_db, get_semantic
-from src.services.api.rate_limit import limiter
+from src.services.api.rate_limit import RATE_LIMIT, limiter
 from src.services.api.schemas import ProjectOut, ProjectSemanticOut, ProjectSimilarOut
 from src.services.api.semantic import SemanticSearchService
 
@@ -25,7 +25,7 @@ def _row_or_none(result: Result[Any]) -> dict[str, Any] | None:
 
 
 @router.get("/search", response_model=list[ProjectOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def search_projects(
     request: Request,
     q: str = Query(..., min_length=1),
@@ -74,7 +74,7 @@ def search_projects(
 
 
 @router.get("/search-natural", response_model=list[ProjectSemanticOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def search_natural(
     request: Request,
     q: str = Query(..., min_length=1),
@@ -137,7 +137,7 @@ def search_natural(
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def get_project(
     request: Request,
     project_id: str,
@@ -200,7 +200,7 @@ def get_project(
 
 
 @router.get("/{project_id}/similar", response_model=list[ProjectSimilarOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def find_similar(
     request: Request,
     project_id: str,

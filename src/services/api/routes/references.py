@@ -6,7 +6,7 @@ from sqlalchemy.engine import Result
 from sqlalchemy.orm import Session
 
 from src.services.api.dependencies import get_db
-from src.services.api.rate_limit import limiter
+from src.services.api.rate_limit import RATE_LIMIT, limiter
 from src.services.api.schemas import CategoryOut, DomainOut, TechStackOut
 
 router = APIRouter()
@@ -17,7 +17,7 @@ def _rows(result: Result[Any]) -> list[dict[str, Any]]:
 
 
 @router.get("/categories", response_model=list[CategoryOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def list_categories(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     """List all project categories."""
     result = db.execute(text('SELECT id, name FROM public."Category" ORDER BY name'))
@@ -25,7 +25,7 @@ def list_categories(request: Request, db: Session = Depends(get_db)) -> list[dic
 
 
 @router.get("/domains", response_model=list[DomainOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def list_domains(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     """List all project domains."""
     result = db.execute(text('SELECT id, name FROM public."Domain" ORDER BY name'))
@@ -33,7 +33,7 @@ def list_domains(request: Request, db: Session = Depends(get_db)) -> list[dict]:
 
 
 @router.get("/techstacks", response_model=list[TechStackOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def list_techstacks(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     """List all tech stacks."""
     result = db.execute(

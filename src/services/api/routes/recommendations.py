@@ -5,14 +5,14 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from src.services.api.dependencies import get_db
-from src.services.api.rate_limit import limiter
+from src.services.api.rate_limit import RATE_LIMIT, limiter
 from src.services.api.schemas import GithubTrendingProjectOut, TrendingProjectOut
 
 router = APIRouter(prefix="/recommendations")
 
 
 @router.get("/github-trending", response_model=list[GithubTrendingProjectOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def get_github_trending(
     request: Request,
     limit: int = Query(default=25, ge=1, le=50),
@@ -58,7 +58,7 @@ def get_github_trending(
 
 
 @router.get("/trending", response_model=list[TrendingProjectOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def get_trending(
     request: Request,
     limit: int = Query(default=20, ge=1, le=50),

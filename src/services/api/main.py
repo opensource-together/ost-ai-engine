@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncGenerator
 from contextlib import asynccontextmanager
 
@@ -42,11 +43,28 @@ def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
     )
 
 
+def _openapi_urls() -> tuple[str | None, str | None, str | None]:
+    """Hide OpenAPI and UIs when API_ENABLE_OPENAPI is false (e.g. production)."""
+    enabled = os.environ.get("API_ENABLE_OPENAPI", "true").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if enabled:
+        return "/openapi.json", "/docs", "/redoc"
+    return None, None, None
+
+
+_openapi_json, _docs_url, _redoc_url = _openapi_urls()
+
 app = FastAPI(
     title="OST Linker API",
     description="Open-source project recommendations",
     version="1.0.0",
     lifespan=lifespan,
+    openapi_url=_openapi_json,
+    docs_url=_docs_url,
+    redoc_url=_redoc_url,
 )
 
 # Rate limiting via @limiter.limit() decorators on routes.
