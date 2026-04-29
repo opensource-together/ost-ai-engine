@@ -21,17 +21,17 @@ It analyzes open-source projects and matches them to contributors — so you fin
 ## Getting Started
 
 ```bash
-cp .env.example .env              # configure environment
-make setup                        # install deps + compile Go binaries
-npm ci                            # Prisma / ts-node (package.json is in-repo)
-docker compose up --build -d      # start services (Dagster UI at :3000)
-make db-init                      # apply schema + seed data
-make ci-check                     # same Python gates as GitHub Actions (before a PR)
+cp .env.example .env              # set DATABASE_URL, tokens, optional host ports (see file + AGENTS.md)
+make setup                        # uv sync + compile Go binaries
+npm ci                            # Prisma / Node (needed before db-init)
+docker compose up --build -d      # Dagster + API + db (default host: Dagster :3000, API :8000 unless overridden in .env)
+make db-init                      # Prisma schema + seed
+make ci-check                     # Python parity with CI quality job (before a PR); full CI is broader — see AGENTS.md
 ```
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes, run checks, and open PRs. A maintainer-facing [readiness audit](docs/READINESS-AUDIT.md) covers OSS posture, security, CI, and recommendations pipeline health.
+See [CONTRIBUTING.md](CONTRIBUTING.md) (branch flow, conventions, **`make ci-check`**). For command cheat-sheets (**dbt**, API, Docker overrides), see [AGENTS.md](AGENTS.md).
 
 ## License
 
