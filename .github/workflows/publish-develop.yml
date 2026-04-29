@@ -2,7 +2,7 @@ name: Publish develop
 
 on:
   pull_request:
-    branches: [ main, staging ]
+    branches: [ develop, main, staging ]
   push:
     branches:
       - staging
