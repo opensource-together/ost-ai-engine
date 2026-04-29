@@ -71,6 +71,9 @@ node_modules/
 postgres-data/
 *.db
 
+# Design notes / planning (local or draft; not product source)
+specs/
+
 # Personal notes
 PR.md
 PR.txt
