@@ -39,7 +39,6 @@ jobs:
         run: uv run pytest -m unit --cov-fail-under=50
 
       - name: Dagster startup smoke test
-        continue-on-error: true
         run: uv run pytest -m integration -k test_dagster_startup --no-cov
 
   dbt-check:
@@ -168,6 +167,8 @@ jobs:
 
   docs-submodule:
     runs-on: ubuntu-latest
+    # Fork PRs do not receive org secrets — skip rather than fail checkout.
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout with submodules
         uses: actions/checkout@v4
@@ -177,7 +178,7 @@ jobs:
 
       - name: Check docs submodule SHA exists on remote
         run: |
-          SUBMODULE_SHA=$(git -C docs rev-parse HEAD)
+          SUBMODULE_SHA=$(git -C ost-docs rev-parse HEAD)
           echo "Submodule SHA: $SUBMODULE_SHA"
           if git ls-remote https://x-access-token:${{ secrets.OST_LINKER_SYNC_TOKEN }}@github.com/opensource-together/ost-docs.git | grep -q "$SUBMODULE_SHA"; then
             echo "docs submodule SHA exists on ost-docs remote"
