@@ -3,9 +3,21 @@ set -e
 
 echo "Starting initialization..."
 
-# Daemon skips dbt init — webserver handles it
+# Daemon skips dbt build (webserver runs build into shared /app/dbt/target volume), but
+# definitions import still requires manifest.json — create it if the volume is empty
+# (e.g. daemon-only, or fresh volume before webserver finished).
 if [ "$DAGSTER_ROLE" = "daemon" ]; then
-    echo "Daemon role: skipping dbt init."
+    echo "Daemon role: skipping dbt build."
+    if [ ! -f "dbt/target/manifest.json" ]; then
+        echo "No dbt manifest — running dbt deps + parse (required to load definitions)."
+        cd dbt
+        if [ -f "packages.yml" ]; then
+            echo "Installing dbt dependencies..."
+            dbt deps
+        fi
+        dbt parse
+        cd ..
+    fi
     echo "Executing command: $@"
     exec "$@"
 fi
@@ -55,9 +67,13 @@ if [ -d "dbt" ]; then
         dbt deps
     fi
 
+    echo "Parsing dbt project (manifest.json for Dagster)..."
+    dbt parse
+
     echo "Building dbt models..."
     if ! dbt build; then
-        echo "WARNING: dbt build failed — some models may be missing. Continuing startup."
+        echo "WARNING: dbt build failed — some models may be missing. Re-parsing manifest for startup."
+        dbt parse || true
     fi
 
     cd ..

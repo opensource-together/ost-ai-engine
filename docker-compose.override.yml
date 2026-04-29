@@ -42,6 +42,11 @@ services:
     image: ankane/pgvector:v0.4.1
     container_name: ost-linker-db
     restart: unless-stopped
+    labels:
+      org.open-source-together.stack: ost
+      org.open-source-together.app: linker
+      org.open-source-together.role: postgres
+      org.open-source-together.description: Linker dev Postgres + pgvector
     environment:
       POSTGRES_USER: ${POSTGRES_USER}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
