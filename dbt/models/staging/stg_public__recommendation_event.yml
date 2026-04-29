@@ -13,10 +13,18 @@ models:
         description: "User who triggered the event"
         tests:
           - not_null
+          - relationships:
+              arguments:
+                to: source('public', 'user')
+                field: id
       - name: project_id
         description: "Project the event refers to"
         tests:
           - not_null
+          - relationships:
+              arguments:
+                to: source('public', 'Project')
+                field: id
       - name: event_type
         description: "Enum: SHOWN | CLICKED | DISMISSED | STARRED_AFTER_RECO"
         tests:

@@ -1,0 +1,7 @@
+version: 2
+
+data_tests:
+  - name: match_user_recommendation_max_rows_per_user
+    description: >
+      Ensures no user has more than reco_top_n rows in match_user_recommendation
+      (matches the WHERE rn <= reco_top_n filter in the model).

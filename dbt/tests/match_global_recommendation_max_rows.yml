@@ -1,0 +1,7 @@
+version: 2
+
+data_tests:
+  - name: match_global_recommendation_max_rows
+    description: >
+      Ensures match_global_recommendation has at most global_reco_top_n rows
+      (matches the SQL LIMIT in the model).
