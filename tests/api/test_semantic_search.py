@@ -3,13 +3,12 @@ from unittest.mock import MagicMock
 from fastapi.testclient import TestClient
 
 
-def _make_pool(rows: list[dict]) -> MagicMock:
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = rows
-    mock_pool = MagicMock()
-    mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_pool
+def _make_session(rows: list[dict]) -> MagicMock:
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.all.return_value = rows
+    mock_session = MagicMock()
+    mock_session.execute.return_value = mock_result
+    return mock_session
 
 
 class TestSearchNatural:
@@ -25,7 +24,7 @@ class TestSearchNatural:
         from src.services.api.dependencies import get_pool
         from src.services.api.main import app
 
-        pool = _make_pool(
+        session = _make_session(
             [
                 {
                     "id": "p1",
@@ -45,7 +44,7 @@ class TestSearchNatural:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get(
                 "/projects/search-natural?q=medical+python+llm&limit=2"
@@ -65,8 +64,8 @@ class TestSearchNatural:
         from src.services.api.dependencies import get_pool
         from src.services.api.main import app
 
-        pool = _make_pool([])
-        app.dependency_overrides[get_pool] = lambda: pool
+        session = _make_session([])
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get(
                 "/projects/search-natural"
@@ -77,12 +76,10 @@ class TestSearchNatural:
 
         assert response.status_code == 200
         # The SQL text should mention filter joins
-        call_args = (
-            pool.get_cursor.return_value.__enter__.return_value.execute.call_args
-        )
-        sql = call_args[0][0]
+        call_args = session.execute.call_args
+        sql = str(call_args[0][0])
         params = call_args[0][1]
         assert "project_domain" in sql
         assert "tech_stack" in sql
-        assert "Python" in params
-        assert "Healthcare" in params
+        assert params["language"] == "Python"
+        assert params["domain"] == "Healthcare"

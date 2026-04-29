@@ -6,21 +6,31 @@ from src.services.api.dependencies import get_pool
 from src.services.api.main import app
 
 
-def _make_pool(rows: list[dict]) -> MagicMock:
-    """Create a mock pool whose cursor returns given rows."""
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = rows
-    mock_cursor.fetchone.return_value = rows[0] if rows else None
-    mock_pool = MagicMock()
-    mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_pool
+def _make_result(
+    *,
+    rows: list[dict] | None = None,
+    first: dict | None = None,
+) -> MagicMock:
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.all.return_value = rows or []
+    mock_result.mappings.return_value.first.return_value = first
+    return mock_result
+
+
+def _make_session(rows: list[dict]) -> MagicMock:
+    """Create a mock session whose execute() returns one result set."""
+    mock_session = MagicMock()
+    mock_session.execute.return_value = _make_result(
+        rows=rows,
+        first=rows[0] if rows else None,
+    )
+    return mock_session
 
 
 class TestSearchProjects:
     def test_search_with_query(self, client: TestClient) -> None:
         """GET /projects/search?q=react returns matching projects."""
-        pool = _make_pool(
+        session = _make_session(
             [
                 {
                     "id": "1",
@@ -33,7 +43,7 @@ class TestSearchProjects:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get("/projects/search?q=react")
         finally:
@@ -53,30 +63,25 @@ class TestSearchProjects:
         self, client: TestClient
     ) -> None:
         """GET /projects/search with category filter adds AND c.name = %s."""
-        mock_cursor = MagicMock()
-        mock_cursor.fetchall.return_value = []
-        mock_pool = MagicMock()
-        mock_pool.get_cursor.return_value.__enter__ = MagicMock(
-            return_value=mock_cursor
-        )
-        mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_session = MagicMock()
+        mock_session.execute.return_value = _make_result(rows=[])
 
-        app.dependency_overrides[get_pool] = lambda: mock_pool
+        app.dependency_overrides[get_pool] = lambda: mock_session
         try:
             response = client.get("/projects/search?q=test&category=Web+Development")
         finally:
             app.dependency_overrides.pop(get_pool, None)
 
         assert response.status_code == 200
-        sql = mock_cursor.execute.call_args[0][0]
-        params = mock_cursor.execute.call_args[0][1]
-        assert "AND c.name = %s" in sql
-        assert "Web Development" in params
+        sql = str(mock_session.execute.call_args[0][0])
+        params = mock_session.execute.call_args[0][1]
+        assert "AND c.name = :category" in sql
+        assert params["category"] == "Web Development"
 
     def test_search_limit_over_max_returns_422(self, client: TestClient) -> None:
         """GET /projects/search?limit=100 returns 422 since limit exceeds max (50)."""
-        pool = _make_pool([])
-        app.dependency_overrides[get_pool] = lambda: pool
+        session = _make_session([])
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get("/projects/search?q=test&limit=100")
         finally:
@@ -103,16 +108,15 @@ class TestGetProject:
             {"id": "t1", "name": "Python", "icon_url": "http://img", "type": "LANGUAGE"}
         ]
 
-        mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = project_row
-        mock_cursor.fetchall.side_effect = [categories, domains, tech_stacks]
-        mock_pool = MagicMock()
-        mock_pool.get_cursor.return_value.__enter__ = MagicMock(
-            return_value=mock_cursor
-        )
-        mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_session = MagicMock()
+        mock_session.execute.side_effect = [
+            _make_result(first=project_row),
+            _make_result(rows=categories),
+            _make_result(rows=domains),
+            _make_result(rows=tech_stacks),
+        ]
 
-        app.dependency_overrides[get_pool] = lambda: mock_pool
+        app.dependency_overrides[get_pool] = lambda: mock_session
         try:
             response = client.get("/projects/550e8400-e29b-41d4-a716-446655440000")
         finally:
@@ -128,15 +132,10 @@ class TestGetProject:
 
     def test_get_nonexistent_project_returns_404(self, client: TestClient) -> None:
         """GET /projects/{id} returns 404 for unknown ID."""
-        mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = None
-        mock_pool = MagicMock()
-        mock_pool.get_cursor.return_value.__enter__ = MagicMock(
-            return_value=mock_cursor
-        )
-        mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_session = MagicMock()
+        mock_session.execute.return_value = _make_result(first=None)
 
-        app.dependency_overrides[get_pool] = lambda: mock_pool
+        app.dependency_overrides[get_pool] = lambda: mock_session
         try:
             response = client.get("/projects/550e8400-e29b-41d4-a716-446655440000")
         finally:
@@ -148,26 +147,23 @@ class TestGetProject:
 class TestFindSimilar:
     def test_find_similar_returns_list(self, client: TestClient) -> None:
         """GET /projects/{id}/similar returns similar projects."""
-        mock_cursor = MagicMock()
-        mock_cursor.fetchone.side_effect = [
-            {"vector": "[0.1, 0.2]"},
+        mock_session = MagicMock()
+        mock_session.execute.side_effect = [
+            _make_result(first={"vector": "[0.1, 0.2]"}),
+            _make_result(
+                rows=[
+                    {
+                        "id": "2",
+                        "title": "Similar Project",
+                        "description": "Desc",
+                        "repo_url": "https://github.com/org/similar",
+                        "similarity": 0.85,
+                    },
+                ]
+            ),
         ]
-        mock_cursor.fetchall.return_value = [
-            {
-                "id": "2",
-                "title": "Similar Project",
-                "description": "Desc",
-                "repo_url": "https://github.com/org/similar",
-                "similarity": 0.85,
-            },
-        ]
-        mock_pool = MagicMock()
-        mock_pool.get_cursor.return_value.__enter__ = MagicMock(
-            return_value=mock_cursor
-        )
-        mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
 
-        app.dependency_overrides[get_pool] = lambda: mock_pool
+        app.dependency_overrides[get_pool] = lambda: mock_session
         try:
             response = client.get(
                 "/projects/550e8400-e29b-41d4-a716-446655440000/similar"
@@ -182,15 +178,10 @@ class TestFindSimilar:
 
     def test_find_similar_no_embedding_returns_404(self, client: TestClient) -> None:
         """GET /projects/{id}/similar returns 404 when no embedding exists."""
-        mock_cursor = MagicMock()
-        mock_cursor.fetchone.return_value = None
-        mock_pool = MagicMock()
-        mock_pool.get_cursor.return_value.__enter__ = MagicMock(
-            return_value=mock_cursor
-        )
-        mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_session = MagicMock()
+        mock_session.execute.return_value = _make_result(first=None)
 
-        app.dependency_overrides[get_pool] = lambda: mock_pool
+        app.dependency_overrides[get_pool] = lambda: mock_session
         try:
             response = client.get(
                 "/projects/550e8400-e29b-41d4-a716-446655440000/similar"

@@ -6,26 +6,25 @@ from src.services.api.dependencies import get_pool
 from src.services.api.main import app
 
 
-def _make_pool(rows: list[dict]) -> MagicMock:
-    """Create a mock pool whose cursor returns the given rows."""
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = rows
-    mock_pool = MagicMock()
-    mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_pool
+def _make_session(rows: list[dict]) -> MagicMock:
+    """Create a mock session whose execute().mappings().all() returns rows."""
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.all.return_value = rows
+    mock_session = MagicMock()
+    mock_session.execute.return_value = mock_result
+    return mock_session
 
 
 class TestCategories:
     def test_list_categories_returns_list(self, client: TestClient) -> None:
         """GET /categories returns a list of categories."""
-        pool = _make_pool(
+        session = _make_session(
             [
                 {"id": "1", "name": "Web Development"},
                 {"id": "2", "name": "Machine Learning"},
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get("/categories")
         finally:
@@ -40,12 +39,12 @@ class TestCategories:
 class TestDomains:
     def test_list_domains_returns_list(self, client: TestClient) -> None:
         """GET /domains returns a list of domains."""
-        pool = _make_pool(
+        session = _make_session(
             [
                 {"id": "1", "name": "Healthcare"},
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get("/domains")
         finally:
@@ -58,7 +57,7 @@ class TestDomains:
 class TestTechStacks:
     def test_list_techstacks_returns_list(self, client: TestClient) -> None:
         """GET /techstacks returns a list of tech stacks."""
-        pool = _make_pool(
+        session = _make_session(
             [
                 {
                     "id": "1",
@@ -68,7 +67,7 @@ class TestTechStacks:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get("/techstacks")
         finally:

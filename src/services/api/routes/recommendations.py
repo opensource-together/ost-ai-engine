@@ -1,9 +1,10 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, Query, Request
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from src.services.api.database import ConnectionPool
-from src.services.api.dependencies import get_pool
+from src.services.api.dependencies import get_db
 from src.services.api.rate_limit import limiter
 from src.services.api.schemas import GithubTrendingProjectOut, TrendingProjectOut
 
@@ -16,11 +17,11 @@ router = APIRouter(prefix="/recommendations")
 def get_github_trending(
     request: Request,
     limit: int = Query(default=25, ge=1, le=50),
-    pool: ConnectionPool = Depends(get_pool),
+    db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """Get repos currently trending on GitHub."""
-    with pool.get_cursor() as cur:
-        cur.execute(
+    result = db.execute(
+        text(
             """SELECT
                  t.repo_url, t.data, t.stars_today, t.trending_date,
                  p.id AS linked_project_id, p.name, p.description,
@@ -30,10 +31,11 @@ def get_github_trending(
                  ON t.repo_url = p."repoUrl"
                WHERE t.trending_date = CURRENT_DATE
                ORDER BY t.stars_today DESC NULLS LAST
-               LIMIT %s""",
-            (limit,),
-        )
-        rows = cur.fetchall()
+               LIMIT :limit"""
+        ),
+        {"limit": limit},
+    )
+    rows = [dict(row) for row in result.mappings().all()]
 
     results = []
     for row in rows:
@@ -60,15 +62,16 @@ def get_github_trending(
 def get_trending(
     request: Request,
     limit: int = Query(default=20, ge=1, le=50),
-    pool: ConnectionPool = Depends(get_pool),
+    db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """Get globally trending/popular projects."""
-    with pool.get_cursor() as cur:
-        cur.execute(
+    result = db.execute(
+        text(
             """SELECT project_id, stars, last_synced_at
                FROM public.match_global_recommendation
                ORDER BY stars DESC NULLS LAST
-               LIMIT %s""",
-            (limit,),
-        )
-        return list(cur.fetchall())
+               LIMIT :limit"""
+        ),
+        {"limit": limit},
+    )
+    return [dict(row) for row in result.mappings().all()]
