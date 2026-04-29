@@ -8,7 +8,6 @@ from src.services.api.dependencies import get_db
 from src.services.api.rate_limit import limiter
 from src.services.api.schemas import GithubTrendingProjectOut, TrendingProjectOut
 
-
 router = APIRouter(prefix="/recommendations")
 
 
@@ -56,6 +55,7 @@ def get_github_trending(
             }
         )
     return results
+
 
 @router.get("/trending", response_model=list[TrendingProjectOut])
 @limiter.limit("60/minute")

@@ -12,7 +12,7 @@ def _dagster_home_path() -> Path | None:
 
 
 def _cleanup_targets(dgh: Path | None) -> list[Path]:
-    """Directories whose *children* may be pruned by age (see dagster.yaml env layout)."""
+    """Dirs whose children may be pruned by age (`dagster.yaml` layout)."""
     out: list[Path] = []
 
     logs = os.environ.get("DAGSTER_LOGS_DIR", "").strip()
@@ -55,13 +55,13 @@ def clean_dagster_home(context: OpExecutionContext) -> dict[str, int]:
     """
     Prune Dagster filesystem clutter older than N days.
 
-    Uses ``DAGSTER_LOGS_DIR`` and ``DAGSTER_STORAGE_DIR`` when set (see ``dagster.yaml``),
-    otherwise ``$DAGSTER_HOME/logs`` and ``$DAGSTER_HOME/storage``. Also cleans
-    ``$DAGSTER_HOME/.logs_queue`` and legacy ``history/history`` if present.
+    Uses ``DAGSTER_LOGS_DIR`` / ``DAGSTER_STORAGE_DIR`` when set
+    (see ``dagster.yaml``), else ``$DAGSTER_HOME/logs`` and
+    ``$DAGSTER_HOME/storage``. Also ``.logs_queue`` and legacy ``history/history``.
     """
     dgh = _dagster_home_path()
     if dgh is not None and not dgh.exists():
-        context.log.info("DAGSTER_HOME points to a non-existent path — nothing to clean")
+        context.log.info("DAGSTER_HOME missing or invalid path — nothing to clean")
         return {"scanned": 0, "deleted": 0}
 
     targets = _cleanup_targets(dgh)

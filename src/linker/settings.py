@@ -1,9 +1,9 @@
 """
-  Application bootstrap settings for the Linker package.
+Application bootstrap settings for the Linker package.
 
-  This module resolves configuration needed before Dagster resources are
-  constructed, such as dbt project.
-  """
+This module resolves configuration needed before Dagster resources are
+constructed, such as dbt project.
+"""
 
 from pathlib import Path
 

@@ -2,6 +2,7 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import text
+from sqlalchemy.engine import Result
 from sqlalchemy.orm import Session
 
 from src.services.api.dependencies import get_db, get_semantic
@@ -9,17 +10,16 @@ from src.services.api.rate_limit import limiter
 from src.services.api.schemas import ProjectOut, ProjectSemanticOut, ProjectSimilarOut
 from src.services.api.semantic import SemanticSearchService
 
-
 router = APIRouter(prefix="/projects")
 
 MAX_LIMIT = 50
 
 
-def _rows(result: object) -> list[dict[str, Any]]:
-    return [dict(row) for row in result.mappings().all()]  # type: ignore[no-any-return]
+def _rows(result: Result[Any]) -> list[dict[str, Any]]:
+    return [dict(row) for row in result.mappings().all()]
 
 
-def _row_or_none(result: object) -> dict[str, Any] | None:
+def _row_or_none(result: Result[Any]) -> dict[str, Any] | None:
     row = result.mappings().first()
     return dict(row) if row is not None else None
 
@@ -135,6 +135,7 @@ def search_natural(
     result = db.execute(text(sql), params)
     return _rows(result)
 
+
 @router.get("/{project_id}", response_model=ProjectOut)
 @limiter.limit("60/minute")
 def get_project(
@@ -182,7 +183,8 @@ def get_project(
     tech_stacks = _rows(
         db.execute(
             text(
-                """SELECT ts.id, ts.name, ts."iconUrl" AS icon_url, CAST(ts.type AS text) AS type
+                """SELECT ts.id, ts.name, ts."iconUrl" AS icon_url,
+                          CAST(ts.type AS text) AS type
                    FROM public.tech_stack ts
                    JOIN public.project_tech_stack pts ON ts.id = pts."techStackId"
                    WHERE pts."projectId" = :project_id"""
@@ -208,7 +210,10 @@ def find_similar(
     """Find similar projects using pgvector cosine similarity."""
     embedding = _row_or_none(
         db.execute(
-            text('SELECT vector FROM ml.embd_github_project WHERE "projectId" = :project_id'),
+            text(
+                """SELECT vector FROM ml.embd_github_project
+                   WHERE "projectId" = :project_id"""
+            ),
             {"project_id": project_id},
         )
     )
