@@ -38,6 +38,9 @@ jobs:
       - name: Unit tests
         run: uv run pytest -m unit --cov-fail-under=50
 
+      - name: API tests
+        run: uv run pytest -m api --no-cov
+
       - name: Dagster startup smoke test
         run: uv run pytest -m integration -k test_dagster_startup --no-cov
 
