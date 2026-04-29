@@ -26,6 +26,7 @@ make setup                        # install deps + compile Go binaries
 npm ci                            # Prisma / ts-node (package.json is in-repo)
 docker compose up --build -d      # start services (Dagster UI at :3000)
 make db-init                      # apply schema + seed data
+make ci-check                     # same Python gates as GitHub Actions (before a PR)
 ```
 
 ## Contributing

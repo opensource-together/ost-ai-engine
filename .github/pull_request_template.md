@@ -10,9 +10,7 @@
 
 ## Checklist
 
-- [ ] Tests pass (`make test`, or `uv run pytest` — see [CONTRIBUTING.md](../CONTRIBUTING.md))
-- [ ] Lint & typecheck (`make lint`, `make typecheck`)
-- [ ] Format check passes (`uv run ruff format --check src/` — matches CI)
+- [ ] **`make ci-check`** passes (matches GitHub Actions Python quality job: ruff, format, mypy, unit + API + Dagster smoke — see [CONTRIBUTING.md](../CONTRIBUTING.md))
 - [ ] If you changed `dbt/`: `cd dbt && uv run dbt parse` (and `dbt test` when you have a matching DB)
 - [ ] Commits are atomic and follow [Conventional Commits](https://www.conventionalcommits.org/)
 - [ ] PR targets **`staging`** (not `main`)

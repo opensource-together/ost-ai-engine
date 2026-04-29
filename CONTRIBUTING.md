@@ -45,7 +45,9 @@ npx prisma db push
 ./node_modules/.bin/ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed/seed.ts
 ```
 
-If `npx ts-node` misbehaves on your Node version, use the `ts-node` line above from the repo root after `npm ci`.
+If `npx ts-node` misbehaves on your Node version, use the `ts-node` line above from the repo root after `npm ci`. You can also run **`npx prisma db seed`** after `db push` (same script as `make db-init`).
+
+**Seed vs pipeline:** Prisma seed fills **reference data** (categories, domains, tech stacks, sample users)—not **`Project`** rows, embeddings, or **`match_*`** marts. You can run the **API + DB** and hit **`/health`** and **`/references/*`** without scraping; **search, similar projects, and trending** need Dagster/Go ingest and usually **`make dbt-build`** (see [AGENTS.md](AGENTS.md)).
 
 **Shortcut:** `make setup` runs `uv sync` and compiles Go binaries; then run `npm ci`, `docker compose up`, and `make db-init`.
 
@@ -113,13 +115,21 @@ uv run ruff format src/      # Format
 uv run mypy src/             # Type-check
 ```
 
-All lint and format checks must pass before opening a PR (CI runs these via `uv run`).
+All lint and format checks must pass before opening a PR (CI runs these via `uv run`). **`make ci-check`** runs the same Python steps as the **quality** job in [`.github/workflows/quality-checks.yml`](.github/workflows/quality-checks.yml) (ruff, mypy, unit + api + Dagster smoke).
+
+### Optional: pre-commit
+
+After `uv sync`, install Git hooks so staged Python files match CI before you commit:
+
+```bash
+uv run pre-commit install
+```
 
 ## Pull Request Process
 
 1. Create a branch from `staging` (not `main`)
 2. Make your changes with atomic commits
-3. Ensure tests pass and lint is clean
+3. Run **`make ci-check`** (or match the **Linting & formatting** + **Running tests** sections above)
 4. Open a PR targeting `staging`
 5. Request a review from `@spideystreet`
 

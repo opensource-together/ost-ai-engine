@@ -23,6 +23,8 @@ If `npx ts-node` fails on your Node version, use the `ts-node` line above from t
 
 `make db-init` and `make dbt-build` source `./.env` when present so `DATABASE_URL` and Postgres-related vars match your compose/db setup.
 
+**What seed covers:** Prisma seed adds **taxonomies** (categories, domains, tech stacks) and **sample users**—not GitHub **`Project`** data, **embeddings**, or **dbt `match_*` tables**. For a **working stack without scraping first**, you still get a valid DB and can use **`/references`** and **`/health`**; project search, similarity, and trending need the **ingestion pipeline** (and typically **`dbt build`**) as documented in this file.
+
 ### Python / Dagster
 ```bash
 uv sync                                   # Install Python dependencies
@@ -64,6 +66,8 @@ pytest tests/test_foo.py -k test_bar      # Run a single test
 pytest -m unit                            # Run by marker (unit/integration/performance/api)
 pytest -m integration                     # Dagster startup smoke test
 ```
+`make ci-check` runs ruff (check + format), mypy, unit tests, API tests, and the Dagster smoke — aligned with `.github/workflows/quality-checks.yml`.
+
 Test config is in `pyproject.toml` under `[tool.pytest.ini_options]`. Tests use class-based style (`class TestXxx`).
 
 Go tests:
