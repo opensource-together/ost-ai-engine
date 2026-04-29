@@ -1,6 +1,6 @@
 # Contributing to OST Linker
 
-OST Linker is the AI-powered recommendation engine of [OpenSourceTogether](https://opensource-together.com/). Contributions are welcome — bug fixes, new features, tests, and documentation improvements.
+OST Linker is the intelligent recommender-system of [OpenSourceTogether](https://opensource-together.com/). Contributions are welcome — bug fixes, new features, tests, and documentation improvements. **By contributing, you agree that your contributions will be licensed under the [GNU AGPL-3.0-only](LICENSE), the same license as this repository** (strong copyleft).
 
 ## Prerequisites
 

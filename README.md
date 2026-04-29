@@ -4,9 +4,8 @@ Recommender-system of the [OpenSource Together](https://github.com/opensource-to
 
 <img width="100%" alt="ost-knight" src="https://github.com/user-attachments/assets/cdf66f76-89bf-4150-b798-e26a25dc8239" />
 
-</div>
+[![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/4ZDhm3dQAC) [![Follow](https://img.shields.io/twitter/follow/OpenSTogether?style=social)](https://x.com/OpenSTogether) [![GitHub](https://img.shields.io/badge/GitHub-OpenSource%20Together-black.svg)](https://github.com/opensource-together) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL--v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0.html)
 
-[![Discord](https://img.shields.io/badge/Join%20Community-5865F2?logo=discord&logoColor=white)](https://discord.com/invite/4ZDhm3dQAC) [![Follow](https://img.shields.io/twitter/follow/OpenSTogether?style=social)](https://x.com/OpenSTogether) [![GitHub](https://img.shields.io/badge/GitHub-OpenSource%20Together-black.svg)](https://github.com/opensource-together) [![License: CC BY-NC 4.0](https://img.shields.io/badge/License-CC%20BY--NC%204.0-lightgrey.svg)](https://creativecommons.org/licenses/by-nc/4.0/)
 </div>
 
 ---
@@ -35,7 +34,7 @@ See [CONTRIBUTING.md](CONTRIBUTING.md) (branch flow, conventions, **`make ci-che
 
 ## License
 
-The code in this repository is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — see [LICENSE](LICENSE). That license allows sharing and adapting the work for **non-commercial** use; it is **not** the same as [OSI’s definition](https://opensource.org/osd) of “open source.” For commercial licensing or other permission questions, use the channels in [CONTRIBUTING.md](CONTRIBUTING.md).
+This repository is **free/open source software** under the [**GNU Affero General Public License v3.0 only** (AGPL-3.0-only)](https://www.gnu.org/licenses/agpl-3.0.html) — full text in [LICENSE](LICENSE).
 
 ---
 
