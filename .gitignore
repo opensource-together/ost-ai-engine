@@ -79,6 +79,12 @@ PR.md
 PR.txt
 TODO.md
 
+# CI ephemeral Dagster dirs (quality-checks sets DAGSTER_* under repo root)
+tmp_dagster/
+
+# Maintainer-only / local audit notes (do not commit)
+docs/READINESS-AUDIT.md
+
 # Local
 .actrc
 .mcp.json
