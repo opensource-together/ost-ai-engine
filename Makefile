@@ -38,13 +38,14 @@ docker-down:
 	docker compose down
 
 ## DB-init — apply Prisma schema and seed data
+## Sources `.env` when present so DATABASE_URL matches compose/Postgres (see AGENTS.md).
 db-init:
-	npx prisma db push
-	npx ts-node prisma/seed/seed.ts
+	bash -c 'set -a && [ -f .env ] && . ./.env; set +a; npx prisma db push'
+	bash -c 'set -a && [ -f .env ] && . ./.env; set +a; ./node_modules/.bin/ts-node --compiler-options "{\"module\":\"CommonJS\"}" prisma/seed/seed.ts'
 
 ## DBT-build — install dbt deps and build all models
 dbt-build:
-	cd dbt && dbt deps && dbt build
+	bash -c 'set -a && [ -f .env ] && . ./.env; set +a; cd dbt && dbt deps && dbt build'
 
 ## Clean — remove Dagster storage and Python caches
 clean:
