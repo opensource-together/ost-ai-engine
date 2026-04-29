@@ -23,14 +23,14 @@ It analyzes open-source projects and matches them to contributors — so you fin
 ```bash
 cp .env.example .env              # configure environment
 make setup                        # install deps + compile Go binaries
+npm ci                            # Prisma / ts-node (package.json is in-repo)
 docker compose up --build -d      # start services (Dagster UI at :3000)
 make db-init                      # apply schema + seed data
 ```
 
 ## Contributing
 
-Contributions soon !  
-You can already check the [Contributing Guide](CONTRIBUTING.md) to be ready.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes, run checks, and open PRs.
 
 ## License
 
