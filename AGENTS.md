@@ -127,12 +127,7 @@ When fixing a bug, always follow this order:
 |----------|---------|---------|
 | `publish-prod.yml` | Release published | Docker build/push to `ghcr.io/opensource-together/ia` |
 | `publish-develop.yml` | PR to main/staging + push to staging | Quality checks (reusable) + Docker build/push |
-| `quality-checks.yml` | Reusable (`workflow_call`) | Lint, format, type check, tests, dbt, Go, Docker, Prisma, security |
-| `claude-code-review.yml` | PR opened/synced (all branches) | Automatic Claude review (Sonnet) |
-| `claude.yml` | `@claude` in issues/PR comments | AI assistant (requires workflow on default branch) |
 | `sync-docs-submodule.yml` | PR to main/staging (path: `ost-docs`) | Sync docs submodule to `ost-docs` repo |
 | `sync-prisma-backend.yml` | PR to main/staging (path: `prisma/**`) | Sync Prisma schema to `ost-backend` repo |
 
 **`quality-checks.yml` notes:** the security job runs `gitleaks detect --no-git`, which scans the **checked-out tree only** (not full `git` history)—a fast working-tree leak check. On **fork pull requests**, the `docs-submodule` job is skipped when the PR head is another repository, because org secrets are not available to those runs. The same fork guard applies to **`sync-docs-submodule.yml`** and **`sync-prisma-backend.yml`** (entire job skipped for fork PRs).
-
-**Important:** `claude.yml` uses `issue_comment`/`issues` events which only trigger from the **default branch** (`staging`). The workflow must exist on `staging` to work.
