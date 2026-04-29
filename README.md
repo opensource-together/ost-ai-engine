@@ -31,11 +31,11 @@ make ci-check                     # same Python gates as GitHub Actions (before 
 
 ## Contributing
 
-Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes, run checks, and open PRs.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes, run checks, and open PRs. A maintainer-facing [readiness audit](docs/READINESS-AUDIT.md) covers OSS posture, security, CI, and recommendations pipeline health.
 
 ## License
 
-[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — See [LICENSE](LICENSE).
+The code in this repository is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — see [LICENSE](LICENSE). That license allows sharing and adapting the work for **non-commercial** use; it is **not** the same as [OSI’s definition](https://opensource.org/osd) of “open source.” For commercial licensing or other permission questions, use the channels in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

@@ -110,9 +110,10 @@ scripts/clean_docker_images.sh            # Docker image cleanup
 | `LINKER_API_HOST_PORT` | Optional: host port mapped to FastAPI (**8000** if unset; set MCP `OST_API_URL` to match when changed) |
 | `API_HOST` | API listen host inside container (default `0.0.0.0`) |
 | `API_PORT` | API listen port inside container (default `8000`) |
-| `API_RATE_LIMIT` | Requests per minute per IP (default `60`) |
+| `API_RATE_LIMIT` | Requests per minute per IP (default `60`; applied by SlowAPI in `src/services/api/rate_limit.py`) |
 | `OST_LINKER_SERVICE_TOKEN` | Optional header auth for the Linker API |
 | `OST_LINKER_REQUIRE_SERVICE_TOKEN` | If true, API startup fails unless `OST_LINKER_SERVICE_TOKEN` is set (use in prod) |
+| `API_ENABLE_OPENAPI` | If `true` (default), exposes `/openapi.json`, `/docs`, `/redoc`. Set `false` in production to hide schema and UIs. |
 
 ## Bug Fixing
 
