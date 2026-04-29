@@ -3,31 +3,73 @@ import shutil
 import time
 from pathlib import Path
 
-from dagster import OpExecutionContext, job, op
+from dagster import Field, OpExecutionContext, job, op
 
 
-@op
+def _dagster_home_path() -> Path | None:
+    dagster_home = os.environ.get("DAGSTER_HOME", "").strip()
+    return Path(dagster_home) if dagster_home else None
+
+
+def _cleanup_targets(dgh: Path | None) -> list[Path]:
+    """Directories whose *children* may be pruned by age (see dagster.yaml env layout)."""
+    out: list[Path] = []
+
+    logs = os.environ.get("DAGSTER_LOGS_DIR", "").strip()
+    if logs:
+        out.append(Path(logs))
+    elif dgh is not None:
+        out.append(dgh / "logs")
+
+    storage = os.environ.get("DAGSTER_STORAGE_DIR", "").strip()
+    if storage:
+        out.append(Path(storage))
+    elif dgh is not None:
+        out.append(dgh / "storage")
+
+    if dgh is not None:
+        out.append(dgh / ".logs_queue")
+        out.append(dgh / "history" / "history")
+
+    seen: set[str] = set()
+    unique: list[Path] = []
+    for p in out:
+        key = str(p.resolve()) if p.exists() else str(p)
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(p)
+    return unique
+
+
+@op(
+    config_schema={
+        "days_to_keep": Field(
+            int,
+            default_value=2,
+            description="Remove directory entries older than this many days.",
+        )
+    }
+)
 def clean_dagster_home(context: OpExecutionContext) -> dict[str, int]:
     """
-    Clean specific Dagster state directories older than 2 days.
+    Prune Dagster filesystem clutter older than N days.
 
-    Targets (relative to $DAGSTER_HOME or default cwd/.dagster_home):
-      - history/history
-      - logs
-
-    Safety: only removes entries inside those two targets and logs actions.
+    Uses ``DAGSTER_LOGS_DIR`` and ``DAGSTER_STORAGE_DIR`` when set (see ``dagster.yaml``),
+    otherwise ``$DAGSTER_HOME/logs`` and ``$DAGSTER_HOME/storage``. Also cleans
+    ``$DAGSTER_HOME/.logs_queue`` and legacy ``history/history`` if present.
     """
-    dagster_home = os.environ.get("DAGSTER_HOME", "")
-    dgh = Path(dagster_home)
-    if not dgh.exists():
-        context.log.info(f"dagster home not found: {dgh} — nothing to clean")
+    dgh = _dagster_home_path()
+    if dgh is not None and not dgh.exists():
+        context.log.info("DAGSTER_HOME points to a non-existent path — nothing to clean")
         return {"scanned": 0, "deleted": 0}
 
-    # explicit targets under DAGSTER_HOME
-    targets = [dgh / "logs", dgh / ".logs_queue", dgh / "history" / "history"]
+    targets = _cleanup_targets(dgh)
+    if not targets:
+        context.log.info("no Dagster log/storage paths resolved — nothing to clean")
+        return {"scanned": 0, "deleted": 0}
 
-    # keep items newer than this many days
-    days_to_keep = 2
+    days_to_keep = context.op_config["days_to_keep"]
     cutoff = time.time() - (days_to_keep * 24 * 3600)
 
     scanned = 0
@@ -37,7 +79,6 @@ def clean_dagster_home(context: OpExecutionContext) -> dict[str, int]:
         if not target.exists():
             context.log.debug(f"cleanup: target does not exist: {target}")
             continue
-        # iterate over children and remove those older than cutoff
         for child in target.iterdir():
             try:
                 scanned += 1
