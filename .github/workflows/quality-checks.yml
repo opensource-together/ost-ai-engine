@@ -1,5 +1,6 @@
 name: Quality checks
 
+# PRs run scoped checks from path filters; pushes (e.g. staging) always run everything.
 on:
   workflow_call:
     secrets:
@@ -7,7 +8,70 @@ on:
         required: true
 
 jobs:
+  changes:
+    runs-on: ubuntu-latest
+    outputs:
+      # path-filter booleans ('true' / 'false' strings from dorny/paths-filter)
+      python: ${{ steps.filter.outputs.python }}
+      deps_py: ${{ steps.filter.outputs.deps_py }}
+      workflows: ${{ steps.filter.outputs.workflows }}
+      dbt: ${{ steps.filter.outputs.dbt }}
+      go_svc: ${{ steps.filter.outputs.go_svc }}
+      docker_pack: ${{ steps.filter.outputs.docker_pack }}
+      prisma_schema: ${{ steps.filter.outputs.prisma_schema }}
+      ost_docs_paths: ${{ steps.filter.outputs.ost_docs_paths }}
+      dagster_cfg: ${{ steps.filter.outputs.dagster_cfg }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        # PRs may need deeper history so path filter can resolve base refs
+        with:
+          fetch-depth: 0
+
+      - name: Decide which slices run on this PR
+        uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            deps_py:
+              - 'pyproject.toml'
+              - 'uv.lock'
+            workflows:
+              - '.github/workflows/**'
+            python:
+              - 'src/**/*.py'
+              - 'tests/**'
+              - 'Makefile'
+            dagster_cfg:
+              - 'dagster.yaml'
+              - 'dagster.prod.yaml'
+              - 'workspace.yaml'
+            dbt:
+              - 'dbt/**'
+              - '.sqlfluff'
+            go_svc:
+              - 'src/services/go/**'
+            docker_pack:
+              - 'Dockerfile'
+              - '.dockerignore'
+              - 'docker-compose.yml'
+              - 'docker-compose.override.yml'
+              - 'scripts/init.sh'
+              - 'scripts/docker-entrypoint.sh'
+            prisma_schema:
+              - 'prisma/**'
+            ost_docs_paths:
+              - 'ost-docs/**'
+              - '.gitmodules'
+
   quality:
+    needs: changes
+    if: >-
+      github.event_name == 'push'
+      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.deps_py == 'true'
+      || needs.changes.outputs.python == 'true'
+      || needs.changes.outputs.dagster_cfg == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -43,7 +107,6 @@ jobs:
 
       - name: Dagster startup smoke test
         env:
-          # Match dagster.yaml (env-based storage/logs); runner has no Docker .env defaults.
           DAGSTER_HOME: ${{ github.workspace }}
           DAGSTER_STORAGE_DIR: ${{ github.workspace }}/tmp_dagster/storage
           DAGSTER_LOGS_DIR: ${{ github.workspace }}/tmp_dagster/logs
@@ -52,6 +115,11 @@ jobs:
           uv run pytest -m integration -k test_dagster_startup --no-cov
 
   dbt-check:
+    needs: changes
+    if: >-
+      github.event_name == 'push'
+      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.dbt == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -77,6 +145,11 @@ jobs:
           uv run dbt parse
 
   go-check:
+    needs: changes
+    if: >-
+      github.event_name == 'push'
+      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.go_svc == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -109,6 +182,16 @@ jobs:
           go test ./...
 
   docker-build:
+    needs: changes
+    if: >-
+      github.event_name == 'push'
+      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.docker_pack == 'true'
+      || needs.changes.outputs.deps_py == 'true'
+      || needs.changes.outputs.python == 'true'
+      || needs.changes.outputs.dbt == 'true'
+      || needs.changes.outputs.go_svc == 'true'
+      || needs.changes.outputs.prisma_schema == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -127,6 +210,11 @@ jobs:
           cache-to: type=gha,mode=max
 
   prisma-validate:
+    needs: changes
+    if: >-
+      github.event_name == 'push'
+      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.prisma_schema == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -140,10 +228,20 @@ jobs:
       - name: Validate Prisma schema
         run: npx prisma validate --schema prisma/schema.prisma
         env:
-          # Prisma validate only checks schema syntax, it does not connect to a database
           DATABASE_URL: "postgresql://validate:validate@localhost:5432/validate"
 
   security:
+    needs: changes
+    if: >-
+      github.event_name == 'push'
+      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.deps_py == 'true'
+      || needs.changes.outputs.python == 'true'
+      || needs.changes.outputs.go_svc == 'true'
+      || needs.changes.outputs.prisma_schema == 'true'
+      || needs.changes.outputs.docker_pack == 'true'
+      || needs.changes.outputs.dbt == 'true'
+      || needs.changes.outputs.ost_docs_paths == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -176,9 +274,15 @@ jobs:
         run: gitleaks detect --source . --no-git --verbose
 
   docs-submodule:
+    needs: changes
+    if: >-
+      (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository)
+      && (
+        github.event_name == 'push'
+        || needs.changes.outputs.workflows == 'true'
+        || needs.changes.outputs.ost_docs_paths == 'true'
+      )
     runs-on: ubuntu-latest
-    # Fork PRs do not receive org secrets — skip rather than fail checkout.
-    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout with submodules
         uses: actions/checkout@v4
