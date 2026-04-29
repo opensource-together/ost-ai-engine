@@ -7,26 +7,28 @@ from fastapi.testclient import TestClient
 
 @pytest.fixture()
 def client() -> Generator[TestClient, None, None]:
-    """FastAPI test client with mocked DB pool and semantic service."""
-    mock_pool = MagicMock()
-    mock_cursor = MagicMock()
-    mock_cursor.fetchone.return_value = {"?column?": 1}
-    mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+    """FastAPI test client with mocked DB session factory and semantic service."""
+    mock_db = MagicMock()
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.first.return_value = {"?column?": 1}
+    mock_result.mappings.return_value.all.return_value = []
+    mock_db.execute.return_value = mock_result
 
     mock_semantic = MagicMock()
     mock_semantic.encode.return_value = [0.1] * 384
 
     with (
-        patch("src.services.api.dependencies._pool", mock_pool),
+        patch("src.services.api.dependencies._session_factory", MagicMock(return_value=mock_db)),
         patch("src.services.api.dependencies._semantic", mock_semantic),
         patch("src.services.api.main._get_config") as mock_cfg,
-        patch("src.services.api.dependencies.init_pool"),
+        patch("src.services.api.dependencies.init_db"),
         patch("src.services.api.dependencies.init_semantic"),
     ):
 
         mock_cfg.return_value = MagicMock(
             database_url="postgresql://test:test@localhost:5432/test",
+            require_service_token=False,
+            service_token=None,
         )
         from src.services.api.main import app
 

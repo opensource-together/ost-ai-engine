@@ -78,37 +78,39 @@ FAKE_TECHSTACK_ROW = {
 @pytest.fixture()
 def contract_client() -> Generator[TestClient, None, None]:
     """TestClient with mock DB returning realistic row data."""
-    mock_pool = MagicMock()
-    mock_cursor = MagicMock()
-    mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-
-    mock_cursor.fetchall.return_value = []
-    mock_cursor.fetchone.return_value = None
+    mock_db = MagicMock()
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.all.return_value = []
+    mock_result.mappings.return_value.first.return_value = None
+    mock_db.execute.return_value = mock_result
 
     with (
-        patch("src.services.api.dependencies._pool", mock_pool),
+        patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ),
         patch("src.services.api.main._get_config") as mock_cfg,
-        patch("src.services.api.dependencies.init_pool"),
+        patch("src.services.api.dependencies.init_db"),
     ):
         mock_cfg.return_value = MagicMock(
             database_url="postgresql://test:test@localhost:5432/test",
+            require_service_token=False,
+            service_token=None,
         )
         from src.services.api.main import app
 
         yield TestClient(app)
 
-    # Store cursor ref for per-test configuration
-    contract_client._mock_cursor = mock_cursor  # type: ignore[attr-defined]
 
-
-@pytest.fixture()
-def mock_cursor(contract_client: TestClient) -> MagicMock:
-    """Access the mock cursor to configure return values per test."""
-    pool = contract_client.app.dependency_overrides.get(None)
-    # Get cursor from the patched pool
-    with patch("src.services.api.dependencies._pool") as p:
-        return p.get_cursor.return_value.__enter__.return_value
+def _make_result(
+    *,
+    rows: list[dict] | None = None,
+    first: dict | None = None,
+) -> MagicMock:
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.all.return_value = rows or []
+    mock_result.mappings.return_value.first.return_value = first
+    return mock_result
 
 
 # -- Contract Tests ------------------------------------------------------------
@@ -120,12 +122,12 @@ class TestCategoryContract:
     def test_response_matches_mcp_category_type(
         self, contract_client: TestClient
     ) -> None:
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            cursor.fetchall.return_value = [FAKE_CATEGORY_ROW]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.execute.return_value = _make_result(rows=[FAKE_CATEGORY_ROW])
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
             resp = contract_client.get("/categories")
 
         assert resp.status_code == 200
@@ -141,12 +143,12 @@ class TestDomainContract:
     def test_response_matches_mcp_domain_type(
         self, contract_client: TestClient
     ) -> None:
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            cursor.fetchall.return_value = [FAKE_DOMAIN_ROW]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.execute.return_value = _make_result(rows=[FAKE_DOMAIN_ROW])
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
             resp = contract_client.get("/domains")
 
         assert resp.status_code == 200
@@ -162,12 +164,12 @@ class TestTechStackContract:
     def test_response_matches_mcp_techstack_type(
         self, contract_client: TestClient
     ) -> None:
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            cursor.fetchall.return_value = [FAKE_TECHSTACK_ROW]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.execute.return_value = _make_result(rows=[FAKE_TECHSTACK_ROW])
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
             resp = contract_client.get("/techstacks")
 
         assert resp.status_code == 200
@@ -183,12 +185,12 @@ class TestProjectSearchContract:
     def test_response_matches_mcp_project_type(
         self, contract_client: TestClient
     ) -> None:
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            cursor.fetchall.return_value = [FAKE_PROJECT_ROW]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.execute.return_value = _make_result(rows=[FAKE_PROJECT_ROW])
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
             resp = contract_client.get("/projects/search?q=test")
 
         assert resp.status_code == 200
@@ -201,12 +203,12 @@ class TestProjectSearchContract:
         self, contract_client: TestClient
     ) -> None:
         """Verify categories/domains/tech_stacks are arrays (even if empty)."""
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            cursor.fetchall.return_value = [FAKE_PROJECT_ROW]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-
+        mock_db = MagicMock()
+        mock_db.execute.return_value = _make_result(rows=[FAKE_PROJECT_ROW])
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
             resp = contract_client.get("/projects/search?q=test")
 
         project = resp.json()[0]
@@ -221,17 +223,17 @@ class TestProjectDetailContract:
     def test_response_matches_mcp_project_type_with_relations(
         self, contract_client: TestClient
     ) -> None:
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            # get_project makes 4 sequential queries
-            cursor.fetchone.return_value = FAKE_PROJECT_ROW
-            cursor.fetchall.side_effect = [
-                [FAKE_CATEGORY_ROW],
-                [FAKE_DOMAIN_ROW],
-                [FAKE_TECHSTACK_ROW],
-            ]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db = MagicMock()
+        mock_db.execute.side_effect = [
+            _make_result(first=FAKE_PROJECT_ROW),
+            _make_result(rows=[FAKE_CATEGORY_ROW]),
+            _make_result(rows=[FAKE_DOMAIN_ROW]),
+            _make_result(rows=[FAKE_TECHSTACK_ROW]),
+        ]
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
 
             resp = contract_client.get("/projects/proj-1")
 
@@ -261,14 +263,15 @@ class TestSimilarContract:
             "repo_url": "https://github.com/test/similar",
             "similarity": 0.87,
         }
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            # First query: check embedding exists
-            cursor.fetchone.return_value = {"vector": [0.1] * 384}
-            # Second query: similar projects
-            cursor.fetchall.return_value = [similar_row]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db = MagicMock()
+        mock_db.execute.side_effect = [
+            _make_result(first={"vector": [0.1] * 384}),
+            _make_result(rows=[similar_row]),
+        ]
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
 
             resp = contract_client.get("/projects/proj-1/similar")
 
@@ -291,11 +294,12 @@ class TestTrendingContract:
             "stars": 1500,
             "last_synced_at": datetime(2025, 1, 15, tzinfo=UTC),
         }
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            cursor.fetchall.return_value = [trending_row]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db = MagicMock()
+        mock_db.execute.return_value = _make_result(rows=[trending_row])
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
 
             resp = contract_client.get("/recommendations/trending")
 
@@ -312,11 +316,12 @@ class TestTrendingContract:
             "stars": None,
             "last_synced_at": None,
         }
-        with patch("src.services.api.dependencies._pool") as mock_pool:
-            cursor = MagicMock()
-            cursor.fetchall.return_value = [trending_row]
-            mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=cursor)
-            mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
+        mock_db = MagicMock()
+        mock_db.execute.return_value = _make_result(rows=[trending_row])
+        with patch(
+            "src.services.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
 
             resp = contract_client.get("/recommendations/trending")
 

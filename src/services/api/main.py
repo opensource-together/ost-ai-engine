@@ -7,8 +7,7 @@ from slowapi.errors import RateLimitExceeded
 
 from src.services.api.auth import require_service_token
 from src.services.api.config import APIConfig
-from src.services.api.dependencies import close_pool, init_pool, init_semantic
-
+from src.services.api.dependencies import close_db, init_db, init_semantic
 from src.services.api.rate_limit import limiter
 from src.services.api.routes import health, projects, recommendations, references
 
@@ -19,13 +18,21 @@ def _get_config() -> APIConfig:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Startup: init pool + load semantic search model. Shutdown: close pool."""
+    """Startup: init DB + load semantic search model. Shutdown: dispose DB."""
     config = _get_config()
-    init_pool(config.database_url)
+    token_ok = config.service_token and config.service_token.strip()
+    if config.require_service_token and not token_ok:
+        msg = (
+            "OST_LINKER_REQUIRE_SERVICE_TOKEN is enabled but "
+            "OST_LINKER_SERVICE_TOKEN is missing or empty — set a shared secret or "
+            "turn off strict mode for local dev."
+        )
+        raise RuntimeError(msg)
+    init_db(config.database_url)
     init_semantic()
 
     yield
-    close_pool()
+    close_db()
 
 
 def _rate_limit_handler(request: Request, exc: RateLimitExceeded) -> Response:
