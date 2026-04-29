@@ -9,6 +9,7 @@ on:
 jobs:
   sync-prisma:
     runs-on: ubuntu-latest
+    if: github.event.pull_request.head.repo.full_name == github.repository
     steps:
       - name: Checkout ost-linker
         uses: actions/checkout@v4

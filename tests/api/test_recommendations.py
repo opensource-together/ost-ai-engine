@@ -7,20 +7,19 @@ from src.services.api.dependencies import get_pool
 from src.services.api.main import app
 
 
-def _make_pool(rows: list[dict]) -> MagicMock:
-    """Create a mock pool whose cursor returns given rows."""
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = rows
-    mock_pool = MagicMock()
-    mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_pool
+def _make_session(rows: list[dict]) -> MagicMock:
+    """Create a mock session whose execute().mappings().all() returns rows."""
+    mock_result = MagicMock()
+    mock_result.mappings.return_value.all.return_value = rows
+    mock_session = MagicMock()
+    mock_session.execute.return_value = mock_result
+    return mock_session
 
 
 class TestTrending:
     def test_get_trending_returns_list(self, client: TestClient) -> None:
         """GET /recommendations/trending returns trending projects."""
-        pool = _make_pool(
+        session = _make_session(
             [
                 {
                     "project_id": "1",
@@ -34,7 +33,7 @@ class TestTrending:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get("/recommendations/trending")
         finally:
@@ -47,8 +46,8 @@ class TestTrending:
 
     def test_get_trending_respects_limit(self, client: TestClient) -> None:
         """GET /recommendations/trending?limit=5 limits results."""
-        pool = _make_pool([])
-        app.dependency_overrides[get_pool] = lambda: pool
+        session = _make_session([])
+        app.dependency_overrides[get_pool] = lambda: session
         try:
             response = client.get("/recommendations/trending?limit=5")
         finally:

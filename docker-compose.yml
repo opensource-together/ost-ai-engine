@@ -1,3 +1,12 @@
+# Compose project name → Docker Desktop shows this as one stack. Use the same
+# `org.open-source-together.stack: ost` label on other OST repos so search/filter
+# groups them; Docker Desktop does not support a real folder hierarchy across projects.
+name: ost-linker
+
+x-ost-labels: &ost-labels
+  org.open-source-together.stack: ost
+  org.open-source-together.app: linker
+
 # Shared environment variables for Dagster services
 x-common-env: &common-env
   DATABASE_URL: ${DATABASE_URL}
@@ -16,8 +25,11 @@ x-common-env: &common-env
   POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
   POSTGRES_DB: ${POSTGRES_DB}
 
+# Share compiled dbt artifacts so the daemon (separate container) can import definitions
+# without duplicating a full dbt build; path must match dbt `target-path` + manifest.json.
 x-common-volumes: &common-volumes
   - dagster_data:/app/dagster_home
+  - dbt_target:/app/dbt/target
 
 services:
   # ============================================================================
@@ -27,8 +39,12 @@ services:
     build: .
     container_name: ost-linker-webserver
     restart: unless-stopped
+    labels:
+      <<: *ost-labels
+      org.open-source-together.role: dagster-webserver
+      org.open-source-together.description: Dagster UI + GraphQL
     ports:
-      - "3000:3000"
+      - "${DAGSTER_HOST_PORT:-3000}:3000"
     environment:
       <<: *common-env
     volumes: *common-volumes
@@ -47,6 +63,13 @@ services:
     build: .
     container_name: ost-linker-daemon
     restart: unless-stopped
+    labels:
+      <<: *ost-labels
+      org.open-source-together.role: dagster-daemon
+      org.open-source-together.description: Schedules, sensors, run queue
+    # Image HEALTHCHECK probes :3000 (webserver); daemon has no HTTP port — disable to avoid false "unhealthy".
+    healthcheck:
+      disable: true
     environment:
       <<: *common-env
       DAGSTER_ROLE: daemon
@@ -64,13 +87,23 @@ services:
     build: .
     container_name: ost-linker-api
     restart: unless-stopped
+    labels:
+      <<: *ost-labels
+      org.open-source-together.role: linker-api
+      org.open-source-together.description: FastAPI read-only MCP backend
     ports:
-      - "8000:8000"
+      # Host port only; production keeps default 8000 by leaving LINKER_API_HOST_PORT unset.
+      - "${LINKER_API_HOST_PORT:-8000}:8000"
     environment:
       DATABASE_URL: ${DATABASE_URL}
       API_HOST: ${API_HOST:-0.0.0.0}
       API_PORT: ${API_PORT:-8000}
       API_RATE_LIMIT: ${API_RATE_LIMIT:-60}
+      # Production: set true together with OST_LINKER_SERVICE_TOKEN (see AGENTS.md).
+      OST_LINKER_REQUIRE_SERVICE_TOKEN: ${OST_LINKER_REQUIRE_SERVICE_TOKEN:-false}
+      OST_LINKER_SERVICE_TOKEN: ${OST_LINKER_SERVICE_TOKEN:-}
+      # Server-side: false hides /docs, /openapi.json, /redoc when using env at container start.
+      API_ENABLE_OPENAPI: ${API_ENABLE_OPENAPI:-true}
       DAGSTER_ROLE: api
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
@@ -82,3 +115,4 @@ services:
 
 volumes:
   dagster_data:
+  dbt_target:

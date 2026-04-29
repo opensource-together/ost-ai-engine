@@ -38,13 +38,29 @@ docker-down:
 	docker compose down
 
 ## DB-init — apply Prisma schema and seed data
+## Sources `.env` when present so DATABASE_URL matches compose/Postgres (see AGENTS.md).
 db-init:
-	npx prisma db push
-	npx ts-node prisma/seed/seed.ts
+	bash -c 'set -a && [ -f .env ] && . ./.env; set +a; npx prisma db push'
+	bash -c 'set -a && [ -f .env ] && . ./.env; set +a; ./node_modules/.bin/ts-node --compiler-options "{\"module\":\"CommonJS\"}" prisma/seed/seed.ts'
 
 ## DBT-build — install dbt deps and build all models
 dbt-build:
-	cd dbt && dbt deps && dbt build
+	bash -c 'set -a && [ -f .env ] && . ./.env; set +a; cd dbt && dbt deps && dbt build'
+
+## Doctor — verify uv and .env (Docker only needed for compose)
+doctor:
+	@command -v uv >/dev/null || (echo "Install uv: https://docs.astral.sh/uv/" && exit 1)
+	@uv --version >/dev/null
+	@test -f .env || (echo "Missing .env — copy from .env.example and fill values" && exit 1)
+	@echo "doctor: ok (uv + .env). Use Docker when running docker compose."
+
+## CI-check — run the same Python checks as GitHub Actions quality job
+ci-check: lint
+	uv run ruff format --check src/
+	$(MAKE) typecheck
+	uv run pytest -m unit --cov-fail-under=50
+	uv run pytest -m api --no-cov
+	uv run pytest -m integration -k test_dagster_startup --no-cov
 
 ## Clean — remove Dagster storage and Python caches
 clean:
@@ -58,4 +74,4 @@ help:
 	@echo ""
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /'
 
-.PHONY: setup dev test lint format typecheck build-go docker-up docker-down db-init dbt-build clean help
+.PHONY: setup dev test lint format typecheck build-go docker-up docker-down db-init dbt-build clean help doctor ci-check

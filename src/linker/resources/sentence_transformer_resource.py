@@ -1,6 +1,10 @@
+import logging
+
 from dagster import ConfigurableResource
 from pydantic import PrivateAttr
 from sentence_transformers import SentenceTransformer
+
+logger = logging.getLogger(__name__)
 
 
 class SentenceTransformerResource(ConfigurableResource):
@@ -14,13 +18,13 @@ class SentenceTransformerResource(ConfigurableResource):
 
     def get_model(self) -> SentenceTransformer:
         if self._model is None:
-            print(
-                f"Loading SentenceTransformer model: "
-                f"{self.model_name} on {self.device}",
-                flush=True,
+            logger.info(
+                "Loading SentenceTransformer model %s on %s",
+                self.model_name,
+                self.device,
             )
             self._model = SentenceTransformer(self.model_name, device=self.device)
-            print("Model loaded successfully.", flush=True)
+            logger.info("SentenceTransformer model loaded")
         return self._model
 
     def encode(self, text: str) -> list[float]:

@@ -1,6 +1,5 @@
 from datetime import date, datetime
 
-
 from pydantic import BaseModel
 
 
@@ -50,6 +49,7 @@ class ProjectSemanticOut(BaseModel):
     logo_url: str | None = None
     similarity: float
 
+
 class TrendingProjectOut(BaseModel):
     project_id: str
     stars: int | None = None
@@ -68,6 +68,7 @@ class GithubTrendingProjectOut(BaseModel):
     linked_project_id: str | None = None
     category_id: str | None = None
     domain_id: str | None = None
+
 
 class ErrorOut(BaseModel):
     detail: str

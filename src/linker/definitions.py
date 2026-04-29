@@ -6,7 +6,6 @@ constructed. For that reason, bootstrap values needed at import time are
 read from `settings.py`.
 """
 
-import os
 from collections.abc import Iterator
 from typing import Any
 
@@ -122,9 +121,7 @@ def build_resources() -> dict[str, Any]:
             api_key=EnvVar("MISTRAL_API_KEY"),
         ),
         # force CPU usage to avoid relying on GPU availability in runtime env
-        "sentence_transformer": SentenceTransformerResource(
-            device="cpu"
-        ),
+        "sentence_transformer": SentenceTransformerResource(device="cpu"),
         "dbt": dbt_resource,
         "io_manager": PandasPostgresIOManager(db_url=EnvVar("DATABASE_URL")),
         "streaming_io_manager": PandasPostgresIOManager(

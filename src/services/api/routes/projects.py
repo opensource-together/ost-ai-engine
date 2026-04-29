@@ -1,21 +1,31 @@
 from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
+from sqlalchemy import text
+from sqlalchemy.engine import Result
+from sqlalchemy.orm import Session
 
-from src.services.api.database import ConnectionPool
-from src.services.api.dependencies import get_pool, get_semantic
-from src.services.api.rate_limit import limiter
+from src.services.api.dependencies import get_db, get_semantic
+from src.services.api.rate_limit import RATE_LIMIT, limiter
 from src.services.api.schemas import ProjectOut, ProjectSemanticOut, ProjectSimilarOut
 from src.services.api.semantic import SemanticSearchService
-
 
 router = APIRouter(prefix="/projects")
 
 MAX_LIMIT = 50
 
 
+def _rows(result: Result[Any]) -> list[dict[str, Any]]:
+    return [dict(row) for row in result.mappings().all()]
+
+
+def _row_or_none(result: Result[Any]) -> dict[str, Any] | None:
+    row = result.mappings().first()
+    return dict(row) if row is not None else None
+
+
 @router.get("/search", response_model=list[ProjectOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def search_projects(
     request: Request,
     q: str = Query(..., min_length=1),
@@ -23,7 +33,7 @@ def search_projects(
     domain: str | None = None,
     techstack: str | None = None,
     limit: int = Query(default=20, ge=1, le=MAX_LIMIT),
-    pool: ConnectionPool = Depends(get_pool),
+    db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """Search projects by keyword, optionally filtered by category/domain/techstack."""
     query = """
@@ -37,32 +47,34 @@ def search_projects(
         LEFT JOIN public.project_tech_stack pts ON p.id = pts."projectId"
         LEFT JOIN public.tech_stack ts ON pts."techStackId" = ts.id
         WHERE (p.published = true OR p.trending = true)
-          AND (p.title ILIKE %s OR p.description ILIKE %s)
+          AND (p.title ILIKE :title_pattern OR p.description ILIKE :description_pattern)
     """
     escaped = q.replace("%", "\\%").replace("_", "\\_")
     pattern = f"%{escaped}%"
-    params: list[Any] = [pattern, pattern]
+    params: dict[str, Any] = {
+        "title_pattern": pattern,
+        "description_pattern": pattern,
+    }
 
     if category:
-        query += " AND c.name = %s"
-        params.append(category)
+        query += " AND c.name = :category"
+        params["category"] = category
     if domain:
-        query += " AND d.name = %s"
-        params.append(domain)
+        query += " AND d.name = :domain"
+        params["domain"] = domain
     if techstack:
-        query += " AND ts.name = %s"
-        params.append(techstack)
+        query += " AND ts.name = :techstack"
+        params["techstack"] = techstack
 
-    query += " ORDER BY p.trending DESC, p.title LIMIT %s"
-    params.append(limit)
+    query += " ORDER BY p.trending DESC, p.title LIMIT :limit"
+    params["limit"] = limit
 
-    with pool.get_cursor() as cur:
-        cur.execute(query, params)
-        return list(cur.fetchall())
+    result = db.execute(text(query), params)
+    return _rows(result)
 
 
 @router.get("/search-natural", response_model=list[ProjectSemanticOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def search_natural(
     request: Request,
     q: str = Query(..., min_length=1),
@@ -71,7 +83,7 @@ def search_natural(
     category: str | None = None,
     techstack: str | None = None,
     limit: int = Query(default=10, ge=1, le=MAX_LIMIT),
-    pool: ConnectionPool = Depends(get_pool),
+    db: Session = Depends(get_db),
     semantic: SemanticSearchService = Depends(get_semantic),
 ) -> list[dict[str, Any]]:
     """Natural-language semantic search.
@@ -86,123 +98,140 @@ def search_natural(
     sql = """
         SELECT DISTINCT p.id, p.title, p.description, p."repoUrl" AS repo_url,
                p."logoUrl" AS logo_url,
-               1 - (e.vector <=> %s::vector) AS similarity
+               1 - (e.vector <=> CAST(:query_vector AS vector)) AS similarity
         FROM ml.embd_github_project e
         JOIN public."Project" p ON p.id = e."projectId"
     """
-    params: list[Any] = [vector_literal]
+    params: dict[str, Any] = {"query_vector": vector_literal}
 
     if category:
         sql += (
             ' JOIN public.project_category pc ON p.id = pc."projectId"'
-            ' JOIN public."Category" c ON pc."categoryId" = c.id AND c.name = %s'
+            ' JOIN public."Category" c ON pc."categoryId" = c.id AND c.name = :category'
         )
-        params.append(category)
+        params["category"] = category
     if domain:
         sql += (
             ' JOIN public.project_domain pd ON p.id = pd."projectId"'
-            ' JOIN public."Domain" d ON pd."domainId" = d.id AND d.name = %s'
+            ' JOIN public."Domain" d ON pd."domainId" = d.id AND d.name = :domain'
         )
-        params.append(domain)
+        params["domain"] = domain
     if techstack or language:
         sql += (
             ' JOIN public.project_tech_stack pts ON p.id = pts."projectId"'
             ' JOIN public.tech_stack ts ON pts."techStackId" = ts.id'
         )
         if techstack:
-            sql += " AND ts.name = %s"
-            params.append(techstack)
+            sql += " AND ts.name = :techstack"
+            params["techstack"] = techstack
         if language:
-            sql += " AND ts.name ILIKE %s AND ts.type = 'LANGUAGE'"
-            params.append(language)
+            sql += " AND ts.name ILIKE :language AND ts.type = 'LANGUAGE'"
+            params["language"] = language
 
     sql += " WHERE (p.published = true OR p.trending = true)"
-    sql += " ORDER BY similarity DESC LIMIT %s"
-    params.append(limit)
+    sql += " ORDER BY similarity DESC LIMIT :limit"
+    params["limit"] = limit
 
-    with pool.get_cursor() as cur:
-        cur.execute(sql, params)
-        return list(cur.fetchall())
+    result = db.execute(text(sql), params)
+    return _rows(result)
+
 
 @router.get("/{project_id}", response_model=ProjectOut)
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def get_project(
     request: Request,
     project_id: str,
-    pool: ConnectionPool = Depends(get_pool),
+    db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Get full project details by ID."""
-    with pool.get_cursor() as cur:
-        cur.execute(
-            """SELECT id, title, description, "repoUrl" AS repo_url,
-                      published, trending, "logoUrl" AS logo_url
-               FROM public."Project"
-               WHERE id = %s""",
-            (project_id,),
+    project = _row_or_none(
+        db.execute(
+            text(
+                """SELECT id, title, description, "repoUrl" AS repo_url,
+                          published, trending, "logoUrl" AS logo_url
+                   FROM public."Project"
+                   WHERE id = :project_id"""
+            ),
+            {"project_id": project_id},
         )
-        project = cur.fetchone()
-        if not project:
-            raise HTTPException(status_code=404, detail="Project not found")
+    )
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
 
-        cur.execute(
-            """SELECT c.id, c.name FROM public."Category" c
-               JOIN public.project_category pc ON c.id = pc."categoryId"
-               WHERE pc."projectId" = %s""",
-            (project_id,),
+    categories = _rows(
+        db.execute(
+            text(
+                """SELECT c.id, c.name FROM public."Category" c
+                   JOIN public.project_category pc ON c.id = pc."categoryId"
+                   WHERE pc."projectId" = :project_id"""
+            ),
+            {"project_id": project_id},
         )
-        categories = cur.fetchall()
+    )
 
-        cur.execute(
-            """SELECT d.id, d.name FROM public."Domain" d
-               JOIN public.project_domain pd ON d.id = pd."domainId"
-               WHERE pd."projectId" = %s""",
-            (project_id,),
+    domains = _rows(
+        db.execute(
+            text(
+                """SELECT d.id, d.name FROM public."Domain" d
+                   JOIN public.project_domain pd ON d.id = pd."domainId"
+                   WHERE pd."projectId" = :project_id"""
+            ),
+            {"project_id": project_id},
         )
-        domains = cur.fetchall()
+    )
 
-        cur.execute(
-            """SELECT ts.id, ts.name, ts."iconUrl" AS icon_url, ts.type::text
-               FROM public.tech_stack ts
-               JOIN public.project_tech_stack pts ON ts.id = pts."techStackId"
-               WHERE pts."projectId" = %s""",
-            (project_id,),
+    tech_stacks = _rows(
+        db.execute(
+            text(
+                """SELECT ts.id, ts.name, ts."iconUrl" AS icon_url,
+                          CAST(ts.type AS text) AS type
+                   FROM public.tech_stack ts
+                   JOIN public.project_tech_stack pts ON ts.id = pts."techStackId"
+                   WHERE pts."projectId" = :project_id"""
+            ),
+            {"project_id": project_id},
         )
-        tech_stacks = cur.fetchall()
+    )
 
-        result = dict(project)
-        result["categories"] = categories
-        result["domains"] = domains
-        result["tech_stacks"] = tech_stacks
-        return result
+    project["categories"] = categories
+    project["domains"] = domains
+    project["tech_stacks"] = tech_stacks
+    return project
 
 
 @router.get("/{project_id}/similar", response_model=list[ProjectSimilarOut])
-@limiter.limit("60/minute")
+@limiter.limit(RATE_LIMIT)
 def find_similar(
     request: Request,
     project_id: str,
     limit: int = Query(default=10, ge=1, le=MAX_LIMIT),
-    pool: ConnectionPool = Depends(get_pool),
+    db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """Find similar projects using pgvector cosine similarity."""
-    with pool.get_cursor() as cur:
-        cur.execute(
-            'SELECT vector FROM ml.embd_github_project WHERE "projectId" = %s',
-            (project_id,),
+    embedding = _row_or_none(
+        db.execute(
+            text(
+                """SELECT vector FROM ml.embd_github_project
+                   WHERE "projectId" = :project_id"""
+            ),
+            {"project_id": project_id},
         )
-        if not cur.fetchone():
-            raise HTTPException(status_code=404, detail="Project embedding not found")
+    )
+    if not embedding:
+        raise HTTPException(status_code=404, detail="Project embedding not found")
 
-        cur.execute(
+    result = db.execute(
+        text(
             """SELECT p.id, p.title, p.description, p."repoUrl" AS repo_url,
                       1 - (e.vector <=> ref.vector) AS similarity
                FROM ml.embd_github_project e
-               JOIN ml.embd_github_project ref ON ref."projectId" = %s
+               JOIN ml.embd_github_project ref ON ref."projectId" = :project_id
                JOIN public."Project" p ON p.id = e."projectId"
-               WHERE e."projectId" != %s
+               WHERE e."projectId" != :project_id
                  AND (p.published = true OR p.trending = true)
                ORDER BY e.vector <=> ref.vector
-               LIMIT %s""",
-            (project_id, project_id, limit),
-        )
-        return list(cur.fetchall())
+               LIMIT :limit"""
+        ),
+        {"project_id": project_id, "limit": limit},
+    )
+    return _rows(result)

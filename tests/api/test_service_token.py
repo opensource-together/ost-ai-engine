@@ -1,4 +1,4 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from fastapi.testclient import TestClient
@@ -14,18 +14,30 @@ def _make_pool(
     fetchall_rows: list[dict] | None = None,
     fetchone_rows: list[dict | None] | None = None,
 ) -> MagicMock:
-    """Create a mock pool whose cursor returns the given rows."""
-    mock_cursor = MagicMock()
-    mock_cursor.fetchall.return_value = fetchall_rows or []
-    if fetchone_rows is not None:
-        mock_cursor.fetchone.side_effect = fetchone_rows
-    else:
-        mock_cursor.fetchone.return_value = None
+    """Create a mock session whose execute() returns configured result mappings."""
+    mock_session = MagicMock()
 
-    mock_pool = MagicMock()
-    mock_pool.get_cursor.return_value.__enter__ = MagicMock(return_value=mock_cursor)
-    mock_pool.get_cursor.return_value.__exit__ = MagicMock(return_value=False)
-    return mock_pool
+    def _make_result(
+        *,
+        rows: list[dict] | None = None,
+        first: dict | None = None,
+    ) -> MagicMock:
+        mock_result = MagicMock()
+        mock_result.mappings.return_value.all.return_value = rows or []
+        mock_result.mappings.return_value.first.return_value = first
+        return mock_result
+
+    if fetchone_rows is not None:
+        execute_results = [
+            _make_result(first=row) for row in fetchone_rows
+        ]
+        if fetchall_rows is not None:
+            execute_results.append(_make_result(rows=fetchall_rows))
+        mock_session.execute.side_effect = execute_results
+    else:
+        mock_session.execute.return_value = _make_result(rows=fetchall_rows)
+
+    return mock_session
 
 
 class TestServiceTokenOpen:
@@ -142,3 +154,19 @@ class TestHealthOpen:
 
         assert response.status_code == 200
         assert response.json() == {"status": "ok"}
+
+
+def test_strict_service_token_without_secret_fails_at_startup(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """When strict mode is on, startup fails if OST_LINKER_SERVICE_TOKEN is unset."""
+    monkeypatch.setenv("DATABASE_URL", "postgresql://test:test@localhost:5432/test")
+    monkeypatch.setenv("OST_LINKER_REQUIRE_SERVICE_TOKEN", "true")
+    monkeypatch.delenv("OST_LINKER_SERVICE_TOKEN", raising=False)
+    with (
+        patch("src.services.api.main.init_db"),
+        patch("src.services.api.main.init_semantic"),
+    ):
+        with pytest.raises(RuntimeError, match="OST_LINKER_REQUIRE_SERVICE_TOKEN"):
+            with TestClient(app):
+                pass

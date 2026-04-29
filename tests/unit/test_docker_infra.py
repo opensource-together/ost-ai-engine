@@ -10,20 +10,28 @@ class TestDockerfile:
         assert (PROJECT_ROOT / "Dockerfile").is_file()
 
     def test_non_root_user(self) -> None:
-        """Dockerfile must switch to a non-root user before CMD."""
-        content = (PROJECT_ROOT / "Dockerfile").read_text()
-        lines = content.splitlines()
-        user_line_idx = None
-        cmd_line_idx = None
-        for i, line in enumerate(lines):
-            stripped = line.strip()
-            if stripped.startswith("USER ") and not stripped.startswith("USER root"):
-                user_line_idx = i
-            if stripped.startswith("CMD "):
-                cmd_line_idx = i
-        assert user_line_idx is not None, "Dockerfile must contain a non-root USER"
+        """Workload must run as non-root: USER appuser before CMD, or entrypoint gosu."""
+        dockerfile = (PROJECT_ROOT / "Dockerfile").read_text()
+        entrypoint_script = (PROJECT_ROOT / "scripts/docker-entrypoint.sh").read_text()
+        lines = dockerfile.splitlines()
+        cmd_line_idx = next(
+            (i for i, line in enumerate(lines) if line.strip().startswith("CMD ")),
+            None,
+        )
         assert cmd_line_idx is not None, "Dockerfile must contain a CMD"
-        assert user_line_idx < cmd_line_idx, "USER must come before CMD"
+        user_before_cmd = any(
+            i < cmd_line_idx
+            and line.strip().startswith("USER ")
+            and not line.strip().startswith("USER root")
+            for i, line in enumerate(lines)
+        )
+        entrypoint_drops_priv = (
+            "docker-entrypoint.sh" in dockerfile and "gosu appuser" in entrypoint_script
+        )
+        assert user_before_cmd or entrypoint_drops_priv, (
+            "Dockerfile must run the process as non-root "
+            "(USER appuser before CMD, or ENTRYPOINT scripts/docker-entrypoint.sh with gosu appuser)"
+        )
 
     def test_healthcheck_defined(self) -> None:
         content = (PROJECT_ROOT / "Dockerfile").read_text()

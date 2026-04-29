@@ -64,22 +64,15 @@ dbt/logs/
 # Cache
 .cache/
 
-# Node (only used for Prisma seeding)
+# Node (only used for Prisma — package.json + lockfile are committed; artifacts not)
 node_modules/
-package-lock.json
-package.json
 
 # Database
 postgres-data/
 *.db
 
-# Docker
-postgres-data/
-
-# Legacy / unused
-config/cfg.py
-config/cfg.yaml
-poetry.lock
+# Design notes / planning (local or draft; not product source)
+specs/
 
 # Personal notes
 PR.md

@@ -1,15 +1,15 @@
 """
-  Dagster runtime configuration for the linker pipeline.
+Dagster runtime configuration for the linker pipeline.
 
-  This module defines `PipelineConfig`, a `ConfigurableResource` used by
-  Dagster assets/resources at execution time. It covers pipeline runtime
-  inputs such as database access, GitHub credentials, and Go binary paths.
+This module defines `PipelineConfig`, a `ConfigurableResource` used by
+Dagster assets/resources at execution time. It covers pipeline runtime
+inputs such as database access, GitHub credentials, and Go binary paths.
 
-  It is not the bootstrap settings layer for application startup.
-  Settings needed before Dagster resources are constructed
-  (for example dbt project discovery in `definitions.py`) should live in 
-  `settings.py`.
-  """
+It is not the bootstrap settings layer for application startup.
+Settings needed before Dagster resources are constructed
+(for example dbt project discovery in `definitions.py`) should live in
+`settings.py`.
+"""
 
 import json
 from datetime import date, timedelta

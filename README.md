@@ -23,18 +23,19 @@ It analyzes open-source projects and matches them to contributors — so you fin
 ```bash
 cp .env.example .env              # configure environment
 make setup                        # install deps + compile Go binaries
+npm ci                            # Prisma / ts-node (package.json is in-repo)
 docker compose up --build -d      # start services (Dagster UI at :3000)
 make db-init                      # apply schema + seed data
+make ci-check                     # same Python gates as GitHub Actions (before a PR)
 ```
 
 ## Contributing
 
-Contributions soon !  
-You can already check the [Contributing Guide](CONTRIBUTING.md) to be ready.
+Contributions are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for how to propose changes, run checks, and open PRs. A maintainer-facing [readiness audit](docs/READINESS-AUDIT.md) covers OSS posture, security, CI, and recommendations pipeline health.
 
 ## License
 
-[CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — See [LICENSE](LICENSE).
+The code in this repository is licensed under [CC BY-NC 4.0](https://creativecommons.org/licenses/by-nc/4.0/) — see [LICENSE](LICENSE). That license allows sharing and adapting the work for **non-commercial** use; it is **not** the same as [OSI’s definition](https://opensource.org/osd) of “open source.” For commercial licensing or other permission questions, use the channels in [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ---
 

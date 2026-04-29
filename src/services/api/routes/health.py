@@ -1,14 +1,14 @@
 from fastapi import APIRouter, Depends
+from sqlalchemy import text
+from sqlalchemy.orm import Session
 
-from src.services.api.database import ConnectionPool
-from src.services.api.dependencies import get_pool
+from src.services.api.dependencies import get_db
 
 router = APIRouter()
 
 
 @router.get("/health")
-def health(pool: ConnectionPool = Depends(get_pool)) -> dict[str, str]:
-    """Health check endpoint -- verifies DB connectivity."""
-    with pool.get_cursor() as cur:
-        cur.execute("SELECT 1")
+def health(db: Session = Depends(get_db)) -> dict[str, str]:
+    """Health check endpoint, checks DB connectivity."""
+    db.execute(text("SELECT 1"))
     return {"status": "ok"}
