@@ -61,6 +61,7 @@ dev = [
     "pandas-stubs>=3.0.0.260204",
     "types-psycopg2>=2.9.21.20260223",
     "types-PyYAML>=6.0",
+    "pre-commit>=4.0.0,<5",
 ]
 
 [build-system]
