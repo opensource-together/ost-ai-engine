@@ -42,7 +42,14 @@ jobs:
         run: uv run pytest -m api --no-cov
 
       - name: Dagster startup smoke test
-        run: uv run pytest -m integration -k test_dagster_startup --no-cov
+        env:
+          # Match dagster.yaml (env-based storage/logs); runner has no Docker .env defaults.
+          DAGSTER_HOME: ${{ github.workspace }}
+          DAGSTER_STORAGE_DIR: ${{ github.workspace }}/tmp_dagster/storage
+          DAGSTER_LOGS_DIR: ${{ github.workspace }}/tmp_dagster/logs
+        run: |
+          mkdir -p "$DAGSTER_STORAGE_DIR" "$DAGSTER_LOGS_DIR"
+          uv run pytest -m integration -k test_dagster_startup --no-cov
 
   dbt-check:
     runs-on: ubuntu-latest
