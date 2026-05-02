@@ -5,9 +5,9 @@ setup:
 	uv sync
 	$(MAKE) build-go
 
-## Dev — run Dagster dev server locally
+## Dev — run Dagster dev server locally (host paths; see workspace.host.yaml)
 dev:
-	uv run dagster dev -h 0.0.0.0 -p 3000
+	uv run dagster dev -h 0.0.0.0 -p 3000 -w workspace.host.yaml
 
 ## Test — run pytest with coverage
 test:
@@ -62,6 +62,10 @@ ci-check: lint
 	uv run pytest -m api --no-cov
 	uv run pytest -m integration -k test_dagster_startup --no-cov
 
+## Test-database — Postgres-backed FastAPI tier (DATABASE_URL required)
+test-database:
+	uv run pytest tests/api_db --no-cov -v
+
 ## Clean — remove Dagster storage and Python caches
 clean:
 	bash scripts/clean_dagster.sh
@@ -74,4 +78,4 @@ help:
 	@echo ""
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /'
 
-.PHONY: setup dev test lint format typecheck build-go docker-up docker-down db-init dbt-build clean help doctor ci-check
+.PHONY: setup dev test lint format typecheck build-go docker-up docker-down db-init dbt-build clean help doctor ci-check test-database

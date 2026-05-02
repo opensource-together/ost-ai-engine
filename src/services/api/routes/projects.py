@@ -2,26 +2,17 @@ from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import text
-from sqlalchemy.engine import Result
 from sqlalchemy.orm import Session
 
 from src.services.api.dependencies import get_db, get_semantic
 from src.services.api.rate_limit import RATE_LIMIT, limiter
+from src.services.api.row_mapping import mapping_row_first, mapping_rows
 from src.services.api.schemas import ProjectOut, ProjectSemanticOut, ProjectSimilarOut
 from src.services.api.semantic import SemanticSearchService
 
 router = APIRouter(prefix="/projects")
 
 MAX_LIMIT = 50
-
-
-def _rows(result: Result[Any]) -> list[dict[str, Any]]:
-    return [dict(row) for row in result.mappings().all()]
-
-
-def _row_or_none(result: Result[Any]) -> dict[str, Any] | None:
-    row = result.mappings().first()
-    return dict(row) if row is not None else None
 
 
 @router.get("/search", response_model=list[ProjectOut])
@@ -70,7 +61,7 @@ def search_projects(
     params["limit"] = limit
 
     result = db.execute(text(query), params)
-    return _rows(result)
+    return mapping_rows(result)
 
 
 @router.get("/search-natural", response_model=list[ProjectSemanticOut])
@@ -133,7 +124,7 @@ def search_natural(
     params["limit"] = limit
 
     result = db.execute(text(sql), params)
-    return _rows(result)
+    return mapping_rows(result)
 
 
 @router.get("/{project_id}", response_model=ProjectOut)
@@ -144,7 +135,7 @@ def get_project(
     db: Session = Depends(get_db),
 ) -> dict[str, Any]:
     """Get full project details by ID."""
-    project = _row_or_none(
+    project = mapping_row_first(
         db.execute(
             text(
                 """SELECT id, title, description, "repoUrl" AS repo_url,
@@ -158,7 +149,7 @@ def get_project(
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    categories = _rows(
+    categories = mapping_rows(
         db.execute(
             text(
                 """SELECT c.id, c.name FROM public."Category" c
@@ -169,7 +160,7 @@ def get_project(
         )
     )
 
-    domains = _rows(
+    domains = mapping_rows(
         db.execute(
             text(
                 """SELECT d.id, d.name FROM public."Domain" d
@@ -180,7 +171,7 @@ def get_project(
         )
     )
 
-    tech_stacks = _rows(
+    tech_stacks = mapping_rows(
         db.execute(
             text(
                 """SELECT ts.id, ts.name, ts."iconUrl" AS icon_url,
@@ -208,7 +199,7 @@ def find_similar(
     db: Session = Depends(get_db),
 ) -> list[dict[str, Any]]:
     """Find similar projects using pgvector cosine similarity."""
-    embedding = _row_or_none(
+    embedding = mapping_row_first(
         db.execute(
             text(
                 """SELECT vector FROM ml.embd_github_project
@@ -234,4 +225,4 @@ def find_similar(
         ),
         {"project_id": project_id, "limit": limit},
     )
-    return _rows(result)
+    return mapping_rows(result)

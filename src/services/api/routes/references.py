@@ -1,19 +1,13 @@
-from typing import Any
-
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy import text
-from sqlalchemy.engine import Result
 from sqlalchemy.orm import Session
 
 from src.services.api.dependencies import get_db
 from src.services.api.rate_limit import RATE_LIMIT, limiter
+from src.services.api.row_mapping import mapping_rows
 from src.services.api.schemas import CategoryOut, DomainOut, TechStackOut
 
 router = APIRouter()
-
-
-def _rows(result: Result[Any]) -> list[dict[str, Any]]:
-    return [dict(row) for row in result.mappings().all()]
 
 
 @router.get("/categories", response_model=list[CategoryOut])
@@ -21,7 +15,7 @@ def _rows(result: Result[Any]) -> list[dict[str, Any]]:
 def list_categories(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     """List all project categories."""
     result = db.execute(text('SELECT id, name FROM public."Category" ORDER BY name'))
-    return _rows(result)
+    return mapping_rows(result)
 
 
 @router.get("/domains", response_model=list[DomainOut])
@@ -29,7 +23,7 @@ def list_categories(request: Request, db: Session = Depends(get_db)) -> list[dic
 def list_domains(request: Request, db: Session = Depends(get_db)) -> list[dict]:
     """List all project domains."""
     result = db.execute(text('SELECT id, name FROM public."Domain" ORDER BY name'))
-    return _rows(result)
+    return mapping_rows(result)
 
 
 @router.get("/techstacks", response_model=list[TechStackOut])
@@ -43,4 +37,4 @@ def list_techstacks(request: Request, db: Session = Depends(get_db)) -> list[dic
                ORDER BY name"""
         )
     )
-    return _rows(result)
+    return mapping_rows(result)

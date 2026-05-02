@@ -28,7 +28,7 @@ If `npx ts-node` fails on your Node version, use the `ts-node` line above from t
 ### Python / Dagster
 ```bash
 uv sync                                   # Install Python dependencies
-dagster dev -h 0.0.0.0 -p 3000           # Run Dagster locally (outside Docker)
+make dev                                  # Dagster UI on :3000 (uses workspace.host.yaml)
 ```
 
 ### REST API (FastAPI)
@@ -37,6 +37,32 @@ uvicorn src.services.api.main:app --host 0.0.0.0 --port 8000   # Run API locally
 pytest -m api                                                    # Run API tests only
 ```
 The API is a lightweight, read-only service consumed by the [ost-mcp](https://github.com/opensource-together/ost-mcp) MCP server. It exposes project search, similarity, trending recommendations, and reference data.
+
+### FastAPI service token (`OST_LINKER_*`)
+
+Exact behavior (see `src/services/api/auth.py` and `lifespan` in `src/services/api/main.py`; covered by `pytest -m api` in `tests/api/test_service_token.py`):
+
+| `OST_LINKER_REQUIRE_SERVICE_TOKEN` | `OST_LINKER_SERVICE_TOKEN` | Protected routes (`/projects`, `/references`, `/recommendations`, …) | `/health` |
+| ---------------------------------- | -------------------------- | -------------------------------------------------------------------- | --------- |
+| `false` or unset                    | unset or empty             | Open (no `X-Service-Token` required)                                  | Open      |
+| `false` or unset                    | set                        | **401** unless `X-Service-Token` matches                               | Open      |
+| `true`                             | unset or empty             | **Startup fails** (`RuntimeError` in lifespan)                        | n/a       |
+| `true`                             | set                        | **401** unless header matches                                          | Open      |
+
+**MCP-facing production:** set strict mode and a strong shared token; keep transport on a private network or TLS-terminated path so the header is not leaked.
+
+### Postgres host bind (dev override)
+
+Compose maps the dev database as `${POSTGRES_BIND_ADDR:-127.0.0.1}:${POSTGRES_PORT:-5433}:5432` (loopback-first by host port **5433** unless you override). Use `POSTGRES_BIND_ADDR=0.0.0.0` **only on trusted LANs** (e.g. DBeaver from another machine on Tailscale) and rely on `POSTGRES_PASSWORD` strength — see `.env.example`.
+
+### Dagster: Docker vs host
+
+- **Containers** use `-w /app/workspace.yaml` with `working_directory: /app` (bind-mounted tree).
+- **Host** `make dev` uses `workspace.host.yaml` with `working_directory: .` so `src.linker.definitions` loads from your checkout. Keep both YAML files aligned if you rename modules.
+
+### Ingestion / Dagster regression coverage
+
+Not every ingestion asset ships full deterministic unit tests against Go binaries. After changing subprocess wiring (`raw_github__extract_projects`, trending, etc.), run a Dagster materialization smoke in dev or document manual rehearsal on the PR.
 
 ### dbt
 Target `local` in `dbt/profiles.yml` uses `POSTGRES_HOST`, `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_PORT`, `POSTGRES_DB` (defaults **ci_user** / **ci_pass** / **5433** if unset — wrong for your Docker DB). **Load the repo `.env` before running dbt:**
@@ -63,10 +89,22 @@ mypy src/                                 # Type check (strict mode)
 ```bash
 pytest                                    # Run all tests (coverage included via --cov=src)
 pytest tests/test_foo.py -k test_bar      # Run a single test
-pytest -m unit                            # Run by marker (unit/integration/performance/api)
+pytest -m unit                            # Run by marker (unit/integration/performance/api/database)
 pytest -m integration                     # Dagster startup smoke test
+pytest -m database                        # Only `tests/api_db/` (requires DATABASE_URL; skipped if unset)
 ```
-`make ci-check` runs ruff (check + format), mypy, unit tests, API tests, and the Dagster smoke — aligned with `.github/workflows/quality-checks.yml`.
+`make ci-check` runs ruff (check + format), mypy, unit tests, API tests, and the Dagster smoke — aligned with `.github/workflows/quality-checks.yml`. It does **not** run the Postgres tier; use **`make test-database`** when **`DATABASE_URL`** points at a migrated, seeded DB.
+
+#### Verification tiers (CI vs local Postgres)
+
+| Tier | Command | Needs |
+| ---- | ------- | ----- |
+| **Unit** | `pytest -m unit --cov-fail-under=50` | Python only |
+| **API mocks** | `pytest -m api` | Python only (mocked DB + semantic) |
+| **Integration (Dagster)** | `pytest -m integration -k test_dagster_startup --no-cov` | Dagster env dirs (see workflow) |
+| **Database (`api_db`)** | `DATABASE_URL=... LINKER_SKIP_SEMANTIC_INIT=true make test-database` | Compose **db** (`ankane/pgvector` in docker-compose override), `npx prisma migrate deploy`, Prisma seed |
+
+**`LINKER_SKIP_SEMANTIC_INIT`** — When set to **`true`**, FastAPI skips loading **`sentence-transformers`** (used in **GitHub Actions `postgres-db`** and **`tests/api_db`**). Routes that call **`get_semantic()`** (e.g. **`/projects`** embedding search) stay untested in that mode.
 
 Test config is in `pyproject.toml` under `[tool.pytest.ini_options]`. Tests use class-based style (`class TestXxx`).
 

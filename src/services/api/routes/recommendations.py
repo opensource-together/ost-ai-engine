@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from src.services.api.dependencies import get_db
 from src.services.api.rate_limit import RATE_LIMIT, limiter
+from src.services.api.row_mapping import mapping_rows
 from src.services.api.schemas import GithubTrendingProjectOut, TrendingProjectOut
 
 router = APIRouter(prefix="/recommendations")
@@ -34,7 +35,7 @@ def get_github_trending(
         ),
         {"limit": limit},
     )
-    rows = [dict(row) for row in result.mappings().all()]
+    rows = mapping_rows(result)
 
     results = []
     for row in rows:
@@ -74,4 +75,4 @@ def get_trending(
         ),
         {"limit": limit},
     )
-    return [dict(row) for row in result.mappings().all()]
+    return mapping_rows(result)
