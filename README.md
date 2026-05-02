@@ -28,6 +28,8 @@ make db-init                      # Prisma schema + seed
 make ci-check                     # Python parity with CI quality job (before a PR); full CI is broader — see AGENTS.md
 ```
 
+See [AGENTS.md](AGENTS.md) for **API service-token behavior**, **Postgres host bind**, and **Dagster host vs Docker workspaces** (`workspace.host.yaml`, `Makefile` **`make dev`**).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) (branch flow, conventions, **`make ci-check`**). For command cheat-sheets (**dbt**, API, Docker overrides), see [AGENTS.md](AGENTS.md).

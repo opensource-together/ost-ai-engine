@@ -1,0 +1,5 @@
+load_from:
+  - python_module:
+      module_name: src.linker.definitions
+      attribute: defs
+      working_directory: .

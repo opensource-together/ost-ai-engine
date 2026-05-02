@@ -21,6 +21,7 @@ jobs:
       prisma_schema: ${{ steps.filter.outputs.prisma_schema }}
       ost_docs_paths: ${{ steps.filter.outputs.ost_docs_paths }}
       dagster_cfg: ${{ steps.filter.outputs.dagster_cfg }}
+      postgres_suite: ${{ steps.filter.outputs.postgres_suite }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -60,6 +61,11 @@ jobs:
               - 'scripts/docker-entrypoint.sh'
             prisma_schema:
               - 'prisma/**'
+            postgres_suite:
+              - 'prisma/**'
+              - 'tests/api_db/**'
+              - 'tests/conftest.py'
+              - '.github/workflows/quality-checks.yml'
             ost_docs_paths:
               - 'ost-docs/**'
               - '.gitmodules'
@@ -113,6 +119,69 @@ jobs:
         run: |
           mkdir -p "$DAGSTER_STORAGE_DIR" "$DAGSTER_LOGS_DIR"
           uv run pytest -m integration -k test_dagster_startup --no-cov
+
+  postgres-db:
+    needs: changes
+    if: >-
+      github.event_name == 'push'
+      || needs.changes.outputs.workflows == 'true'
+      || needs.changes.outputs.postgres_suite == 'true'
+      || needs.changes.outputs.python == 'true'
+      || needs.changes.outputs.prisma_schema == 'true'
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: ankane/pgvector:v0.4.1
+        env:
+          POSTGRES_USER: linker_ci
+          POSTGRES_PASSWORD: linker_ci
+          POSTGRES_DB: linker_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U linker_ci -d linker_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      DATABASE_URL: postgresql://linker_ci:linker_ci@localhost:5432/linker_ci
+      LINKER_SKIP_SEMANTIC_INIT: "true"
+      OST_LINKER_REQUIRE_SERVICE_TOKEN: "false"
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install Python deps
+        run: uv sync --frozen
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+
+      - name: Install Node deps for Prisma CLI + seed
+        run: npm ci
+
+      - name: Deploy migrations
+        run: npx prisma migrate deploy
+
+      - name: Seed taxonomy rows
+        run: ./node_modules/.bin/ts-node --compiler-options '{"module":"CommonJS"}' prisma/seed/seed.ts
+
+      - name: Database-tier pytest
+        run: uv run pytest tests/api_db --no-cov -v --tb=short
 
   dbt-check:
     needs: changes

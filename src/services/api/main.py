@@ -19,7 +19,7 @@ def _get_config() -> APIConfig:
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
-    """Startup: init DB + load semantic search model. Shutdown: dispose DB."""
+    """Startup: init DB; optionally load semantic model. Shutdown: dispose DB."""
     config = _get_config()
     token_ok = config.service_token and config.service_token.strip()
     if config.require_service_token and not token_ok:
@@ -30,7 +30,13 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         )
         raise RuntimeError(msg)
     init_db(config.database_url)
-    init_semantic()
+    skip_semantic = os.environ.get("LINKER_SKIP_SEMANTIC_INIT", "").strip().lower() in (
+        "1",
+        "true",
+        "yes",
+    )
+    if not skip_semantic:
+        init_semantic()
 
     yield
     close_db()

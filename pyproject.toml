@@ -159,4 +159,5 @@ markers = [
     "integration: Integration tests",
     "performance: Performance tests",
     "api: API tests",
+    "database: Tests requiring reachable PostgreSQL (DATABASE_URL); see AGENTS.md",
 ]

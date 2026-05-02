@@ -84,6 +84,7 @@ tmp_dagster/
 
 # Maintainer-only / local audit notes (do not commit)
 docs/READINESS-AUDIT.md
+docs/audit
 
 # Local
 .actrc
