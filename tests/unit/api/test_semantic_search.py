@@ -21,7 +21,7 @@ class TestSearchNatural:
         assert response.status_code == 422
 
     def test_returns_ranked_projects(self, client: TestClient) -> None:
-        from src.api.dependencies import get_pool
+        from src.api.dependencies import get_db
         from src.api.main import app
 
         session = _make_session(
@@ -44,7 +44,7 @@ class TestSearchNatural:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get(
                 "/v1/projects/search-natural?q=medical+python+llm&limit=2"
@@ -61,11 +61,11 @@ class TestSearchNatural:
 
     def test_hard_filters_apply(self, client: TestClient) -> None:
         """Verify filter params reach the SQL (cursor.execute called with them)."""
-        from src.api.dependencies import get_pool
+        from src.api.dependencies import get_db
         from src.api.main import app
 
         session = _make_session([])
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get(
                 "/v1/projects/search-natural"

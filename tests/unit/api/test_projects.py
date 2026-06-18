@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_pool
+from src.api.dependencies import get_db
 from src.api.main import app
 
 
@@ -43,11 +43,11 @@ class TestSearchProjects:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/projects/search?q=react")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -66,11 +66,11 @@ class TestSearchProjects:
         mock_session = MagicMock()
         mock_session.execute.return_value = _make_result(rows=[])
 
-        app.dependency_overrides[get_pool] = lambda: mock_session
+        app.dependency_overrides[get_db] = lambda: mock_session
         try:
             response = client.get("/v1/projects/search?q=test&category=Web+Development")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         sql = str(mock_session.execute.call_args[0][0])
@@ -81,11 +81,11 @@ class TestSearchProjects:
     def test_search_limit_over_max_returns_422(self, client: TestClient) -> None:
         """GET /projects/search?limit=100 returns 422 since limit exceeds max (50)."""
         session = _make_session([])
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/projects/search?q=test&limit=100")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 422
 
@@ -116,11 +116,11 @@ class TestGetProject:
             _make_result(rows=tech_stacks),
         ]
 
-        app.dependency_overrides[get_pool] = lambda: mock_session
+        app.dependency_overrides[get_db] = lambda: mock_session
         try:
             response = client.get("/v1/projects/550e8400-e29b-41d4-a716-446655440000")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -135,11 +135,11 @@ class TestGetProject:
         mock_session = MagicMock()
         mock_session.execute.return_value = _make_result(first=None)
 
-        app.dependency_overrides[get_pool] = lambda: mock_session
+        app.dependency_overrides[get_db] = lambda: mock_session
         try:
             response = client.get("/v1/projects/550e8400-e29b-41d4-a716-446655440000")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 404
 
@@ -163,13 +163,13 @@ class TestFindSimilar:
             ),
         ]
 
-        app.dependency_overrides[get_pool] = lambda: mock_session
+        app.dependency_overrides[get_db] = lambda: mock_session
         try:
             response = client.get(
                 "/v1/projects/550e8400-e29b-41d4-a716-446655440000/similar"
             )
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -181,12 +181,12 @@ class TestFindSimilar:
         mock_session = MagicMock()
         mock_session.execute.return_value = _make_result(first=None)
 
-        app.dependency_overrides[get_pool] = lambda: mock_session
+        app.dependency_overrides[get_db] = lambda: mock_session
         try:
             response = client.get(
                 "/v1/projects/550e8400-e29b-41d4-a716-446655440000/similar"
             )
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 404

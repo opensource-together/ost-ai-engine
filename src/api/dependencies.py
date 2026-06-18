@@ -42,12 +42,6 @@ def get_db() -> Generator[Session, None, None]:
         db.close()
 
 
-# Backwards-compatible aliases kept during the SQLAlchemy migration.
-init_pool = init_db
-close_pool = close_db
-get_pool = get_db
-
-
 def init_semantic() -> None:
     """Initialize the global semantic search service (eager model load)."""
     global _semantic

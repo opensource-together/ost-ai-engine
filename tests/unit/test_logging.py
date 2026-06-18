@@ -26,3 +26,13 @@ class TestConfigureLogging:
         configure_logging()
         assert root.handlers
         assert root.handlers[0].formatter is not None
+
+    def test_text_formatter_by_default(self, monkeypatch) -> None:
+        root = logging.getLogger()
+        for handler in root.handlers[:]:
+            root.removeHandler(handler)
+        monkeypatch.delenv("LOG_FORMAT", raising=False)
+        configure_logging()
+        formatter = root.handlers[0].formatter
+        assert formatter is not None
+        assert formatter.__class__.__name__ == "Formatter"

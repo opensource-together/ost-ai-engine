@@ -55,7 +55,7 @@ make ci-check                     # lint, types, unit tests (see CONTRIBUTING.md
 
 See [`.env.example`](.env.example) and [AGENTS.md](AGENTS.md) for the full list.
 
-**API migration:** business routes moved to `/v1/` (e.g. `/v1/projects/search`). Update ost-mcp `OST_API_URL` paths accordingly. Deprecated import: `src.services.api.main` → `src.api.main`.
+Business routes are under **`/v1/`** (e.g. `/v1/projects/search`). **`/health`** stays unversioned.
 
 ## Contributing
 

@@ -34,7 +34,7 @@ make dev                                  # Dagster UI on :3000 (uses workspace.
 ### REST API (FastAPI)
 ```bash
 uvicorn src.api.main:app --host 0.0.0.0 --port 8000   # Run API locally
-pytest -m api                                                    # Run API tests only
+pytest tests/unit/api                              # Mocked API tests
 ```
 The API is a lightweight, read-only service consumed by the [ost-mcp](https://github.com/opensource-together/ost-mcp) MCP server. It exposes project search, similarity, trending recommendations, and reference data.
 
@@ -89,9 +89,9 @@ mypy src/                                 # Type check (strict mode)
 ```bash
 pytest                                    # Run all tests (coverage included via --cov=src)
 pytest tests/test_foo.py -k test_bar      # Run a single test
-pytest -m unit                            # Run by marker (unit/integration/performance/api/database)
-pytest -m integration                     # Dagster startup smoke test
-pytest -m database                        # Only `tests/integration/api/` (requires DATABASE_URL; skipped if unset)
+pytest tests/unit                                  # Unit tests (includes tests/unit/api/)
+pytest -m integration                              # Dagster startup smoke test
+pytest tests/integration/api                       # Live Postgres API tier (needs DATABASE_URL)
 ```
 `make ci-check` runs ruff, sqlfluff, mypy, unit tests, and the Dagster smoke — aligned with `.github/workflows/ci.yml`. It does **not** run the Postgres tier; use **`make test-database`** when **`DATABASE_URL`** points at a migrated, seeded DB.
 
@@ -99,7 +99,7 @@ pytest -m database                        # Only `tests/integration/api/` (requi
 
 | Tier | Command | Needs |
 | ---- | ------- | ----- |
-| **Unit** | `pytest tests/unit --cov-fail-under=65` | Python only |
+| **Unit** | `pytest tests/unit --cov-fail-under=80` | Python only |
 | **API mocks** | `tests/unit/api/` (included in unit tier) | Python only (mocked DB + semantic) |
 | **Integration (Dagster)** | `pytest -m integration -k test_dagster_startup --no-cov` | Dagster env dirs (see workflow) |
 | **Database** | `DATABASE_URL=... LINKER_SKIP_SEMANTIC_INIT=true make test-database` | Compose **db**, `npx prisma migrate deploy`, Prisma seed |
@@ -148,7 +148,7 @@ scripts/clean_docker_images.sh            # Docker image cleanup
 | `LINKER_API_HOST_PORT` | Optional: host port mapped to FastAPI (**8000** if unset; set MCP `OST_API_URL` to match when changed) |
 | `API_HOST` | API listen host inside container (default `0.0.0.0`) |
 | `API_PORT` | API listen port inside container (default `8000`) |
-| `API_RATE_LIMIT` | Requests per minute per IP (default `60`; applied by SlowAPI in `src/services/api/rate_limit.py`) |
+| `API_RATE_LIMIT` | Requests per minute per IP (default `60`; applied by SlowAPI in `src/api/rate_limit.py`) |
 | `OST_LINKER_SERVICE_TOKEN` | Optional header auth for the Linker API |
 | `OST_LINKER_REQUIRE_SERVICE_TOKEN` | If true, API startup fails unless `OST_LINKER_SERVICE_TOKEN` is set (use in prod) |
 | `API_ENABLE_OPENAPI` | If `true` (default), exposes `/openapi.json`, `/docs`, `/redoc`. Set `false` in production to hide schema and UIs. |

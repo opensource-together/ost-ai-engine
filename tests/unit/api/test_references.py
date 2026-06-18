@@ -2,7 +2,7 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_pool
+from src.api.dependencies import get_db
 from src.api.main import app
 
 
@@ -24,11 +24,11 @@ class TestCategories:
                 {"id": "2", "name": "Machine Learning"},
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/references/categories")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -44,11 +44,11 @@ class TestDomains:
                 {"id": "1", "name": "Healthcare"},
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/references/domains")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         assert len(response.json()) == 1
@@ -67,11 +67,11 @@ class TestTechStacks:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/references/techstacks")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()

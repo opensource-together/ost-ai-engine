@@ -4,7 +4,7 @@ import pytest
 
 
 def pytest_collection_modifyitems(items: list[pytest.Item]) -> None:
-    """Auto-apply markers based on path; skip live DB and AI suites when unset."""
+    """Auto-apply markers by test path; skip live DB and AI suites when unset."""
     skip_live = pytest.mark.skip(
         reason=(
             "Database-tier tests skipped: export DATABASE_URL to a reachable Postgres "

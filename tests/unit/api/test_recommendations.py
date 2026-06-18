@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_pool
+from src.api.dependencies import get_db
 from src.api.main import app
 
 
@@ -33,11 +33,11 @@ class TestTrending:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/recommendations/trending")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -47,10 +47,10 @@ class TestTrending:
     def test_get_trending_respects_limit(self, client: TestClient) -> None:
         """GET /recommendations/trending?limit=5 limits results."""
         session = _make_session([])
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/recommendations/trending?limit=5")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200

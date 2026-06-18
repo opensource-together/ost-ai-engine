@@ -3,7 +3,7 @@ from unittest.mock import MagicMock
 
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_pool
+from src.api.dependencies import get_db
 from src.api.main import app
 
 
@@ -38,11 +38,11 @@ class TestGithubTrending:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/recommendations/github-trending")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -73,11 +73,11 @@ class TestGithubTrending:
                 },
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/recommendations/github-trending")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
         data = response.json()
@@ -87,21 +87,21 @@ class TestGithubTrending:
     def test_respects_limit(self, client: TestClient) -> None:
         """GET /recommendations/github-trending?limit=5 limits results."""
         session = _make_session([])
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/recommendations/github-trending?limit=5")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
 
     def test_limit_validation(self, client: TestClient) -> None:
         """Limit must be between 1 and 50."""
         session = _make_session([])
-        app.dependency_overrides[get_pool] = lambda: session
+        app.dependency_overrides[get_db] = lambda: session
         try:
             response = client.get("/v1/recommendations/github-trending?limit=0")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 422

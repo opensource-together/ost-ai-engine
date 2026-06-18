@@ -10,12 +10,12 @@ from pathlib import Path
 from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-# Directories structure:
+# Directories:
 # ost-linker/
-# ├── src/
-# │   ├── linker/
-# │   ├── services/
-# │   └── ...
+# ├── src/api/          FastAPI service
+# ├── src/linker/       Dagster pipeline
+# ├── src/services/go/  Go binaries
+# ├── src/services/python/db.py
 # ├── dbt/
 # ├── prisma/
 # ├── scripts/

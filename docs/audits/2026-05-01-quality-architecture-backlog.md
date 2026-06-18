@@ -1,5 +1,7 @@
 # ost-linker — quality & architecture backlog (phase 1)
 
+> **Historical:** snapshot from 2026-05-01, before the structural refactor (`src/api/`, `ci.yml`, test layout). Paths and CI commands below may be outdated.
+
 **Audit execution date:** 2026-05-01  
 **Design spec (workspace meta):** `docs/superpowers/specs/2026-05-01-ost-linker-quality-architecture-audit-design.md`
 
