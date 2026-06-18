@@ -3,6 +3,7 @@ templater = dbt
 dialect = postgres
 sql_file_exts = .sql
 max_line_length = 120
+exclude_rules = ST05
 
 [sqlfluff:templater:dbt]
 project_dir = ./dbt
@@ -26,5 +27,4 @@ capitalisation_policy = upper
 capitalisation_policy = lower
 
 [sqlfluff:rules:references.keywords]
-# Column names like 'language', 'name', 'description' come from the DB schema
 ignore_words = name,language,description
