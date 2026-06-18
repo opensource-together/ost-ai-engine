@@ -12,36 +12,55 @@ Recommender-system of the [OpenSource Together](https://github.com/opensource-to
 
 ## What is OST Linker?
 
-The AI-powered recommendation engine behind [OpenSourceTogether](https://opensource-together.com/).
+The AI-powered recommendation engine behind [OpenSourceTogether](https://opensource-together.com/). It scrapes GitHub, classifies projects via LLM, builds embeddings, and serves personalized recommendations through a read-only FastAPI consumed by [ost-mcp](https://github.com/opensource-together/ost-mcp).
 
-It analyzes open-source projects and matches them to contributors — so you find your next contribution in seconds, not hours.
+## Architecture
 
-
-## Getting Started
-
-```bash
-cp .env.example .env              # set DATABASE_URL, tokens, optional host ports (see file + AGENTS.md)
-make setup                        # uv sync + compile Go binaries
-npm ci                            # Prisma / Node (needed before db-init)
-docker compose up --build -d      # Dagster + API + db (default host: Dagster :3000, API :8000 unless overridden in .env)
-make db-init                      # Prisma schema + seed
-make ci-check                     # Python parity with CI quality job (before a PR); full CI is broader — see AGENTS.md
+```
+GitHub / Trending (Go) → Postgres (raw) → Dagster + dbt → embeddings + match_* marts
+                                                              ↓
+                                                    FastAPI /v1/* (ost-mcp)
 ```
 
-See [AGENTS.md](AGENTS.md) for **API service-token behavior**, **Postgres host bind**, and **Dagster host vs Docker workspaces** (`workspace.host.yaml`, `Makefile` **`make dev`**).
+| Component | Role |
+| --- | --- |
+| Dagster | Batch pipeline (scrape, classify, embed, dbt) |
+| dbt | Warehouse models (`stg_`, `int_`, `fct_`, `match_*`) |
+| FastAPI (`src/api/`) | Read-only HTTP API; `/health` unversioned; business routes under `/v1/` |
+| Postgres + pgvector | Storage and similarity search |
+
+## Quickstart
+
+```bash
+cp .env.example .env              # DATABASE_URL, tokens, optional host ports
+make setup                        # uv sync + Go binaries (data/)
+npm ci
+docker compose up --build -d      # Dagster + API + db
+make db-init                      # Prisma schema + seed
+curl -f http://127.0.0.1:${LINKER_API_HOST_PORT:-8000}/health
+make ci-check                     # lint, types, unit tests (see CONTRIBUTING.md)
+```
+
+## Key environment variables
+
+| Variable | Purpose |
+| --- | --- |
+| `DATABASE_URL` | Postgres connection (must match compose `POSTGRES_*`) |
+| `OST_LINKER_SERVICE_TOKEN` | Shared API key for `/v1/*` (header `X-Service-Token`) |
+| `OST_LINKER_REQUIRE_SERVICE_TOKEN` | If `true`, startup fails without token |
+| `GITHUB_ACCESS_TOKEN` | GitHub API (Dagster pipeline only) |
+| `MISTRAL_API_KEY` | LLM classification (pipeline only) |
+| `GO_*_PATH` | Compiled Go binary paths |
+| `LINKER_API_HOST_PORT` | Host port for API (default 8000) |
+
+See [`.env.example`](.env.example) and [AGENTS.md](AGENTS.md) for the full list.
+
+**API migration:** business routes moved to `/v1/` (e.g. `/v1/projects/search`). Update ost-mcp `OST_API_URL` paths accordingly. Deprecated import: `src.services.api.main` → `src.api.main`.
 
 ## Contributing
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) (branch flow, conventions, **`make ci-check`**). For command cheat-sheets (**dbt**, API, Docker overrides), see [AGENTS.md](AGENTS.md).
+See [CONTRIBUTING.md](CONTRIBUTING.md). Operator runbook: [AGENTS.md](AGENTS.md).
 
 ## License
 
-This repository is **free/open source software** under the [**GNU Affero General Public License v3.0 only** (AGPL-3.0-only)](https://www.gnu.org/licenses/agpl-3.0.html) — full text in [LICENSE](LICENSE).
-
----
-
-<div align="center">
-
-Built in public by [@spideystreet](https://x.com/spideystreet) & the [OST team](https://github.com/opensource-together)
-
-</div>
+[GNU Affero General Public License v3.0 only (AGPL-3.0-only)](https://www.gnu.org/licenses/agpl-3.0.html) — [LICENSE](LICENSE).

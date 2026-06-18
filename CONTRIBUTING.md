@@ -97,25 +97,36 @@ test(resources): add unit tests for build_scraper_env
 ## Running Tests
 
 ```bash
-uv run pytest                     # All tests (with coverage)
-uv run pytest -m unit             # Unit tests only
-uv run pytest -m api              # FastAPI tests only
-uv run pytest tests/unit/test_cfg_resource.py -v
+uv run pytest tests/unit              # Unit tests (with coverage)
+uv run pytest tests/integration       # Integration (Dagster smoke + live DB when DATABASE_URL set)
+make test-database                    # Postgres-backed API tests (needs migrated + seeded DB)
+cd src/services/go/scraper && go test ./...
+cd src/services/go/fetcher && go test ./...
+cd src/services/go/trending && go test ./...
+uv run pytest -m integration -k test_dagster_startup --no-cov
 ```
 
-Tests are class-based (`class TestXxx`) and live under `tests/`. Dagster integration smoke: `uv run pytest -m integration`.
+Tests mirror `src/` under `tests/unit/` and `tests/integration/`. Class-based style (`class TestXxx`).
 
-More detail: [AGENTS.md](AGENTS.md) (commands, dbt, CI notes).
+More detail: [AGENTS.md](AGENTS.md).
 
 ## Linting & Formatting
 
 ```bash
-uv run ruff check src/       # Lint
-uv run ruff format src/      # Format
-uv run mypy src/             # Type-check
+uv run ruff check src/
+uv run ruff format src/
+uv run mypy src/
+uv run sqlfluff lint dbt/
 ```
 
-All lint and format checks must pass before opening a PR (CI runs these via `uv run`). **`make ci-check`** runs the same Python steps as the **quality** job in [`.github/workflows/quality-checks.yml`](.github/workflows/quality-checks.yml) (ruff, mypy, unit + api + Dagster smoke).
+**`make ci-check`** matches [`.github/workflows/ci.yml`](.github/workflows/ci.yml) Python steps (ruff, sqlfluff, mypy, unit tests, Dagster smoke).
+
+## PR checklist
+
+- [ ] Tests for new/changed behavior
+- [ ] `make ci-check` passes locally
+- [ ] No secrets in code or commits
+- [ ] Target branch: `develop`
 
 ### Optional: pre-commit
 
@@ -127,10 +138,10 @@ uv run pre-commit install
 
 ## Pull Request Process
 
-1. Create a branch from `staging` (not `main`)
+1. Create a branch from `develop`
 2. Make your changes with atomic commits
-3. Run **`make ci-check`** (or match the **Linting & formatting** + **Running tests** sections above)
-4. Open a PR targeting `staging`
+3. Run **`make ci-check`**
+4. Open a PR targeting **`develop`**
 5. Request a review from `@spideystreet`
 
 PR titles follow the same `<type>(<scope>): <summary>` format as commits.

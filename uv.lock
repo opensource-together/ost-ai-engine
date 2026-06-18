@@ -1798,6 +1798,7 @@ dependencies = [
     { name = "pydantic-settings" },
     { name = "pygithub" },
     { name = "python-dotenv" },
+    { name = "python-json-logger" },
     { name = "requests" },
     { name = "schedule" },
     { name = "sentence-transformers" },
@@ -1848,6 +1849,7 @@ requires-dist = [
     { name = "pydantic-settings", specifier = ">=2.4.0,<3" },
     { name = "pygithub", specifier = ">=2.6.1,<3" },
     { name = "python-dotenv", specifier = ">=1.1.1,<2" },
+    { name = "python-json-logger", specifier = ">=3.2.1,<4" },
     { name = "requests", specifier = ">=2.33.0,<3" },
     { name = "schedule", specifier = ">=1.1.0,<2" },
     { name = "sentence-transformers", specifier = ">=5.1.2,<6" },
@@ -2375,6 +2377,15 @@ source = { registry = "https://pypi.org/simple" }
 sdist = { url = "https://files.pythonhosted.org/packages/82/ed/0301aeeac3e5353ef3d94b6ec08bbcabd04a72018415dcb29e588514bba8/python_dotenv-1.2.2.tar.gz", hash = "sha256:2c371a91fbd7ba082c2c1dc1f8bf89ca22564a087c2c287cd9b662adde799cf3", size = 50135, upload-time = "2026-03-01T16:00:26.196Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/0b/d7/1959b9648791274998a9c3526f6d0ec8fd2233e4d4acce81bbae76b44b2a/python_dotenv-1.2.2-py3-none-any.whl", hash = "sha256:1d8214789a24de455a8b8bd8ae6fe3c6b69a5e3d64aa8a8e5d68e694bbcb285a", size = 22101, upload-time = "2026-03-01T16:00:25.09Z" },
+]
+
+[[package]]
+name = "python-json-logger"
+version = "3.3.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/de/d3144a0bceede957f961e975f3752760fbe390d57fbe194baf709d8f1f7b/python_json_logger-3.3.0.tar.gz", hash = "sha256:12b7e74b17775e7d565129296105bbe3910842d9d0eb083fc83a6a617aa8df84", size = 16642, upload-time = "2025-03-07T07:08:27.301Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/08/20/0f2523b9e50a8052bc6a8b732dfc8568abbdc42010aef03a2d750bdab3b2/python_json_logger-3.3.0-py3-none-any.whl", hash = "sha256:dd980fae8cffb24c13caf6e158d3d61c0d6d22342f932cb6e9deedab3d35eec7", size = 15163, upload-time = "2025-03-07T07:08:25.627Z" },
 ]
 
 [[package]]

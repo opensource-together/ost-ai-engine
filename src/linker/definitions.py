@@ -18,7 +18,11 @@ from dagster import (
 )
 from dagster_dbt import DbtCliResource, DbtProject, dbt_assets
 
+from src.core.logging import configure_logging
+
 from .settings import settings
+
+configure_logging()
 
 # Import-time bootstrap config belongs in settings.py.
 DBT_PROJECT_DIR = settings.dbt_project_dir

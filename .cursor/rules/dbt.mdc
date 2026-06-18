@@ -1,0 +1,13 @@
+---
+description: dbt conventions for ost-linker
+globs: "dbt/**"
+alwaysApply: false
+---
+
+# dbt
+
+- Models: `stg_`, `int_`, `fct_`, `dim_` layer prefixes; `{layer}_{source}__{entity}.sql`.
+- Exception: product reco marts stay as `match_*` in `public` schema.
+- Co-located `*.yml` per model with generic tests (`not_null`, `unique`, `relationships`).
+- Custom SQL tests in `dbt/tests/` for business rules only.
+- One-sentence `description` per model in YAML.

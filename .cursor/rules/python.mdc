@@ -1,0 +1,15 @@
+---
+description: Python conventions for ost-linker
+globs: "**/*.py"
+alwaysApply: false
+---
+
+# Python
+
+- Follow PEP 8 and PEP 257.
+- Files/modules: `snake_case.py`; classes: `PascalCase`; functions/vars: `snake_case`.
+- Tests: `test_<module>.py`, functions `test_<behavior>`.
+- Exception: Dagster assets use `{schema}__{name}.py` (matches dbt asset keys).
+- Lint/format: `ruff`; types: `mypy` strict on `src/`.
+- Logging: `logger = logging.getLogger(__name__)`; use `%s` lazy formatting.
+- Docstrings: one line, English, only when the signature is not self-explanatory.

@@ -33,14 +33,14 @@ make dev                                  # Dagster UI on :3000 (uses workspace.
 
 ### REST API (FastAPI)
 ```bash
-uvicorn src.services.api.main:app --host 0.0.0.0 --port 8000   # Run API locally
+uvicorn src.api.main:app --host 0.0.0.0 --port 8000   # Run API locally
 pytest -m api                                                    # Run API tests only
 ```
 The API is a lightweight, read-only service consumed by the [ost-mcp](https://github.com/opensource-together/ost-mcp) MCP server. It exposes project search, similarity, trending recommendations, and reference data.
 
 ### FastAPI service token (`OST_LINKER_*`)
 
-Exact behavior (see `src/services/api/auth.py` and `lifespan` in `src/services/api/main.py`; covered by `pytest -m api` in `tests/api/test_service_token.py`):
+Exact behavior (see `src/api/auth.py` and `lifespan` in `src/api/main.py`; covered by `tests/unit/api/test_service_token.py`). Business routes live under **`/v1/`**; **`/health`** stays unversioned.
 
 | `OST_LINKER_REQUIRE_SERVICE_TOKEN` | `OST_LINKER_SERVICE_TOKEN` | Protected routes (`/projects`, `/references`, `/recommendations`, …) | `/health` |
 | ---------------------------------- | -------------------------- | -------------------------------------------------------------------- | --------- |
@@ -91,20 +91,20 @@ pytest                                    # Run all tests (coverage included via
 pytest tests/test_foo.py -k test_bar      # Run a single test
 pytest -m unit                            # Run by marker (unit/integration/performance/api/database)
 pytest -m integration                     # Dagster startup smoke test
-pytest -m database                        # Only `tests/api_db/` (requires DATABASE_URL; skipped if unset)
+pytest -m database                        # Only `tests/integration/api/` (requires DATABASE_URL; skipped if unset)
 ```
-`make ci-check` runs ruff (check + format), mypy, unit tests, API tests, and the Dagster smoke — aligned with `.github/workflows/quality-checks.yml`. It does **not** run the Postgres tier; use **`make test-database`** when **`DATABASE_URL`** points at a migrated, seeded DB.
+`make ci-check` runs ruff, sqlfluff, mypy, unit tests, and the Dagster smoke — aligned with `.github/workflows/ci.yml`. It does **not** run the Postgres tier; use **`make test-database`** when **`DATABASE_URL`** points at a migrated, seeded DB.
 
 #### Verification tiers (CI vs local Postgres)
 
 | Tier | Command | Needs |
 | ---- | ------- | ----- |
-| **Unit** | `pytest -m unit --cov-fail-under=50` | Python only |
-| **API mocks** | `pytest -m api` | Python only (mocked DB + semantic) |
+| **Unit** | `pytest tests/unit --cov-fail-under=65` | Python only |
+| **API mocks** | `tests/unit/api/` (included in unit tier) | Python only (mocked DB + semantic) |
 | **Integration (Dagster)** | `pytest -m integration -k test_dagster_startup --no-cov` | Dagster env dirs (see workflow) |
-| **Database (`api_db`)** | `DATABASE_URL=... LINKER_SKIP_SEMANTIC_INIT=true make test-database` | Compose **db** (`ankane/pgvector` in docker-compose override), `npx prisma migrate deploy`, Prisma seed |
+| **Database** | `DATABASE_URL=... LINKER_SKIP_SEMANTIC_INIT=true make test-database` | Compose **db**, `npx prisma migrate deploy`, Prisma seed |
 
-**`LINKER_SKIP_SEMANTIC_INIT`** — When set to **`true`**, FastAPI skips loading **`sentence-transformers`** (used in **GitHub Actions `postgres-db`** and **`tests/api_db`**). Routes that call **`get_semantic()`** (e.g. **`/projects`** embedding search) stay untested in that mode.
+**`LINKER_SKIP_SEMANTIC_INIT`** — When set to **`true`**, FastAPI skips loading **`sentence-transformers`** (used in CI **`integration-db`** and **`tests/integration/api`**). Routes that call **`get_semantic()`** (e.g. **`/v1/projects/search-natural`**) stay untested in that mode.
 
 Test config is in `pyproject.toml` under `[tool.pytest.ini_options]`. Tests use class-based style (`class TestXxx`).
 
@@ -173,4 +173,4 @@ When fixing a bug, always follow this order:
 | `sync-docs-submodule.yml` | PR to main/staging (path: `ost-docs`) | Sync docs submodule to `ost-docs` repo |
 | `sync-prisma-backend.yml` | PR to main/staging (path: `prisma/**`) | Sync Prisma schema to `ost-backend` repo |
 
-**`quality-checks.yml` notes:** the security job runs `gitleaks detect --no-git`, which scans the **checked-out tree only** (not full `git` history)—a fast working-tree leak check. On **fork pull requests**, the `docs-submodule` job is skipped when the PR head is another repository, because org secrets are not available to those runs. The same fork guard applies to **`sync-docs-submodule.yml`** and **`sync-prisma-backend.yml`** (entire job skipped for fork PRs).
+**`ci.yml` notes:** CI runs lint, typecheck, unit tests, dbt compile, Go tests, integration-db, docker build, and pip-audit on PR/push to `develop`, `staging`, and `main`.
