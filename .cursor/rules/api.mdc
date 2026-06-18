@@ -1,0 +1,13 @@
+---
+description: FastAPI conventions for ost-linker
+globs: "src/api/**"
+alwaysApply: false
+---
+
+# API
+
+- Module: `src/api/`; business routes under `/v1/`; `/health` stays unversioned for compose.
+- Auth: env `OST_LINKER_SERVICE_TOKEN` via `X-Service-Token` header; enforce when token is set.
+- Rate limiting: `slowapi` per-route decorators.
+- Validation: Pydantic v2; structured JSON errors via `src/api/errors.py`.
+- Integration tests required for all public endpoints.

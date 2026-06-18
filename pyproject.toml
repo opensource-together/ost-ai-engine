@@ -40,6 +40,7 @@ dependencies = [
     "fastapi>=0.115.0,<1",
     "uvicorn[standard]>=0.34.0,<1",
     "slowapi>=0.1.9,<0.2",
+    "python-json-logger>=3.2.1,<4",
 ]
 
 [project.urls]
@@ -108,11 +109,14 @@ select = [
     "B",  # flake8-bugbear
     "C4", # flake8-comprehensions
     "SIM", # flake8-simplify
+    "TCH", # flake8-type-checking
 ]
 
 [tool.ruff.lint.per-file-ignores]
 "src/linker/definitions.py" = ["E402"]
 "src/services/api/routes/*.py" = ["B008"]
+"src/api/routes/v1/*.py" = ["B008"]
+"src/api/middleware.py" = ["TC002"]
 
 [tool.ruff.lint.isort]
 known-first-party = ["src"]
@@ -160,4 +164,5 @@ markers = [
     "performance: Performance tests",
     "api: API tests",
     "database: Tests requiring reachable PostgreSQL (DATABASE_URL); see AGENTS.md",
+    "ai: Real AI/LLM API calls (skipped in CI unless RUN_AI_TESTS=1)",
 ]

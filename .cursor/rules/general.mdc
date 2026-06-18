@@ -1,0 +1,12 @@
+---
+description: General engineering principles for ost-linker
+alwaysApply: true
+---
+
+# General
+
+- No untested code when testing is feasible.
+- KISS over clever abstractions.
+- English only in code, comments, logs, and docs.
+- No emojis in logs or comments.
+- API layer must run self-contained (Postgres + env only); pipeline external calls are optional and mockable in tests.

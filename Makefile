@@ -25,7 +25,7 @@ format:
 typecheck:
 	uv run mypy src/
 
-## Build-go — compile Go scraper and fetcher binaries
+## Build-go — compile Go scraper, fetcher, and trending binaries
 build-go:
 	bash scripts/go_binary_gen.sh
 
@@ -54,17 +54,21 @@ doctor:
 	@test -f .env || (echo "Missing .env — copy from .env.example and fill values" && exit 1)
 	@echo "doctor: ok (uv + .env). Use Docker when running docker compose."
 
-## CI-check — run the same Python checks as GitHub Actions quality job
+## CI-check — run the same Python checks as GitHub Actions ci workflow
 ci-check: lint
 	uv run ruff format --check src/
 	$(MAKE) typecheck
-	uv run pytest -m unit --cov-fail-under=50
-	uv run pytest -m api --no-cov
+	uv run pytest tests/unit --cov-fail-under=80
 	uv run pytest -m integration -k test_dagster_startup --no-cov
+
+## CI-check-full — includes sqlfluff (requires DATABASE_URL + migrated DB)
+ci-check-full: ci-check
+	@test -n "$$DATABASE_URL" || (echo "DATABASE_URL required for sqlfluff" && exit 1)
+	uv run sqlfluff lint dbt/
 
 ## Test-database — Postgres-backed FastAPI tier (DATABASE_URL required)
 test-database:
-	uv run pytest tests/api_db --no-cov -v
+	uv run pytest tests/integration/api --no-cov -v
 
 ## Clean — remove Dagster storage and Python caches
 clean:

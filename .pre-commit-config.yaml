@@ -1,5 +1,4 @@
 # Requires: uv sync (dev group). Install hooks: uv run pre-commit install
-# Mirrors the Python steps in .github/workflows/quality-checks.yml (quality job).
 repos:
   - repo: local
     hooks:
@@ -16,5 +15,10 @@ repos:
       - id: mypy
         name: mypy
         entry: uv run mypy src/
+        language: system
+        pass_filenames: false
+      - id: sqlfluff
+        name: sqlfluff lint
+        entry: uv run sqlfluff lint dbt/
         language: system
         pass_filenames: false

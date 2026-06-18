@@ -33,7 +33,8 @@ mlruns/
 # IDE / Editor
 .idea/
 .vscode/
-.cursor/
+.cursor/*
+!.cursor/rules/
 *.swp
 *.swo
 *~

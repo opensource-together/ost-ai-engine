@@ -111,7 +111,7 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    command: ["./scripts/init.sh", "uvicorn", "src.services.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
+    command: ["./scripts/init.sh", "uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000", "--workers", "1"]
 
 volumes:
   dagster_data:

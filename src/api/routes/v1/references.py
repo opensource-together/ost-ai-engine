@@ -1,0 +1,40 @@
+from fastapi import APIRouter, Depends, Request
+from sqlalchemy import text
+from sqlalchemy.orm import Session
+
+from src.api.dependencies import get_db
+from src.api.rate_limit import RATE_LIMIT, limiter
+from src.api.row_mapping import mapping_rows
+from src.api.schemas import CategoryOut, DomainOut, TechStackOut
+
+router = APIRouter()
+
+
+@router.get("/categories", response_model=list[CategoryOut])
+@limiter.limit(RATE_LIMIT)
+def list_categories(request: Request, db: Session = Depends(get_db)) -> list[dict]:
+    """List all project categories."""
+    result = db.execute(text('SELECT id, name FROM public."Category" ORDER BY name'))
+    return mapping_rows(result)
+
+
+@router.get("/domains", response_model=list[DomainOut])
+@limiter.limit(RATE_LIMIT)
+def list_domains(request: Request, db: Session = Depends(get_db)) -> list[dict]:
+    """List all project domains."""
+    result = db.execute(text('SELECT id, name FROM public."Domain" ORDER BY name'))
+    return mapping_rows(result)
+
+
+@router.get("/techstacks", response_model=list[TechStackOut])
+@limiter.limit(RATE_LIMIT)
+def list_techstacks(request: Request, db: Session = Depends(get_db)) -> list[dict]:
+    """List all tech stacks."""
+    result = db.execute(
+        text(
+            """SELECT id, name, "iconUrl" AS icon_url, CAST(type AS text) AS type
+               FROM public.tech_stack
+               ORDER BY name"""
+        )
+    )
+    return mapping_rows(result)

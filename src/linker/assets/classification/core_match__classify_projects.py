@@ -154,7 +154,7 @@ def core_match__classify_projects(
         dlq_skip = {str(row["projectId"]) for row in cur.fetchall()}
 
     projects: list[dict[str, Any]] = cast(
-        list[dict[str, Any]], projects_df.to_dict("records")
+        "list[dict[str, Any]]", projects_df.to_dict("records")
     )
     for p in projects:
         if "name" in p and "title" not in p:
