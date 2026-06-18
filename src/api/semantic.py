@@ -6,11 +6,10 @@ _MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
 
 
 class SemanticSearchService:
-    """Lazy-loaded SentenceTransformer wrapper used by the semantic search route.
+    """SentenceTransformer wrapper for semantic project search.
 
-    The model is loaded once at API startup (in main.lifespan) and reused for every
-    request. This is the same model as the one used by the Dagster pipeline to
-    compute project embeddings — consistency matters for cosine similarity.
+    Loaded at API startup via lifespan and reused per request. Uses the same
+    model as the Dagster pipeline for consistent cosine similarity.
     """
 
     def __init__(self, model_name: str = _MODEL_NAME) -> None:

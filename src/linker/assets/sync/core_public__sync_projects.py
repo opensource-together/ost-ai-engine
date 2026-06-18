@@ -24,16 +24,7 @@ def core_public__sync_projects(
     core_match__classify_projects: list[dict[str, Any]],
 ) -> None:
     """
-    Step 2: Sync / Persistence.
-
-    Input: List of classified projects from `core_match__classify_projects`.
-    Actions:
-    1. Upsert `public.Project` (with trending=True).
-    2. Upsert `match.ProjectClassification`.
-    3. Upsert `public.project_category` (Category) and `public.project_domain`.
-
-    Output:
-    Yields AssetMaterialization to trigger downstream DBT models.
+    Persist classified projects to public.Project and related match/public tables.
     """
     data = core_match__classify_projects
 

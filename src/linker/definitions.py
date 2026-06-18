@@ -48,7 +48,6 @@ dbt_resource = DbtCliResource(project_dir=DBT_PROJECT_DIR)
 
 dbt_assets_list = [dbt_project_assets]
 
-# scraper Assets
 from .assets.scraper import (
     core_github__detect_languages,
     core_github__fetch_readme,
@@ -74,24 +73,17 @@ scraper_assets = load_assets_from_modules(
     ]
 )
 
-# classification Assets
 from .assets.classification.core_match__classify_projects import (
     core_match__classify_projects,
 )
-
-# ML Assets
 from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 from .assets.embedding.core_ml__embed_users import core_ml__embed_users
 from .assets.sync.core_public__sync_projects import core_public__sync_projects
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
 from .jobs.project_enrichment_job import project_enrichment_job
-
-# jobs
 from .jobs.run_all_job import run_all_job
 from .jobs.user_recommendation_job import user_recommendation_job
 from .schedules.cleanup_dagster_schedule import cleanup_dagster_history_schedule
-
-# schedule
 from .schedules.project_enrichment_schedule import project_enrichment_schedule
 from .schedules.user_recommendation_schedule import user_recommendation_schedule
 

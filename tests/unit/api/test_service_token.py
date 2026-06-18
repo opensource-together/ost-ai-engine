@@ -3,7 +3,7 @@ from unittest.mock import MagicMock, patch
 import pytest
 from fastapi.testclient import TestClient
 
-from src.api.dependencies import get_pool
+from src.api.dependencies import get_db
 from src.api.main import app
 
 pytestmark = pytest.mark.unit
@@ -59,11 +59,11 @@ class TestServiceTokenOpen:
                 }
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_db] = lambda: pool
         try:
             response = client.get("/v1/projects/search?q=foo")
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
 
@@ -124,14 +124,14 @@ class TestServiceTokenEnforced:
                 }
             ]
         )
-        app.dependency_overrides[get_pool] = lambda: pool
+        app.dependency_overrides[get_db] = lambda: pool
         try:
             response = client.get(
                 "/v1/projects/search?q=foo",
                 headers={"X-Service-Token": "expected-token"},
             )
         finally:
-            app.dependency_overrides.pop(get_pool, None)
+            app.dependency_overrides.pop(get_db, None)
 
         assert response.status_code == 200
 
