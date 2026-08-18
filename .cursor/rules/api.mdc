@@ -10,4 +10,4 @@ alwaysApply: false
 - Auth: env `OST_LINKER_SERVICE_TOKEN` via `X-Service-Token` header; enforce when token is set.
 - Rate limiting: `slowapi` per-route decorators.
 - Validation: Pydantic v2; structured JSON errors via `src/api/errors.py`.
-- Integration tests required for all public endpoints.
+- Unit tests for every new route; integration tests for public endpoints when DATABASE_URL is available.

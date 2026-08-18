@@ -1,7 +1,6 @@
 ---
 description: Testing policy for ost-linker
-globs: "tests/**"
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Testing
@@ -9,5 +8,6 @@ alwaysApply: false
 - Mirror `src/` under `tests/unit/` and `tests/integration/`.
 - Markers: `unit`, `integration`, `database` (live Postgres), `ai` (real LLM; `RUN_AI_TESTS=1`).
 - Mock GitHub, Mistral, and external APIs in unit tests.
-- TDD: write failing test first for bug fixes.
+- TDD: write a failing test first for features and bug fixes; then the minimal code.
+- After code changes: run the relevant pytest (and `ruff` / `sqlfluff` when those files moved). Loop until green.
 - Target ≥80% coverage on unit tier; mock what you can, integration for DB/API paths.
