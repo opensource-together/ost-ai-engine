@@ -269,6 +269,13 @@ def core_match__classify_projects(
         f"est cost ~${estimated_cost_usd}."
     )
 
+    if total > 0 and not results_payload and failures:
+        first_err = failures[0][1]
+        raise RuntimeError(
+            f"Classification failed for all {len(failures)} project(s). "
+            f"First error: {first_err}"
+        )
+
     return Output(
         value=results_payload,
         metadata={

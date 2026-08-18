@@ -1,3 +1,5 @@
+from unittest.mock import MagicMock
+
 import pytest
 
 from src.linker.prompts.registry import load_prompt
@@ -22,13 +24,26 @@ class TestLLMClassifierValidation:
 
 class TestRateLimitError:
     def test_rate_limit_is_distinguishable(self) -> None:
-        """RateLimitError is its own exception type so callers can back off longer."""
         err = RateLimitError("429 Too Many Requests")
         assert isinstance(err, Exception)
         assert "429" in str(err)
 
 
-class TestClassificationResultHasPromptVersion:
+class TestQuotaErrorSurfaces:
+    def test_402_is_wrapped_as_runtime_error(self) -> None:
+        resource = LLMClassifierResource(api_key="dummy")
+        resource._client = MagicMock()
+        resource._client.chat.complete.side_effect = Exception(
+            "Status 402: insufficient_quota"
+        )
+        with pytest.raises(RuntimeError, match="402|quota"):
+            resource.classify_project(
+                title="test",
+                project_context="context",
+                categories=["Web"],
+                domains=["Backend"],
+            )
+
     def test_field_exists(self) -> None:
         """prompt_version is required so every persisted row can be audited."""
         r = ClassificationResult(

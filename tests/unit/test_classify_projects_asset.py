@@ -12,6 +12,7 @@ from src.linker.resources.llm_classifier_resource import (
     RateLimitError,
 )
 
+
 class TestClassifyOne:
     def test_classify_one_success(self) -> None:
         llm = MagicMock()
@@ -50,7 +51,7 @@ class TestClassifyOne:
                 prompt_tokens=10,
                 completion_tokens=5,
                 total_tokens=15,
-            )
+            ),
         ]
         project = {"id": "1", "title": "test-project"}
         cat_names = ["Web"]
@@ -94,22 +95,30 @@ class TestClassifyOne:
         assert rate_limited is False
         llm.classify_project.assert_called_once()
 
+
 class TestClassifyProjectsAsset:
     @pytest.fixture
     def mock_db_cursor(self) -> MagicMock:
         cursor = MagicMock()
         # Mock Category, Domain, Already Classified, and DLQ skip
         cursor.fetchall.side_effect = [
-            [{"id": 1, "name": "Web"}], # Categories
-            [{"id": 1, "name": "Backend"}], # Domains
-            [{"projectId": "already-done"}], # Classified IDs
-            [], # DLQ skip
+            [{"id": 1, "name": "Web"}],  # Categories
+            [{"id": 1, "name": "Backend"}],  # Domains
+            [{"projectId": "already-done"}],  # Classified IDs
+            [],  # DLQ skip
         ]
         return cursor
 
-    @patch("src.linker.assets.classification.core_match__classify_projects.get_db_cursor")
-    @patch("src.linker.assets.classification.core_match__classify_projects._persist_failures", return_value=0)
-    def test_asset_full_flow(self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock) -> None:
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects.get_db_cursor"
+    )
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects._persist_failures",
+        return_value=0,
+    )
+    def test_asset_full_flow(
+        self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock
+    ) -> None:
         # Mock DB context manager
         cm = MagicMock()
         cm.__enter__.return_value = mock_db_cursor
@@ -130,14 +139,14 @@ class TestClassifyProjectsAsset:
         )
 
         # Asset input
-        df = pd.DataFrame([
-            {"id": "new-1", "title": "Project 1", "context": "ctx1"},
-            {"id": "already-done", "title": "Project 2"}, # Should be skipped
-        ])
-
-        context = build_asset_context(
-            resources={"llm_classifier": llm}
+        df = pd.DataFrame(
+            [
+                {"id": "new-1", "title": "Project 1", "context": "ctx1"},
+                {"id": "already-done", "title": "Project 2"},  # Should be skipped
+            ]
         )
+
+        context = build_asset_context(resources={"llm_classifier": llm})
 
         output = core_match__classify_projects(context, df)
 
@@ -148,13 +157,20 @@ class TestClassifyProjectsAsset:
         assert output.metadata["prompt_tokens"].value == 10
         assert output.metadata["completion_tokens"].value == 5
         assert output.metadata["model_version"].value == "mistral-small"
-        
+
         # Verify LLM was called only once for the new project
         llm.classify_project.assert_called_once()
 
-    @patch("src.linker.assets.classification.core_match__classify_projects.get_db_cursor")
-    @patch("src.linker.assets.classification.core_match__classify_projects._persist_failures", return_value=1)
-    def test_asset_with_failures(self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock) -> None:
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects.get_db_cursor"
+    )
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects._persist_failures",
+        return_value=1,
+    )
+    def test_asset_all_failures_raise(
+        self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock
+    ) -> None:
         cm = MagicMock()
         cm.__enter__.return_value = mock_db_cursor
         mock_get_db.return_value = cm
@@ -162,22 +178,72 @@ class TestClassifyProjectsAsset:
         llm = MagicMock()
         llm.model_id = "test-model"
         llm.prompt.fingerprint = "v1-fp"
-        # Return an error for the project
-        llm.classify_project.side_effect = Exception("Classification failed")
+        llm.classify_project.side_effect = RuntimeError(
+            "Mistral API error: Status 402 insufficient_quota"
+        )
 
         df = pd.DataFrame([{"id": "fail-1", "title": "Failed Project"}])
         context = build_asset_context(resources={"llm_classifier": llm})
 
-        output = core_match__classify_projects(context, df)
+        with pytest.raises(RuntimeError, match="all 1 project"):
+            core_match__classify_projects(context, df)
 
-        assert len(output.value) == 0
-        assert output.metadata["failed"].value == 1
-        assert output.metadata["dlq_persisted"].value == 1
         mock_persist.assert_called_once()
 
-    @patch("src.linker.assets.classification.core_match__classify_projects.get_db_cursor")
-    @patch("src.linker.assets.classification.core_match__classify_projects._persist_failures", return_value=1)
-    def test_asset_with_unknown_labels(self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock) -> None:
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects.get_db_cursor"
+    )
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects._persist_failures",
+        return_value=1,
+    )
+    def test_asset_partial_failures_still_succeed(
+        self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock
+    ) -> None:
+        cm = MagicMock()
+        cm.__enter__.return_value = mock_db_cursor
+        mock_get_db.return_value = cm
+
+        llm = MagicMock()
+        llm.model_id = "test-model"
+        llm.prompt.fingerprint = "v1-fp"
+        llm.classify_project.side_effect = [
+            ClassificationResult(
+                category="Web",
+                domain="Backend",
+                model="test-model",
+                prompt_version="v1",
+                prompt_tokens=10,
+                completion_tokens=5,
+                total_tokens=15,
+            ),
+            Exception("transient"),
+        ]
+
+        df = pd.DataFrame(
+            [
+                {"id": "ok-1", "title": "Ok Project"},
+                {"id": "fail-1", "title": "Failed Project"},
+            ]
+        )
+        context = build_asset_context(resources={"llm_classifier": llm})
+
+        output = core_match__classify_projects(context, df)
+
+        assert len(output.value) == 1
+        assert output.metadata["failed"].value == 1
+        mock_persist.assert_called_once()
+
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects.get_db_cursor"
+    )
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects._persist_failures",
+        return_value=1,
+    )
+    def test_asset_with_unknown_labels(
+        self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock
+    ) -> None:
         cm = MagicMock()
         cm.__enter__.return_value = mock_db_cursor
         mock_get_db.return_value = cm
@@ -199,8 +265,7 @@ class TestClassifyProjectsAsset:
         df = pd.DataFrame([{"id": "unknown-1", "title": "Unknown Project"}])
         context = build_asset_context(resources={"llm_classifier": llm})
 
-        output = core_match__classify_projects(context, df)
+        with pytest.raises(RuntimeError, match="all 1 project"):
+            core_match__classify_projects(context, df)
 
-        assert len(output.value) == 0
-        assert output.metadata["unknown_labels"].value == 1
-        assert output.metadata["failed"].value == 1
+        mock_persist.assert_called_once()
