@@ -3,11 +3,10 @@ version: 2
 models:
   - name: match_user_recommendation
     description: >
-      Hybrid personalized recommendations. Computes a continuous preference_score
-      measuring weighted overlap between user preferences and project attributes
-      (tech stacks 0.30, categories 0.45, domains 0.25), then blends it alongside
-      cosine similarity, freshness, and popularity into a final score. Returns
-      top N per user.
+      Personalized recommendations. Retrieves candidates from preference overlap,
+      embedding neighbors, and global trending, drops invisible/ignored/bookmarked
+      projects, blends similarity/preference/freshness/popularity, then applies
+      category diversity before top-N.
     config:
       contract:
         enforced: true
