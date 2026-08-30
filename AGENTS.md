@@ -173,4 +173,4 @@ When fixing a bug, always follow this order:
 | `sync-docs-submodule.yml` | PR to main/staging (path: `ost-docs`) | Sync docs submodule to `ost-docs` repo |
 | `sync-prisma-backend.yml` | PR to main/staging (path: `prisma/**`) | Sync Prisma schema to `ost-backend` repo |
 
-**`ci.yml` notes:** CI runs lint, typecheck, unit tests, dbt compile, Go tests, integration-db, docker build, and pip-audit on PR/push to `develop`, `staging`, and `main`.
+**`ci.yml` notes:** CI runs lint, typecheck, unit tests, `dbt build` (models + data/unit tests), Go tests, integration-db, Docker build, and pip-audit on PR/push to `develop`, `staging`, and `main`.

@@ -30,12 +30,14 @@ models:
         tests:
           - not_null
           - accepted_values:
-              values: ["SHOWN", "CLICKED", "DISMISSED", "STARRED_AFTER_RECO"]
+              arguments:
+                values: ["SHOWN", "CLICKED", "DISMISSED", "STARRED_AFTER_RECO"]
       - name: source
         description: "Reco surface that produced the event (PERSONALIZED | TRENDING | SIMILAR | SEMANTIC_SEARCH)"
         tests:
           - accepted_values:
-              values: ["PERSONALIZED", "TRENDING", "SIMILAR", "SEMANTIC_SEARCH"]
+              arguments:
+                values: ["PERSONALIZED", "TRENDING", "SIMILAR", "SEMANTIC_SEARCH"]
               config:
                 where: "source is not null"
       - name: rank

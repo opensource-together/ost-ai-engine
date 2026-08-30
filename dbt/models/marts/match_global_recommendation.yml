@@ -28,3 +28,71 @@ models:
       - name: last_synced_at
         description: "Timestamp of the last synchronization (public.Project.updatedAt)"
         data_type: timestamp without time zone
+
+unit_tests:
+  - name: global_recommendations_only_include_visible_projects
+    description: Projects must be published or trending to be recommended.
+    model: match_global_recommendation
+    given:
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              false as trending,
+              false as published,
+              '2026-01-01 12:00:00'::timestamp as "updatedAt"
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              true,
+              false,
+              '2026-01-02 12:00:00'::timestamp
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select '00000000-0000-0000-0000-000000000001'::uuid as id, 100 as stars
+          union all
+          select '00000000-0000-0000-0000-000000000002'::uuid, 10
+    expect:
+      rows:
+        - {
+            project_id: "00000000-0000-0000-0000-000000000002",
+            stars: 10,
+            last_synced_at: "2026-01-02 12:00:00",
+          }
+
+  - name: global_recommendations_prioritize_recency
+    description: More recently synchronized projects rank ahead of projects with more stars.
+    model: match_global_recommendation
+    overrides:
+      vars:
+        global_reco_top_n: 1
+    given:
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              true as trending,
+              false as published,
+              '2026-01-01 12:00:00'::timestamp as "updatedAt"
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              false,
+              true,
+              '2026-01-02 12:00:00'::timestamp
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select '00000000-0000-0000-0000-000000000001'::uuid as id, 100 as stars
+          union all
+          select '00000000-0000-0000-0000-000000000002'::uuid, 10
+    expect:
+      rows:
+        - {
+            project_id: "00000000-0000-0000-0000-000000000002",
+            stars: 10,
+            last_synced_at: "2026-01-02 12:00:00",
+          }

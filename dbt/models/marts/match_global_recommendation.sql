@@ -1,9 +1,17 @@
 WITH projects AS (
-    SELECT * FROM {{ source('public', 'Project') }}
+    SELECT
+        id,
+        trending,
+        published,
+        "updatedAt"
+    FROM {{ source('public', 'Project') }}
 ),
 
 metadata AS (
-    SELECT * FROM {{ ref('fct_github_project') }}
+    SELECT
+        id,
+        stars
+    FROM {{ ref('fct_github_project') }}
 ),
 
 final AS (
