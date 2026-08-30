@@ -4,7 +4,12 @@ models:
   - name: fct_recommendation_feedback
     description: >
       Personalized recommendation impressions labeled from clicks and stars in the
-      following seven days, with the recommendation scores available at build time.
+      following seven days, with feature scores snapshotted on the SHOWN event's
+      context at the time the recommendation was shown (not the current
+      recommendation table, to avoid training on hindsight-updated scores).
+      Legacy/malformed events without a snapshot keep their metrics row here
+      with NULL scores, but ranker training excludes them (see
+      src/linker/recommendation/ranker.py).
     config:
       contract:
         enforced: true
@@ -56,23 +61,33 @@ models:
         tests:
           - not_null
       - name: similarity_score
-        description: "Current recommendation cosine similarity score"
+        description: >
+          Similarity score snapshotted from context.similarityScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
         data_type: double precision
       - name: preference_score
-        description: "Current recommendation preference overlap score"
+        description: >
+          Preference score snapshotted from context.preferenceScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
         data_type: double precision
       - name: freshness_score
-        description: "Current recommendation freshness score"
+        description: >
+          Freshness score snapshotted from context.freshnessScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
         data_type: double precision
       - name: popularity_score
-        description: "Current recommendation popularity score"
+        description: >
+          Popularity score snapshotted from context.popularityScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
         data_type: double precision
 
 unit_tests:
   - name: recommendation_feedback_labels_and_sessions
     description: >
       Labels positive and negative impressions, includes the seven-day boundary,
-      and falls back to the user and UTC day when no session ID is present.
+      falls back to the user and UTC day when no session ID is present, snapshots
+      feature scores from the SHOWN event's own context (not the current
+      recommendation table), and leaves legacy/malformed snapshots as NULL.
     model: fct_recommendation_feedback
     given:
       - input: ref('stg_public__recommendation_event')
@@ -85,7 +100,9 @@ unit_tests:
               'SHOWN' as event_type,
               'PERSONALIZED' as source,
               0 as rank,
-              '{"sessionId": "session-a"}'::jsonb as context,
+              '{"sessionId": "session-a", "similarityScore": "0.91",
+                "preferenceScore": "0.81", "freshnessScore": "0.71",
+                "popularityScore": "0.61"}'::jsonb as context,
               '2026-01-01 10:00:00'::timestamp as occurred_at
           union all
           select
@@ -115,7 +132,8 @@ unit_tests:
               'SHOWN',
               'PERSONALIZED',
               2,
-              null,
+              '{"similarityScore": "0.93", "preferenceScore": "0.83",
+                "freshnessScore": "0.73", "popularityScore": "0.63"}'::jsonb,
               '2026-01-02 00:30:00'::timestamp
           union all
           select
@@ -147,40 +165,18 @@ unit_tests:
               null,
               null,
               '2026-01-09 09:00:01'::timestamp
-      - input: ref('match_user_recommendation')
-        format: sql
-        rows: |
-          select
-              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
-              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
-              0.91::double precision as similarity_score,
-              0.81::double precision as preference_score,
-              0.71::double precision as freshness_score,
-              0.61::double precision as popularity_score
           union all
           select
+              '00000000-0000-0000-0000-000000000008'::uuid,
               '10000000-0000-0000-0000-000000000001'::uuid,
-              '20000000-0000-0000-0000-000000000002'::uuid,
-              0.92::double precision,
-              0.82::double precision,
-              0.72::double precision,
-              0.62::double precision
-          union all
-          select
-              '10000000-0000-0000-0000-000000000002'::uuid,
-              '20000000-0000-0000-0000-000000000003'::uuid,
-              0.93::double precision,
-              0.83::double precision,
-              0.73::double precision,
-              0.63::double precision
-          union all
-          select
-              '10000000-0000-0000-0000-000000000002'::uuid,
-              '20000000-0000-0000-0000-000000000004'::uuid,
-              0.94::double precision,
-              0.84::double precision,
-              0.74::double precision,
-              0.64::double precision
+              '20000000-0000-0000-0000-000000000005'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              4,
+              '{"sessionId": "session-c", "similarityScore": "not-a-number",
+                "preferenceScore": "0.5", "freshnessScore": "0.5",
+                "popularityScore": "0.5"}'::jsonb,
+              '2026-01-03 10:00:00'::timestamp
     expect:
       rows:
         - {
@@ -197,6 +193,8 @@ unit_tests:
             popularity_score: 0.61,
           }
         - {
+            # No context at all: a legacy event without a snapshot. Stays a
+            # metrics row with NULL feature scores (excluded from training).
             impression_id: "00000000-0000-0000-0000-000000000003",
             user_id: "10000000-0000-0000-0000-000000000001",
             project_id: "20000000-0000-0000-0000-000000000002",
@@ -204,10 +202,10 @@ unit_tests:
             impression_rank: 1,
             impression_at: "2026-01-01 23:30:00",
             is_positive: false,
-            similarity_score: 0.92,
-            preference_score: 0.82,
-            freshness_score: 0.72,
-            popularity_score: 0.62,
+            similarity_score: null,
+            preference_score: null,
+            freshness_score: null,
+            popularity_score: null,
           }
         - {
             impression_id: "00000000-0000-0000-0000-000000000004",
@@ -223,6 +221,8 @@ unit_tests:
             popularity_score: 0.63,
           }
         - {
+            # sessionId present but no score keys: legacy event with a
+            # session, still excluded from training via NULL scores.
             impression_id: "00000000-0000-0000-0000-000000000006",
             user_id: "10000000-0000-0000-0000-000000000002",
             project_id: "20000000-0000-0000-0000-000000000004",
@@ -230,8 +230,23 @@ unit_tests:
             impression_rank: 3,
             impression_at: "2026-01-02 09:00:00",
             is_positive: false,
-            similarity_score: 0.94,
-            preference_score: 0.84,
-            freshness_score: 0.74,
-            popularity_score: 0.64,
+            similarity_score: null,
+            preference_score: null,
+            freshness_score: null,
+            popularity_score: null,
+          }
+        - {
+            # Malformed similarityScore safely casts to NULL; the other three
+            # valid snapshot values still come through.
+            impression_id: "00000000-0000-0000-0000-000000000008",
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000005",
+            session_key: "session-c",
+            impression_rank: 4,
+            impression_at: "2026-01-03 10:00:00",
+            is_positive: false,
+            similarity_score: null,
+            preference_score: 0.5,
+            freshness_score: 0.5,
+            popularity_score: 0.5,
           }

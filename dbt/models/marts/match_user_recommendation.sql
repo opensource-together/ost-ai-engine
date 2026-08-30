@@ -286,6 +286,42 @@ max_log_stars AS (
     FROM visible_projects
 ),
 
+-- Newest persisted ranker version, if any (learned scoring falls back to the
+-- static weighted blend below when this is empty).
+latest_ranker_model AS (
+    SELECT
+        intercept,
+        coefficients[1] AS coeff_similarity,
+        coefficients[2] AS coeff_preference,
+        coefficients[3] AS coeff_freshness,
+        coefficients[4] AS coeff_popularity
+    FROM {{ source('ml', 'recommendation_ranker_model') }}
+    -- Defensive: only ever use a row with exactly four finite coefficients
+    -- and a finite intercept (also enforced by DB CHECK constraints), so a
+    -- malformed row falls back to the static blend instead of erroring or
+    -- scoring on bad numbers. Postgres treats NaN as equal to itself (unlike
+    -- IEEE 754), so `= 'NaN'` reliably detects it.
+    WHERE
+        cardinality(coefficients) = 4
+        AND coefficients[1] NOT IN (
+            'NaN'::double precision, 'Infinity'::double precision, '-Infinity'::double precision
+        )
+        AND coefficients[2] NOT IN (
+            'NaN'::double precision, 'Infinity'::double precision, '-Infinity'::double precision
+        )
+        AND coefficients[3] NOT IN (
+            'NaN'::double precision, 'Infinity'::double precision, '-Infinity'::double precision
+        )
+        AND coefficients[4] NOT IN (
+            'NaN'::double precision, 'Infinity'::double precision, '-Infinity'::double precision
+        )
+        AND intercept NOT IN (
+            'NaN'::double precision, 'Infinity'::double precision, '-Infinity'::double precision
+        )
+    ORDER BY version DESC
+    LIMIT 1
+),
+
 scored AS (
     SELECT
         c.user_id,
@@ -296,7 +332,12 @@ scored AS (
             '1.0 - extract(EPOCH FROM (now() - vp.pushed_at)) / ('
             ~ var('freshness_decay_days', 90) ~ ' * 86400.0)'
         ) }})::double precision AS freshness_score,
-        {{ clamp('ln(vp.stars + 1) / mls.val') }} AS popularity_score
+        {{ clamp('ln(vp.stars + 1) / mls.val') }} AS popularity_score,
+        lrm.coeff_similarity,
+        lrm.coeff_preference,
+        lrm.coeff_freshness,
+        lrm.coeff_popularity,
+        lrm.intercept
     FROM candidates AS c
     INNER JOIN visible_projects AS vp ON c.project_id = vp.project_id
     CROSS JOIN max_log_stars AS mls
@@ -304,6 +345,7 @@ scored AS (
         ON c.user_id = pr.user_id AND c.project_id = pr.project_id
     LEFT JOIN user_vectors AS uv ON c.user_id = uv.user_id
     LEFT JOIN project_vectors AS pv ON c.project_id = pv.project_id
+    LEFT JOIN latest_ranker_model AS lrm ON true
 ),
 
 blended AS (
@@ -314,11 +356,26 @@ blended AS (
         preference_score,
         freshness_score,
         popularity_score,
-        {{ var('w_similarity', 0.40) }} * similarity_score
-        + {{ var('w_preference', 0.35) }} * preference_score
-        + {{ var('w_freshness', 0.15) }} * freshness_score
-        + {{ var('w_popularity', 0.10) }} * popularity_score
-            AS final_score
+        CASE
+            WHEN intercept IS NOT null
+                THEN
+                {{ clamp(
+                    '1.0 / (1.0 + exp(-(' ~ clamp(
+                        'intercept'
+                        ~ ' + coeff_similarity * similarity_score'
+                        ~ ' + coeff_preference * preference_score'
+                        ~ ' + coeff_freshness * freshness_score'
+                        ~ ' + coeff_popularity * popularity_score',
+                        min_val=-500,
+                        max_val=500
+                    ) ~ ')))'
+                ) }}
+            ELSE
+                {{ var('w_similarity', 0.40) }} * similarity_score
+                + {{ var('w_preference', 0.35) }} * preference_score
+                + {{ var('w_freshness', 0.15) }} * freshness_score
+                + {{ var('w_popularity', 0.10) }} * popularity_score
+        END AS final_score
     FROM scored
 ),
 

@@ -62,7 +62,11 @@ models:
         tests:
           - not_null
       - name: final_score
-        description: "Weighted blend of similarity (0.40), preference (0.35), freshness (0.15), and popularity (0.10)"
+        description: >
+          sigmoid(intercept + sum(coeff_i * feature_i)) from the newest persisted
+          ranker model when one exists with exactly 4 finite coefficients and a
+          finite intercept; otherwise the static weighted blend of similarity
+          (0.40), preference (0.35), freshness (0.15), and popularity (0.10).
         data_type: double precision
         constraints:
           - type: not_null
@@ -71,3 +75,567 @@ models:
       - name: calculated_at
         description: "Timestamp when the recommendation batch was computed"
         data_type: timestamp with time zone
+
+unit_tests:
+  - name: match_user_recommendation_fallback_without_ranker_model
+    description: >
+      Without a persisted ranker model, final_score is the existing weighted
+      blend of similarity/preference/freshness/popularity (byte-for-byte).
+    model: match_user_recommendation
+    given:
+      - input: source('public', 'user_tech_stack')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as "userId",
+              '30000000-0000-0000-0000-000000000001'::uuid as "techStackId"
+      - input: source('public', 'user_categories')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "categoryId"
+          where false
+      - input: source('public', 'user_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "domainId"
+          where false
+      - input: source('public', 'project_tech_stack')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "techStackId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_category')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "categoryId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "domainId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              true as published,
+              false as trending
+      - input: source('ml', 'embd_user')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'embd_github_project')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "projectId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'recommendation_ranker_model')
+        format: sql
+        rows: |
+          select
+              cast(null as integer) as version,
+              cast(null as double precision[]) as coefficients,
+              cast(null as double precision) as intercept
+          where false
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              100 as stars,
+              '2000-01-01'::timestamp as pushed_at,
+              0.9::double precision as language_confidence
+      - input: ref('stg_github__readme')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              repeat('lorem ipsum dolor sit amet ', 5) as content
+      - input: ref('match_global_recommendation')
+        format: sql
+        rows: |
+          select '20000000-0000-0000-0000-000000000001'::uuid as project_id
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              cast(null as uuid) as user_id,
+              cast(null as uuid) as project_id,
+              cast(null as text) as event_type,
+              cast(null as timestamp) as occurred_at
+          where false
+      - input: ref('stg_public__project_bookmark')
+        format: sql
+        rows: |
+          select cast(null as uuid) as user_id, cast(null as uuid) as project_id
+          where false
+    expect:
+      rows:
+        - {
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            similarity_score: 0.0,
+            preference_score: 0.0,
+            freshness_score: 0.0,
+            popularity_score: 1.0,
+            final_score: 0.10,
+          }
+
+  - name: match_user_recommendation_uses_latest_ranker_model
+    description: >
+      With a persisted ranker model, final_score is
+      sigmoid(intercept + sum(coeff_i * feature_i)) instead of the static blend.
+      Uses distinct, non-zero coefficients and feature values so a coefficient/
+      feature mapping mistake (e.g. a permutation) would change the expected
+      score, and asserts the exact value (see
+      TestSigmoidScore in tests/unit/linker/test_ranker.py for the Python-side
+      parity check of the same numbers).
+    model: match_user_recommendation
+    given:
+      - input: source('public', 'user_tech_stack')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as "userId",
+              '30000000-0000-0000-0000-000000000001'::uuid as "techStackId"
+      - input: source('public', 'user_categories')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "categoryId"
+          where false
+      - input: source('public', 'user_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "domainId"
+          where false
+      - input: source('public', 'project_tech_stack')
+        format: sql
+        rows: |
+          select
+              '30000000-0000-0000-0000-000000000001'::uuid as "techStackId",
+              '20000000-0000-0000-0000-000000000001'::uuid as "projectId"
+      - input: source('public', 'project_category')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "categoryId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "domainId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              true as published,
+              false as trending
+          union all
+          select
+              '20000000-0000-0000-0000-000000000009'::uuid,
+              true,
+              false
+      - input: source('ml', 'embd_user')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as "userId",
+              '[1,0]'::vector as vector
+      - input: source('ml', 'embd_github_project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as "projectId",
+              '[0.6,0.8]'::vector as vector
+      - input: source('ml', 'recommendation_ranker_model')
+        format: sql
+        rows: |
+          select
+              1 as version,
+              array[0.10, 0.20, 0.30, 0.40]::double precision[] as coefficients,
+              0.05::double precision as intercept
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              9 as stars,
+              now() - interval '9 days' as pushed_at,
+              0.9::double precision as language_confidence
+          union all
+          select
+              '20000000-0000-0000-0000-000000000009'::uuid,
+              99,
+              now() - interval '9 days',
+              0.9::double precision
+      - input: ref('stg_github__readme')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              repeat('lorem ipsum dolor sit amet ', 5) as content
+          union all
+          select
+              '20000000-0000-0000-0000-000000000009'::uuid,
+              repeat('lorem ipsum dolor sit amet ', 5)
+      - input: ref('match_global_recommendation')
+        format: sql
+        rows: |
+          select cast(null as uuid) as project_id
+          where false
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              cast(null as uuid) as user_id,
+              cast(null as uuid) as project_id,
+              cast(null as text) as event_type,
+              cast(null as timestamp) as occurred_at
+          where false
+      - input: ref('stg_public__project_bookmark')
+        format: sql
+        rows: |
+          select cast(null as uuid) as user_id, cast(null as uuid) as project_id
+          where false
+    expect:
+      rows:
+        # similarity~0.6 (embeddings; pgvector stores float32, so the cosine
+        # distance carries float32 rounding through to this double), preference
+        # =1.0 (full tech overlap), freshness=0.9 (pushed 9/90 decay days ago),
+        # popularity=0.5 (ln(10)/ln(100)); final_score is sigmoid(0.05 +
+        # 0.10*similarity + 0.20*1.0 + 0.30*0.9 + 0.40*0.5) with that same
+        # float32-rounded similarity — both values below are the actual
+        # computed output, not hand-rounded, so this test still catches any
+        # coefficient/feature mapping mistake.
+        - {
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            similarity_score: 0.6000000059604645,
+            preference_score: 1.0,
+            freshness_score: 0.9,
+            popularity_score: 0.5,
+            final_score: 0.6856801140667155,
+          }
+
+  - name: match_user_recommendation_falls_back_on_malformed_coefficients
+    description: >
+      A persisted ranker row with the wrong number of coefficients (data bug
+      or partial write) is ignored: final_score falls back to the static
+      weighted blend, same as when no model is persisted at all.
+    model: match_user_recommendation
+    given:
+      - input: source('public', 'user_tech_stack')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as "userId",
+              '30000000-0000-0000-0000-000000000001'::uuid as "techStackId"
+      - input: source('public', 'user_categories')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "categoryId"
+          where false
+      - input: source('public', 'user_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "domainId"
+          where false
+      - input: source('public', 'project_tech_stack')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "techStackId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_category')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "categoryId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "domainId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              true as published,
+              false as trending
+      - input: source('ml', 'embd_user')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'embd_github_project')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "projectId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'recommendation_ranker_model')
+        format: sql
+        rows: |
+          select
+              1 as version,
+              array[0.1, 0.2, 0.3]::double precision[] as coefficients,
+              0.0::double precision as intercept
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              100 as stars,
+              '2000-01-01'::timestamp as pushed_at,
+              0.9::double precision as language_confidence
+      - input: ref('stg_github__readme')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              repeat('lorem ipsum dolor sit amet ', 5) as content
+      - input: ref('match_global_recommendation')
+        format: sql
+        rows: |
+          select '20000000-0000-0000-0000-000000000001'::uuid as project_id
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              cast(null as uuid) as user_id,
+              cast(null as uuid) as project_id,
+              cast(null as text) as event_type,
+              cast(null as timestamp) as occurred_at
+          where false
+      - input: ref('stg_public__project_bookmark')
+        format: sql
+        rows: |
+          select cast(null as uuid) as user_id, cast(null as uuid) as project_id
+          where false
+    expect:
+      rows:
+        - {
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            similarity_score: 0.0,
+            preference_score: 0.0,
+            freshness_score: 0.0,
+            popularity_score: 1.0,
+            final_score: 0.10,
+          }
+
+  - name: match_user_recommendation_falls_back_on_non_finite_coefficients
+    description: >
+      A persisted ranker row with the right coefficient count but a NaN
+      element (fit gone wrong, not caught by the writer) is ignored:
+      final_score falls back to the static weighted blend, same as when no
+      model is persisted at all.
+    model: match_user_recommendation
+    given:
+      - input: source('public', 'user_tech_stack')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as "userId",
+              '30000000-0000-0000-0000-000000000001'::uuid as "techStackId"
+      - input: source('public', 'user_categories')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "categoryId"
+          where false
+      - input: source('public', 'user_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "domainId"
+          where false
+      - input: source('public', 'project_tech_stack')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "techStackId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_category')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "categoryId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "domainId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              true as published,
+              false as trending
+      - input: source('ml', 'embd_user')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'embd_github_project')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "projectId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'recommendation_ranker_model')
+        format: sql
+        rows: |
+          select
+              1 as version,
+              array[0.1, 0.2, 'NaN'::double precision, 0.4]::double precision[] as coefficients,
+              0.0::double precision as intercept
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              100 as stars,
+              '2000-01-01'::timestamp as pushed_at,
+              0.9::double precision as language_confidence
+      - input: ref('stg_github__readme')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              repeat('lorem ipsum dolor sit amet ', 5) as content
+      - input: ref('match_global_recommendation')
+        format: sql
+        rows: |
+          select '20000000-0000-0000-0000-000000000001'::uuid as project_id
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              cast(null as uuid) as user_id,
+              cast(null as uuid) as project_id,
+              cast(null as text) as event_type,
+              cast(null as timestamp) as occurred_at
+          where false
+      - input: ref('stg_public__project_bookmark')
+        format: sql
+        rows: |
+          select cast(null as uuid) as user_id, cast(null as uuid) as project_id
+          where false
+    expect:
+      rows:
+        - {
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            similarity_score: 0.0,
+            preference_score: 0.0,
+            freshness_score: 0.0,
+            popularity_score: 1.0,
+            final_score: 0.10,
+          }
+
+  - name: match_user_recommendation_falls_back_on_non_finite_intercept
+    description: >
+      A persisted ranker row with a well-formed coefficient array but a NaN
+      intercept (fit gone wrong, not caught by the writer) is ignored:
+      final_score falls back to the static weighted blend, same as when no
+      model is persisted at all.
+    model: match_user_recommendation
+    given:
+      - input: source('public', 'user_tech_stack')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as "userId",
+              '30000000-0000-0000-0000-000000000001'::uuid as "techStackId"
+      - input: source('public', 'user_categories')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "categoryId"
+          where false
+      - input: source('public', 'user_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "domainId"
+          where false
+      - input: source('public', 'project_tech_stack')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "techStackId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_category')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "categoryId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "domainId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              true as published,
+              false as trending
+      - input: source('ml', 'embd_user')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'embd_github_project')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "projectId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'recommendation_ranker_model')
+        format: sql
+        rows: |
+          select
+              1 as version,
+              array[0.1, 0.2, 0.3, 0.4]::double precision[] as coefficients,
+              'NaN'::double precision as intercept
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              100 as stars,
+              '2000-01-01'::timestamp as pushed_at,
+              0.9::double precision as language_confidence
+      - input: ref('stg_github__readme')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              repeat('lorem ipsum dolor sit amet ', 5) as content
+      - input: ref('match_global_recommendation')
+        format: sql
+        rows: |
+          select '20000000-0000-0000-0000-000000000001'::uuid as project_id
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              cast(null as uuid) as user_id,
+              cast(null as uuid) as project_id,
+              cast(null as text) as event_type,
+              cast(null as timestamp) as occurred_at
+          where false
+      - input: ref('stg_public__project_bookmark')
+        format: sql
+        rows: |
+          select cast(null as uuid) as user_id, cast(null as uuid) as project_id
+          where false
+    expect:
+      rows:
+        - {
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            similarity_score: 0.0,
+            preference_score: 0.0,
+            freshness_score: 0.0,
+            popularity_score: 1.0,
+            final_score: 0.10,
+          }
