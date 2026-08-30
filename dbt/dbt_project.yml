@@ -91,3 +91,6 @@ models:
       match_user_recommendation:
         +schema: public
         +meta: { dagster: { group: user_ml } }
+      fct_recommendation_feedback:
+        +schema: public
+        +meta: { dagster: { group: user_ml } }

@@ -1,0 +1,237 @@
+version: 2
+
+models:
+  - name: fct_recommendation_feedback
+    description: >
+      Personalized recommendation impressions labeled from clicks and stars in the
+      following seven days, with the recommendation scores available at build time.
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: impression_id
+        description: "Recommendation event ID for the PERSONALIZED SHOWN impression"
+        data_type: uuid
+        constraints:
+          - type: not_null
+        tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: "User who received the recommendation"
+        data_type: uuid
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: project_id
+        description: "Project shown to the user"
+        data_type: uuid
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: session_key
+        description: "context.sessionId, or user ID plus UTC impression day"
+        data_type: text
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: impression_rank
+        description: "Original rank recorded on the SHOWN event"
+        data_type: integer
+      - name: impression_at
+        description: "Timestamp of the SHOWN event"
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: is_positive
+        description: "True when a click or star follows within seven days"
+        data_type: boolean
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: similarity_score
+        description: "Current recommendation cosine similarity score"
+        data_type: double precision
+      - name: preference_score
+        description: "Current recommendation preference overlap score"
+        data_type: double precision
+      - name: freshness_score
+        description: "Current recommendation freshness score"
+        data_type: double precision
+      - name: popularity_score
+        description: "Current recommendation popularity score"
+        data_type: double precision
+
+unit_tests:
+  - name: recommendation_feedback_labels_and_sessions
+    description: >
+      Labels positive and negative impressions, includes the seven-day boundary,
+      and falls back to the user and UTC day when no session ID is present.
+    model: fct_recommendation_feedback
+    given:
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              'SHOWN' as event_type,
+              'PERSONALIZED' as source,
+              0 as rank,
+              '{"sessionId": "session-a"}'::jsonb as context,
+              '2026-01-01 10:00:00'::timestamp as occurred_at
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000001'::uuid,
+              'CLICKED',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-01 10:05:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000003'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000002'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              1,
+              null,
+              '2026-01-01 23:30:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000004'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000003'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              2,
+              null,
+              '2026-01-02 00:30:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000005'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000003'::uuid,
+              'STARRED_AFTER_RECO',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-09 00:30:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000006'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000004'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              3,
+              '{"sessionId": "session-b"}'::jsonb,
+              '2026-01-02 09:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000007'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000004'::uuid,
+              'CLICKED',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-09 09:00:01'::timestamp
+      - input: ref('match_user_recommendation')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              0.91::double precision as similarity_score,
+              0.81::double precision as preference_score,
+              0.71::double precision as freshness_score,
+              0.61::double precision as popularity_score
+          union all
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000002'::uuid,
+              0.92::double precision,
+              0.82::double precision,
+              0.72::double precision,
+              0.62::double precision
+          union all
+          select
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000003'::uuid,
+              0.93::double precision,
+              0.83::double precision,
+              0.73::double precision,
+              0.63::double precision
+          union all
+          select
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000004'::uuid,
+              0.94::double precision,
+              0.84::double precision,
+              0.74::double precision,
+              0.64::double precision
+    expect:
+      rows:
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000001",
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            session_key: "session-a",
+            impression_rank: 0,
+            impression_at: "2026-01-01 10:00:00",
+            is_positive: true,
+            similarity_score: 0.91,
+            preference_score: 0.81,
+            freshness_score: 0.71,
+            popularity_score: 0.61,
+          }
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000003",
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000002",
+            session_key: "10000000-0000-0000-0000-000000000001:2026-01-01",
+            impression_rank: 1,
+            impression_at: "2026-01-01 23:30:00",
+            is_positive: false,
+            similarity_score: 0.92,
+            preference_score: 0.82,
+            freshness_score: 0.72,
+            popularity_score: 0.62,
+          }
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000004",
+            user_id: "10000000-0000-0000-0000-000000000002",
+            project_id: "20000000-0000-0000-0000-000000000003",
+            session_key: "10000000-0000-0000-0000-000000000002:2026-01-02",
+            impression_rank: 2,
+            impression_at: "2026-01-02 00:30:00",
+            is_positive: true,
+            similarity_score: 0.93,
+            preference_score: 0.83,
+            freshness_score: 0.73,
+            popularity_score: 0.63,
+          }
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000006",
+            user_id: "10000000-0000-0000-0000-000000000002",
+            project_id: "20000000-0000-0000-0000-000000000004",
+            session_key: "session-b",
+            impression_rank: 3,
+            impression_at: "2026-01-02 09:00:00",
+            is_positive: false,
+            similarity_score: 0.94,
+            preference_score: 0.84,
+            freshness_score: 0.74,
+            popularity_score: 0.64,
+          }
