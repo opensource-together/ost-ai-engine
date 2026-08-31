@@ -12,7 +12,7 @@ from src.api.dependencies import close_db, init_db, init_semantic
 from src.api.errors import register_error_handlers
 from src.api.middleware import SecurityHeadersMiddleware
 from src.api.rate_limit import limiter
-from src.api.routes.v1 import health, projects, recommendations, references
+from src.api.routes.v1 import dashboard, health, projects, recommendations, references
 from src.core.logging import configure_logging, get_logger
 
 logger = get_logger(__name__)
@@ -105,6 +105,11 @@ v1.include_router(
     recommendations.router,
     dependencies=protected,
     tags=["recommendations"],
+)
+v1.include_router(
+    dashboard.router,
+    dependencies=protected,
+    tags=["dashboard"],
 )
 
 app.include_router(health.router, tags=["health"])

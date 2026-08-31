@@ -28,3 +28,18 @@ class TestSchemas:
         """TechStackOut includes type field."""
         ts = TechStackOut(id="x", name="Python", icon_url="http://img", type="LANGUAGE")
         assert ts.type == "LANGUAGE"
+
+    def test_dashboard_out_defaults_ranker_to_none(self) -> None:
+        from src.api.schemas import DashboardOut
+
+        snap = DashboardOut(
+            user_count=0,
+            project_count=0,
+            bookmark_count=0,
+            shown_events=0,
+            positive_events=0,
+            personalized_pairs=0,
+            feedback_impressions=0,
+            feedback_positives=0,
+        )
+        assert snap.ranker is None
