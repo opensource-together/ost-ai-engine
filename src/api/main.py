@@ -10,8 +10,10 @@ from src.api.auth import require_service_token
 from src.api.config import APIConfig
 from src.api.dependencies import close_db, init_db, init_semantic
 from src.api.errors import register_error_handlers
+from src.api.metrics import PrometheusMiddleware
 from src.api.middleware import SecurityHeadersMiddleware
 from src.api.rate_limit import limiter
+from src.api.routes import metrics as metrics_route
 from src.api.routes.v1 import dashboard, health, projects, recommendations, references
 from src.core.logging import configure_logging, get_logger
 
@@ -90,6 +92,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, _rate_limit_handler)  # type: ignore[arg-type]
 register_error_handlers(app)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(PrometheusMiddleware)
 
 protected = [Depends(require_service_token)]
 
@@ -113,4 +116,5 @@ v1.include_router(
 )
 
 app.include_router(health.router, tags=["health"])
+app.include_router(metrics_route.router, tags=["metrics"])
 app.include_router(v1)

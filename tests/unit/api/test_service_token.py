@@ -28,9 +28,7 @@ def _make_pool(
         return mock_result
 
     if fetchone_rows is not None:
-        execute_results = [
-            _make_result(first=row) for row in fetchone_rows
-        ]
+        execute_results = [_make_result(first=row) for row in fetchone_rows]
         if fetchall_rows is not None:
             execute_results.append(_make_result(rows=fetchall_rows))
         mock_session.execute.side_effect = execute_results
@@ -140,22 +138,25 @@ class TestServiceTokenEnforced:
 
 class TestHealthOpen:
     @pytest.mark.parametrize("service_token", [None, "expected-token"])
+    @pytest.mark.parametrize("path", ["/health", "/metrics"])
     def test_health_stays_open(
         self,
         client: TestClient,
         monkeypatch: pytest.MonkeyPatch,
         service_token: str | None,
+        path: str,
     ) -> None:
-        """Health remains open whether service-token auth is enabled or not."""
+        """Health and metrics remain open whether service-token auth is enabled."""
         if service_token is None:
             monkeypatch.delenv("OST_LINKER_SERVICE_TOKEN", raising=False)
         else:
             monkeypatch.setenv("OST_LINKER_SERVICE_TOKEN", service_token)
 
-        response = client.get("/health")
+        response = client.get(path)
 
         assert response.status_code == 200
-        assert response.json() == {"status": "ok"}
+        if path == "/health":
+            assert response.json() == {"status": "ok"}
 
 
 def test_strict_service_token_without_secret_fails_at_startup(

@@ -1,0 +1,21 @@
+groups:
+  - name: linker-api
+    rules:
+      - alert: LinkerApiDown
+        expr: up{job="linker-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: Linker API Prometheus scrape is failing
+      - alert: LinkerApiHighErrorRate
+        expr: |
+          sum(rate(linker_http_requests_total{status=~"5.."}[5m]))
+          /
+          clamp_min(sum(rate(linker_http_requests_total[5m])), 0.001)
+          > 0.05
+        for: 5m
+        labels:
+          severity: warning
+        annotations:
+          summary: Linker API 5xx rate is above 5 percent
