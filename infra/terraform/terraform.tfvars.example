@@ -1,0 +1,4 @@
+api_scrape_target      = "host.docker.internal:8000"
+prometheus_host_port   = 9091
+grafana_host_port      = 3002
+grafana_admin_password = "admin"
