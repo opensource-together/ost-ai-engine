@@ -1,0 +1,548 @@
+version: 2
+
+models:
+  - name: fct_recommendation_feedback
+    description: >
+      Personalized recommendation impressions labeled from clicks and stars in the
+      following seven days, with feature scores snapshotted on the SHOWN event's
+      context at the time the recommendation was shown (not the current
+      recommendation table, to avoid training on hindsight-updated scores).
+      Legacy/malformed events without a snapshot keep their metrics row here
+      with NULL scores, but ranker training excludes them (see
+      src/linker/recommendation/ranker.py).
+    config:
+      contract:
+        enforced: true
+    columns:
+      - name: impression_id
+        description: "Recommendation event ID for the PERSONALIZED SHOWN impression"
+        data_type: uuid
+        constraints:
+          - type: not_null
+        tests:
+          - unique
+          - not_null
+      - name: user_id
+        description: "User who received the recommendation"
+        data_type: uuid
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: project_id
+        description: "Project shown to the user"
+        data_type: uuid
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: session_key
+        description: "context.sessionId, or user ID plus UTC impression day"
+        data_type: text
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: impression_rank
+        description: "Original rank recorded on the SHOWN event"
+        data_type: integer
+      - name: impression_at
+        description: "Timestamp of the SHOWN event"
+        data_type: timestamp without time zone
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: is_positive
+        description: "True when a click or star follows within seven days"
+        data_type: boolean
+        constraints:
+          - type: not_null
+        tests:
+          - not_null
+      - name: similarity_score
+        description: >
+          Similarity score snapshotted from context.similarityScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
+        data_type: double precision
+      - name: preference_score
+        description: >
+          Preference score snapshotted from context.preferenceScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
+        data_type: double precision
+      - name: freshness_score
+        description: >
+          Freshness score snapshotted from context.freshnessScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
+        data_type: double precision
+      - name: popularity_score
+        description: >
+          Popularity score snapshotted from context.popularityScore on the SHOWN
+          event. NULL for legacy events without a snapshot.
+        data_type: double precision
+
+unit_tests:
+  - name: recommendation_feedback_labels_and_sessions
+    description: >
+      Labels positive and negative impressions, includes the seven-day boundary,
+      falls back to the user and UTC day when no session ID is present, snapshots
+      feature scores from the SHOWN event's own context (not the current
+      recommendation table), and leaves legacy/malformed snapshots as NULL.
+    model: fct_recommendation_feedback
+    overrides:
+      macros:
+        feedback_as_of: "'2026-01-20 00:00:00'::timestamp"
+    given:
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              'SHOWN' as event_type,
+              'PERSONALIZED' as source,
+              0 as rank,
+              '{"sessionId": "session-a", "similarityScore": "0.91",
+                "preferenceScore": "0.81", "freshnessScore": "0.71",
+                "popularityScore": "0.61"}'::jsonb as context,
+              '2026-01-01 10:00:00'::timestamp as occurred_at
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000001'::uuid,
+              'CLICKED',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-01 10:05:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000003'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000002'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              1,
+              null,
+              '2026-01-01 23:30:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000004'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000003'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              2,
+              '{"similarityScore": "0.93", "preferenceScore": "0.83",
+                "freshnessScore": "0.73", "popularityScore": "0.63"}'::jsonb,
+              '2026-01-02 00:30:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000005'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000003'::uuid,
+              'STARRED_AFTER_RECO',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-09 00:30:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000006'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000004'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              3,
+              '{"sessionId": "session-b"}'::jsonb,
+              '2026-01-02 09:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000007'::uuid,
+              '10000000-0000-0000-0000-000000000002'::uuid,
+              '20000000-0000-0000-0000-000000000004'::uuid,
+              'CLICKED',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-09 09:00:01'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000008'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000005'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              4,
+              '{"sessionId": "session-c", "similarityScore": "not-a-number",
+                "preferenceScore": "0.5", "freshnessScore": "0.5",
+                "popularityScore": "0.5"}'::jsonb,
+              '2026-01-03 10:00:00'::timestamp
+    expect:
+      rows:
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000001",
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            session_key: "session-a",
+            impression_rank: 0,
+            impression_at: "2026-01-01 10:00:00",
+            is_positive: true,
+            similarity_score: 0.91,
+            preference_score: 0.81,
+            freshness_score: 0.71,
+            popularity_score: 0.61,
+          }
+        - {
+            # No context at all: a legacy event without a snapshot. Stays a
+            # metrics row with NULL feature scores (excluded from training).
+            impression_id: "00000000-0000-0000-0000-000000000003",
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000002",
+            session_key: "10000000-0000-0000-0000-000000000001:2026-01-01",
+            impression_rank: 1,
+            impression_at: "2026-01-01 23:30:00",
+            is_positive: false,
+            similarity_score: null,
+            preference_score: null,
+            freshness_score: null,
+            popularity_score: null,
+          }
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000004",
+            user_id: "10000000-0000-0000-0000-000000000002",
+            project_id: "20000000-0000-0000-0000-000000000003",
+            session_key: "10000000-0000-0000-0000-000000000002:2026-01-02",
+            impression_rank: 2,
+            impression_at: "2026-01-02 00:30:00",
+            is_positive: true,
+            similarity_score: 0.93,
+            preference_score: 0.83,
+            freshness_score: 0.73,
+            popularity_score: 0.63,
+          }
+        - {
+            # sessionId present but no score keys: legacy event with a
+            # session, still excluded from training via NULL scores.
+            impression_id: "00000000-0000-0000-0000-000000000006",
+            user_id: "10000000-0000-0000-0000-000000000002",
+            project_id: "20000000-0000-0000-0000-000000000004",
+            session_key: "session-b",
+            impression_rank: 3,
+            impression_at: "2026-01-02 09:00:00",
+            is_positive: false,
+            similarity_score: null,
+            preference_score: null,
+            freshness_score: null,
+            popularity_score: null,
+          }
+        - {
+            # Malformed similarityScore safely casts to NULL; the other three
+            # valid snapshot values still come through.
+            impression_id: "00000000-0000-0000-0000-000000000008",
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000005",
+            session_key: "session-c",
+            impression_rank: 4,
+            impression_at: "2026-01-03 10:00:00",
+            is_positive: false,
+            similarity_score: null,
+            preference_score: 0.5,
+            freshness_score: 0.5,
+            popularity_score: 0.5,
+          }
+
+  - name: recommendation_feedback_excludes_immature_impressions
+    description: >
+      Only impressions whose full seven-day label window has elapsed are
+      emitted (the boundary itself is mature), so a negative label is never
+      recorded while its click or star could still arrive.
+    model: fct_recommendation_feedback
+    overrides:
+      macros:
+        feedback_as_of: "'2026-01-20 00:00:00'::timestamp"
+    given:
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              'SHOWN' as event_type,
+              'PERSONALIZED' as source,
+              0 as rank,
+              '{"sessionId": "mature"}'::jsonb as context,
+              '2026-01-12 00:00:00'::timestamp as occurred_at
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000002'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              1,
+              '{"sessionId": "boundary"}'::jsonb,
+              '2026-01-13 00:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000003'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000003'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              2,
+              '{"sessionId": "one-second-too-young"}'::jsonb,
+              '2026-01-13 00:00:01'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000004'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000004'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              3,
+              '{"sessionId": "clicked-but-immature"}'::jsonb,
+              '2026-01-19 00:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000005'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000004'::uuid,
+              'CLICKED',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-19 01:00:00'::timestamp
+    expect:
+      rows:
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000001",
+            session_key: "mature",
+            impression_at: "2026-01-12 00:00:00",
+            is_positive: false,
+          }
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000002",
+            session_key: "boundary",
+            impression_at: "2026-01-13 00:00:00",
+            is_positive: false,
+          }
+
+  - name: recommendation_feedback_keeps_a_rolling_year
+    description: >
+      Impressions older than the rolling 365-day window are dropped to bound
+      the fact's size; the boundary day itself is kept.
+    model: fct_recommendation_feedback
+    overrides:
+      macros:
+        feedback_as_of: "'2026-01-20 00:00:00'::timestamp"
+    given:
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              'SHOWN' as event_type,
+              'PERSONALIZED' as source,
+              0 as rank,
+              '{"sessionId": "oldest-kept"}'::jsonb as context,
+              '2025-01-20 00:00:00'::timestamp as occurred_at
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000002'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              1,
+              '{"sessionId": "one-second-too-old"}'::jsonb,
+              '2025-01-19 23:59:59'::timestamp
+    expect:
+      rows:
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000001",
+            session_key: "oldest-kept",
+            impression_at: "2025-01-20 00:00:00",
+            is_positive: false,
+          }
+
+  - name: recommendation_feedback_ignores_non_personalized_interactions
+    description: >
+      A click on the same project from another surface (trending, similar,
+      semantic search) must not label a personalized impression positive:
+      only PERSONALIZED interactions are credited.
+    model: fct_recommendation_feedback
+    overrides:
+      macros:
+        feedback_as_of: "'2026-01-20 00:00:00'::timestamp"
+    given:
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              'SHOWN' as event_type,
+              'PERSONALIZED' as source,
+              0 as rank,
+              '{"sessionId": "cross-surface"}'::jsonb as context,
+              '2026-01-01 00:00:00'::timestamp as occurred_at
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000001'::uuid,
+              'CLICKED',
+              'TRENDING',
+              null,
+              null,
+              '2026-01-02 00:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000003'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000002'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              1,
+              '{"sessionId": "personalized"}'::jsonb,
+              '2026-01-01 00:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000004'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000002'::uuid,
+              'CLICKED',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-02 00:00:00'::timestamp
+    expect:
+      rows:
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000001",
+            session_key: "cross-surface",
+            impression_at: "2026-01-01 00:00:00",
+            is_positive: false,
+          }
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000003",
+            session_key: "personalized",
+            impression_at: "2026-01-01 00:00:00",
+            is_positive: true,
+          }
+
+  - name: recommendation_feedback_credits_nearest_impression
+    description: >
+      With repeat impressions of the same project, a click credits only the
+      nearest preceding impression inside the label window: the earlier
+      impression stays negative instead of also being credited.
+    model: fct_recommendation_feedback
+    overrides:
+      macros:
+        feedback_as_of: "'2026-01-20 00:00:00'::timestamp"
+    given:
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              'SHOWN' as event_type,
+              'PERSONALIZED' as source,
+              0 as rank,
+              '{"sessionId": "earlier"}'::jsonb as context,
+              '2026-01-01 00:00:00'::timestamp as occurred_at
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000001'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              1,
+              '{"sessionId": "nearest"}'::jsonb,
+              '2026-01-05 00:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000003'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000001'::uuid,
+              'CLICKED',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-06 00:00:00'::timestamp
+    expect:
+      rows:
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000001",
+            session_key: "earlier",
+            impression_at: "2026-01-01 00:00:00",
+            is_positive: false,
+          }
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000002",
+            session_key: "nearest",
+            impression_at: "2026-01-05 00:00:00",
+            is_positive: true,
+          }
+
+  - name: recommendation_feedback_attribution_sees_immature_impressions
+    description: >
+      Attribution runs over every impression before the maturity and rolling
+      filters are applied: a click preceded by a still-immature impression
+      credits that impression (which is not emitted yet) instead of leaking
+      the credit onto an older, mature one.
+    model: fct_recommendation_feedback
+    overrides:
+      macros:
+        feedback_as_of: "'2026-01-20 00:00:00'::timestamp"
+    given:
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              '00000000-0000-0000-0000-000000000001'::uuid as id,
+              '10000000-0000-0000-0000-000000000001'::uuid as user_id,
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              'SHOWN' as event_type,
+              'PERSONALIZED' as source,
+              0 as rank,
+              '{"sessionId": "mature-older"}'::jsonb as context,
+              '2026-01-10 00:00:00'::timestamp as occurred_at
+          union all
+          select
+              '00000000-0000-0000-0000-000000000002'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000001'::uuid,
+              'SHOWN',
+              'PERSONALIZED',
+              1,
+              '{"sessionId": "immature-newer"}'::jsonb,
+              '2026-01-15 00:00:00'::timestamp
+          union all
+          select
+              '00000000-0000-0000-0000-000000000003'::uuid,
+              '10000000-0000-0000-0000-000000000001'::uuid,
+              '20000000-0000-0000-0000-000000000001'::uuid,
+              'STARRED_AFTER_RECO',
+              'PERSONALIZED',
+              null,
+              null,
+              '2026-01-16 00:00:00'::timestamp
+    expect:
+      rows:
+        - {
+            impression_id: "00000000-0000-0000-0000-000000000001",
+            session_key: "mature-older",
+            impression_at: "2026-01-10 00:00:00",
+            is_positive: false,
+          }

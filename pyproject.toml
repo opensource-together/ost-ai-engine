@@ -41,6 +41,7 @@ dependencies = [
     "uvicorn[standard]>=0.34.0,<1",
     "slowapi>=0.1.9,<0.2",
     "python-json-logger>=3.2.1,<4",
+    "scikit-learn>=1.8.0,<2",
 ]
 
 [project.urls]
@@ -143,6 +144,10 @@ warn_unreachable = true
 strict_equality = true
 explicit_package_bases = true
 mypy_path = "."
+
+[[tool.mypy.overrides]]
+module = "sklearn.*"
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

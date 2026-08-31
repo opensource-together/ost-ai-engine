@@ -1,0 +1,13 @@
+version: 2
+
+macros:
+  - name: safe_double
+    description: >
+      Safely casts a text expression to double precision, returning NULL
+      instead of erroring when the value is missing or not numeric. Intended
+      for JSON/text snapshot fields captured at event time, where legacy or
+      malformed values must not fail the query.
+    arguments:
+      - name: expr
+        type: string
+        description: "SQL expression to cast (e.g. \"context ->> 'similarityScore'\")"

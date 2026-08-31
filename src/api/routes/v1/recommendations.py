@@ -1,6 +1,9 @@
+import json
+import logging
 from typing import Any
 from uuid import UUID
 
+import numpy as np
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -13,8 +16,52 @@ from src.api.schemas import (
     GithubTrendingProjectOut,
     TrendingProjectOut,
 )
+from src.linker.recommendation.mmr import select_mmr
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/recommendations")
+
+
+def _parse_embedding(value: object) -> np.ndarray | None:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        try:
+            value = json.loads(value)
+        except json.JSONDecodeError:
+            return None
+    try:
+        embedding = np.asarray(value, dtype=float)
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if embedding.ndim != 1 or embedding.size == 0 or not np.isfinite(embedding).all():
+        return None
+    norm = np.linalg.norm(embedding)
+    if not np.isfinite(norm) or norm == 0:
+        return None
+    return embedding
+
+
+def _mmr_candidates(rows: list[dict[str, Any]]) -> list[dict[str, Any]] | None:
+    parsed_rows: list[dict[str, Any]] = []
+    dimension: int | None = None
+    for row in rows:
+        embedding = _parse_embedding(row.get("embedding"))
+        if embedding is None:
+            return None
+        if dimension is None:
+            dimension = len(embedding)
+        elif len(embedding) != dimension:
+            return None
+        parsed_rows.append({**row, "embedding": embedding})
+    return parsed_rows
+
+
+def _public_rows(rows: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    return [
+        {key: value for key, value in row.items() if key != "embedding"} for row in rows
+    ]
 
 
 @router.get("/github-trending", response_model=list[GithubTrendingProjectOut])
@@ -101,6 +148,7 @@ def get_for_you(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # project_id breaks final_score ties so the MMR candidate pool is stable.
     result = db.execute(
         text(
             """SELECT
@@ -112,13 +160,27 @@ def get_for_you(
                  mur.preference_score,
                  mur.freshness_score,
                  mur.popularity_score,
-                 mur.final_score
+                 mur.final_score,
+                 e.vector AS embedding
                FROM public.match_user_recommendation AS mur
                INNER JOIN public."Project" AS p ON p.id = mur.project_id
+               LEFT JOIN ml.embd_github_project AS e
+                 ON e."projectId" = mur.project_id
                WHERE mur.user_id = :user_id
-               ORDER BY mur.final_score DESC
+               ORDER BY mur.final_score DESC, mur.project_id
                LIMIT :limit"""
         ),
-        {"user_id": str(user_id), "limit": limit},
+        {"user_id": str(user_id), "limit": 3 * limit},
     )
-    return mapping_rows(result)
+    rows = mapping_rows(result)
+    candidates = _mmr_candidates(rows)
+    if candidates is None:
+        logger.warning(
+            "MMR disabled for user %s: invalid or missing project embedding in "
+            "%d candidates; falling back to final_score order",
+            user_id,
+            len(rows),
+        )
+        return _public_rows(rows[:limit])
+    selected = select_mmr(candidates, limit=limit)
+    return _public_rows([dict(candidate) for candidate in selected])

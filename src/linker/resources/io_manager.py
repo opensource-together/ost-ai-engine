@@ -33,6 +33,7 @@ _ALLOWED_TABLES: set[tuple[str, str]] = {
     # dbt marts / facts
     ("github", "fct_github_project"),
     ("ml", "fct_public_user"),
+    ("public", "fct_recommendation_feedback"),
     # match (public schema per dbt config)
     ("public", "match_global_recommendation"),
     ("public", "match_user_recommendation"),

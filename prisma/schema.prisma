@@ -494,3 +494,32 @@ model EmbdUser {
   @@map("embd_user")
   @@schema("ml")
 }
+
+/// Immutable logistic ranker version, one row per successful training.
+/// `coefficients` follows [similarity_score, preference_score, freshness_score,
+/// popularity_score] order; dbt reads the newest row by `version` for final_score.
+/// `baselineNdcgAt10` is the static blend's NDCG@10 on the same held-out
+/// sessions: a version is only written when `ndcgAt10` >= that baseline.
+/// DB-level CHECKs enforced in the migration SQL — Prisma's schema language
+/// cannot express CHECK constraints: cardinality(coefficients) = 4, each of
+/// the 4 coefficients is NOT NULL and finite, and intercept is finite (none
+/// of them NaN/Infinity/-Infinity).
+model RecommendationRankerModel {
+  id            String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  version       Int      @default(autoincrement())
+  coefficients  Float[]
+  intercept     Float
+  sampleCount   Int
+  positiveCount Int
+  negativeCount Int
+  precisionAt10    Float
+  recallAt10       Float
+  ndcgAt10         Float
+  baselineNdcgAt10 Float
+  createdAt        DateTime @default(now())
+
+  @@unique([version])
+  @@index([createdAt])
+  @@map("recommendation_ranker_model")
+  @@schema("ml")
+}

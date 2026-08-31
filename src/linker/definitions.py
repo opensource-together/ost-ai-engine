@@ -78,6 +78,9 @@ from .assets.classification.core_match__classify_projects import (
 )
 from .assets.embedding.core_ml__embed_projects import core_ml__embed_projects
 from .assets.embedding.core_ml__embed_users import core_ml__embed_users
+from .assets.ml.core_ml__train_recommendation_ranker import (
+    core_ml__train_recommendation_ranker,
+)
 from .assets.sync.core_public__sync_projects import core_public__sync_projects
 from .jobs.cleanup_dagster_job import cleanup_dagster_history_job
 from .jobs.project_enrichment_job import project_enrichment_job
@@ -97,6 +100,7 @@ def build_assets() -> list[Any]:
         core_public__sync_projects,
         core_ml__embed_projects,
         core_ml__embed_users,
+        core_ml__train_recommendation_ranker,
     ]
 
 
