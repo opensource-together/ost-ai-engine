@@ -79,6 +79,8 @@ class TestServiceTokenEnforced:
             "/v1/references/categories",
             "/v1/references/domains",
             "/v1/references/techstacks",
+            "/v1/dashboard",
+            "/v1/dashboard/ui",
         ],
     )
     def test_missing_header(

@@ -82,5 +82,29 @@ class ForYouProjectOut(BaseModel):
     final_score: float
 
 
+class RankerMetricsOut(BaseModel):
+    version: int
+    sample_count: int
+    positive_count: int
+    negative_count: int
+    precision_at_10: float
+    recall_at_10: float
+    ndcg_at_10: float
+    baseline_ndcg_at_10: float
+    created_at: datetime
+
+
+class DashboardOut(BaseModel):
+    user_count: int
+    project_count: int
+    bookmark_count: int
+    shown_events: int
+    positive_events: int
+    personalized_pairs: int
+    feedback_impressions: int
+    feedback_positives: int
+    ranker: RankerMetricsOut | None = None
+
+
 class ErrorOut(BaseModel):
     detail: str
