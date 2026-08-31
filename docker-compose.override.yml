@@ -35,6 +35,47 @@ services:
       db:
         condition: service_healthy
 
+  prometheus:
+    image: prom/prometheus:v2.55.1
+    container_name: ost-linker-prometheus
+    restart: unless-stopped
+    labels:
+      org.open-source-together.stack: ost
+      org.open-source-together.app: linker
+      org.open-source-together.role: prometheus
+      org.open-source-together.description: Prometheus scrape and alert rules
+    ports:
+      - "${PROMETHEUS_HOST_PORT:-9090}:9090"
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./observability/prometheus/rules.yml:/etc/prometheus/rules.yml:ro
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+    depends_on:
+      api:
+        condition: service_healthy
+
+  grafana:
+    image: grafana/grafana:11.4.0
+    container_name: ost-linker-grafana
+    restart: unless-stopped
+    labels:
+      org.open-source-together.stack: ost
+      org.open-source-together.app: linker
+      org.open-source-together.role: grafana
+      org.open-source-together.description: Grafana dashboards for Linker API
+    ports:
+      - "${GRAFANA_HOST_PORT:-3001}:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_USERS_DEFAULT_THEME: dark
+    volumes:
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - prometheus
+
   # ============================================================================
   # DATABASE (Postgres + PGVector) — dev only
   # ============================================================================
