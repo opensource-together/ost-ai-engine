@@ -90,3 +90,9 @@ docs/audit
 # Local
 .actrc
 .mcp.json
+
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/.generated/
