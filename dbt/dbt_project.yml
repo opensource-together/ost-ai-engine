@@ -25,6 +25,10 @@ vars:
   similarity_threshold: 0.25
   reco_top_n: 30
   freshness_decay_days: 90
+  similarity_source_top_n: 50
+  min_readme_chars: 50
+  min_language_confidence: 0.3
+  category_diversity_decay: 0.7
 
 target-path: "target"
 clean-targets:

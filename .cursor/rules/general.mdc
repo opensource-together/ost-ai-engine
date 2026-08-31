@@ -5,8 +5,15 @@ alwaysApply: true
 
 # General
 
-- No untested code when testing is feasible.
-- KISS over clever abstractions.
+- No untested code when testing is feasible. If tests or lint fail, fix and re-run until green.
+- KISS over clever abstractions. Comments only when the signature is not enough.
 - English only in code, comments, logs, and docs.
 - No emojis in logs or comments.
 - API layer must run self-contained (Postgres + env only); pipeline external calls are optional and mockable in tests.
+
+# Git
+
+- Branch from `develop`. Never commit on `develop` / `main` / `staging`.
+- Do not merge to those branches; open a PR and stop.
+- Conventional Commits (`feat`, `fix`, `chore`, …). Author: `spideystreet <dhicham.pro@gmail.com>`.
+- No AI attribution in commits or PRs. Tag/version only for an actual release.

@@ -70,5 +70,17 @@ class GithubTrendingProjectOut(BaseModel):
     domain_id: str | None = None
 
 
+class ForYouProjectOut(BaseModel):
+    project_id: str
+    title: str
+    description: str | None = None
+    repo_url: str | None = None
+    similarity_score: float
+    preference_score: float
+    freshness_score: float
+    popularity_score: float
+    final_score: float
+
+
 class ErrorOut(BaseModel):
     detail: str

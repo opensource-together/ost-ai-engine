@@ -1,0 +1,7 @@
+version: 2
+
+data_tests:
+  - name: visible_projects_in_user_recos
+    description: >
+      match_user_recommendation must not include projects that are neither
+      published nor trending (visibility filter, separate from ranking).

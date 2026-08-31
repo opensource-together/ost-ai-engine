@@ -40,6 +40,17 @@ TRENDING_FIELDS = {
     "stars": (int, type(None)),
     "last_synced_at": (str, type(None)),
 }
+FOR_YOU_FIELDS = {
+    "project_id": str,
+    "title": str,
+    "description": (str, type(None)),
+    "repo_url": (str, type(None)),
+    "similarity_score": (int, float),
+    "preference_score": (int, float),
+    "freshness_score": (int, float),
+    "popularity_score": (int, float),
+    "final_score": (int, float),
+}
 
 
 def _assert_shape(obj: dict, fields: dict) -> None:
@@ -234,7 +245,6 @@ class TestProjectDetailContract:
             "src.api.dependencies._session_factory",
             MagicMock(return_value=mock_db),
         ):
-
             resp = contract_client.get("/v1/projects/proj-1")
 
         assert resp.status_code == 200
@@ -272,7 +282,6 @@ class TestSimilarContract:
             "src.api.dependencies._session_factory",
             MagicMock(return_value=mock_db),
         ):
-
             resp = contract_client.get("/v1/projects/proj-1/similar")
 
         assert resp.status_code == 200
@@ -300,7 +309,6 @@ class TestTrendingContract:
             "src.api.dependencies._session_factory",
             MagicMock(return_value=mock_db),
         ):
-
             resp = contract_client.get("/v1/recommendations/trending")
 
         assert resp.status_code == 200
@@ -322,9 +330,44 @@ class TestTrendingContract:
             "src.api.dependencies._session_factory",
             MagicMock(return_value=mock_db),
         ):
-
             resp = contract_client.get("/v1/recommendations/trending")
 
         data = resp.json()[0]
         assert data["stars"] is None
         assert data["last_synced_at"] is None
+
+
+class TestForYouContract:
+    """GET /recommendations/for-you must return the ForYou project shape."""
+
+    def test_response_matches_for_you_type(self, contract_client: TestClient) -> None:
+        for_you_row = {
+            "project_id": "proj-1",
+            "title": "Linker",
+            "description": "Reco engine",
+            "repo_url": "https://github.com/ost/linker",
+            "similarity_score": 0.8,
+            "preference_score": 0.5,
+            "freshness_score": 0.4,
+            "popularity_score": 0.2,
+            "final_score": 0.62,
+        }
+        mock_db = MagicMock()
+        mock_db.execute.side_effect = [
+            _make_result(first={"id": "11111111-1111-1111-1111-111111111111"}),
+            _make_result(rows=[for_you_row]),
+        ]
+        with patch(
+            "src.api.dependencies._session_factory",
+            MagicMock(return_value=mock_db),
+        ):
+            resp = contract_client.get(
+                "/v1/recommendations/for-you"
+                "?user_id=11111111-1111-1111-1111-111111111111"
+            )
+
+        assert resp.status_code == 200
+        data = resp.json()
+        assert isinstance(data, list)
+        assert len(data) == 1
+        _assert_shape(data[0], FOR_YOU_FIELDS)

@@ -11,3 +11,4 @@ alwaysApply: false
 - Co-located `*.yml` per model with generic tests (`not_null`, `unique`, `relationships`).
 - Custom SQL tests in `dbt/tests/` for business rules only.
 - One-sentence `description` per model in YAML.
+- Lint with `uv run sqlfluff lint dbt/models/` (already in CI). Fix until clean.

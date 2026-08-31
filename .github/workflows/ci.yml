@@ -86,7 +86,7 @@ jobs:
           mkdir -p "$DAGSTER_STORAGE_DIR" "$DAGSTER_LOGS_DIR"
           uv run pytest -m integration -k test_dagster_startup --no-cov
 
-  dbt-compile:
+  dbt-build:
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -103,6 +103,7 @@ jobs:
           --health-timeout 5s
           --health-retries 20
     env:
+      DATABASE_URL: postgresql://linker_ci:linker_ci@localhost:5432/linker_ci
       POSTGRES_HOST: localhost
       POSTGRES_PORT: "5432"
       POSTGRES_USER: linker_ci
@@ -117,10 +118,17 @@ jobs:
         with:
           python-version: "3.11"
       - run: uv sync --frozen
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: package-lock.json
+      - run: npm ci
+      - run: npx prisma migrate deploy
       - run: |
           cd dbt
           uv run dbt deps
-          uv run dbt compile
+          uv run dbt build
 
   go:
     runs-on: ubuntu-latest
