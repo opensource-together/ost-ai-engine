@@ -119,7 +119,7 @@ uv run mypy src/
 uv run sqlfluff lint dbt/
 ```
 
-**`make ci-check`** matches [`.github/workflows/ci.yml`](.github/workflows/ci.yml) Python steps (ruff, sqlfluff, mypy, unit tests, Dagster smoke).
+**`make ci-check`** covers ruff, format, mypy, unit tests, and the Dagster smoke. Sqlfluff and `dbt build` run in CI (`lint` / `dbt-build`); locally use **`make ci-check-full`** when `DATABASE_URL` is set.
 
 ## PR checklist
 

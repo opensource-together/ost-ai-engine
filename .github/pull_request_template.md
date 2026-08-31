@@ -1,16 +1,16 @@
 ## Summary
 
-<!-- What does this PR do? Link related issues with "Closes #123". -->
+<!-- What this PR does. Link related issues with "Closes #123". -->
 
 ## Changes
 
-<!-- List the key changes made in this PR. -->
+<!-- Key changes. -->
 
 -
 
 ## Checklist
 
-- [ ] **`make ci-check`** passes (matches GitHub Actions Python quality job: ruff, format, mypy, unit + API + Dagster smoke — see [CONTRIBUTING.md](../CONTRIBUTING.md))
-- [ ] If you changed `dbt/`: `cd dbt && uv run dbt parse` (and `dbt test` when you have a matching DB)
+- [ ] **`make ci-check`** passes locally (ruff, format, mypy, unit tests, Dagster smoke)
+- [ ] If you changed `dbt/`: `make ci-check-full` (needs `DATABASE_URL`) or rely on CI `dbt-build` / sqlfluff
 - [ ] Commits are atomic and follow [Conventional Commits](https://www.conventionalcommits.org/)
-- [ ] PR targets **`staging`** (not `main`)
+- [ ] PR targets **`develop`** (not `main` or `staging`)

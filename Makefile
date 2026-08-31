@@ -82,4 +82,4 @@ help:
 	@echo ""
 	@grep -E '^## ' $(MAKEFILE_LIST) | sed 's/## /  /'
 
-.PHONY: setup dev test lint format typecheck build-go docker-up docker-down db-init dbt-build clean help doctor ci-check test-database
+.PHONY: setup dev test lint format typecheck build-go docker-up docker-down db-init dbt-build clean help doctor ci-check ci-check-full test-database
