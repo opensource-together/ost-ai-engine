@@ -10,6 +10,9 @@ CREATE TABLE "ml"."recommendation_ranker_model" (
     "precisionAt10" DOUBLE PRECISION NOT NULL,
     "recallAt10" DOUBLE PRECISION NOT NULL,
     "ndcgAt10" DOUBLE PRECISION NOT NULL,
+    -- NDCG@10 of the static weighted blend on the same held-out sessions:
+    -- the baseline this version had to beat to be persisted at all.
+    "baselineNdcgAt10" DOUBLE PRECISION NOT NULL,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
 
     CONSTRAINT "recommendation_ranker_model_pkey" PRIMARY KEY ("id"),

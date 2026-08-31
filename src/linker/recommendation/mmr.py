@@ -1,15 +1,35 @@
 """Greedy maximal marginal relevance selection."""
 
+import logging
 from collections.abc import Mapping, Sequence
 from typing import TypeVar, cast
 
 import numpy as np
 
+logger = logging.getLogger(__name__)
+
 CandidateT = TypeVar("CandidateT", bound=Mapping[str, object])
 
 
-def _cosine_similarity(left: np.ndarray, right: np.ndarray) -> float:
-    return float(np.dot(left, right) / (np.linalg.norm(left) * np.linalg.norm(right)))
+def _normalized_matrix(candidates: Sequence[CandidateT]) -> np.ndarray | None:
+    """Validate and L2-normalize every embedding once.
+
+    Returns None when any embedding is missing, non-numeric, ragged, empty,
+    non-finite or zero-norm: cosine similarity is then undefined for the whole
+    response, so the caller must fall back to plain relevance order.
+    """
+    try:
+        matrix = np.asarray(
+            [candidate.get("embedding") for candidate in candidates], dtype=float
+        )
+    except (TypeError, ValueError, OverflowError):
+        return None
+    if matrix.ndim != 2 or matrix.shape[1] == 0 or not np.isfinite(matrix).all():
+        return None
+    norms = np.linalg.norm(matrix, axis=1)
+    if not np.isfinite(norms).all() or (norms == 0).any():
+        return None
+    return cast("np.ndarray", matrix / norms[:, np.newaxis])
 
 
 def select_mmr(
@@ -17,43 +37,51 @@ def select_mmr(
     limit: int,
     relevance_weight: float = 0.8,
 ) -> list[CandidateT]:
-    """Select candidates by relevance and dissimilarity."""
+    """Select candidates by relevance and dissimilarity.
+
+    Falls back to the incoming relevance order when embeddings cannot be used.
+    """
     if limit <= 0:
         raise ValueError("limit must be positive")
     if not 0.0 <= relevance_weight <= 1.0:
         raise ValueError("relevance_weight must be between 0 and 1")
+    if not candidates:
+        return []
 
-    embeddings = [
-        np.asarray(
-            cast("Sequence[float]", candidate["embedding"]),
-            dtype=float,
+    normalized = _normalized_matrix(candidates)
+    if normalized is None:
+        logger.warning(
+            "MMR disabled for this response: invalid or missing project embedding "
+            "in %d candidates; falling back to relevance order",
+            len(candidates),
         )
-        for candidate in candidates
-    ]
+        return list(candidates[:limit])
+
+    relevance = np.asarray(
+        [float(cast("float", candidate["final_score"])) for candidate in candidates],
+        dtype=float,
+    )
+    diversity_weight = 1.0 - relevance_weight
     remaining = list(range(len(candidates)))
+    # Running max cosine similarity to the already selected items, so each
+    # candidate is compared only against the newest selection per round.
+    max_similarity = np.full(len(candidates), -np.inf)
     selected_indices: list[int] = []
 
     while remaining and len(selected_indices) < limit:
-        best_position = 0
-        best_score = float("-inf")
-        for position, candidate_index in enumerate(remaining):
-            relevance = float(cast("float", candidates[candidate_index]["final_score"]))
-            max_similarity = max(
-                (
-                    _cosine_similarity(
-                        embeddings[candidate_index], embeddings[selected_index]
-                    )
-                    for selected_index in selected_indices
-                ),
-                default=0.0,
+        if selected_indices:
+            penalty = max_similarity[remaining]
+        else:
+            penalty = np.zeros(len(remaining))
+        scores = relevance[remaining] * relevance_weight - diversity_weight * penalty
+        # argmax keeps the first of any tie, matching input order.
+        best_position = int(np.argmax(scores))
+        chosen_index = remaining.pop(best_position)
+        selected_indices.append(chosen_index)
+        if remaining:
+            similarities = normalized[remaining] @ normalized[chosen_index]
+            max_similarity[remaining] = np.maximum(
+                max_similarity[remaining], similarities
             )
-            score = (
-                relevance_weight * relevance - (1.0 - relevance_weight) * max_similarity
-            )
-            if score > best_score:
-                best_position = position
-                best_score = score
-
-        selected_indices.append(remaining.pop(best_position))
 
     return [candidates[index] for index in selected_indices]

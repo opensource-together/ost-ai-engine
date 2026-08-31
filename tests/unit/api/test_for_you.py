@@ -1,3 +1,4 @@
+import logging
 from unittest.mock import MagicMock
 from uuid import UUID
 
@@ -167,6 +168,42 @@ class TestForYou:
             "first",
             "second",
         ]
+
+    def test_invalid_embedding_logs_disabled_mmr(
+        self, client: TestClient, caplog: pytest.LogCaptureFixture
+    ) -> None:
+        rows = [
+            _recommendation("first", 1.0, "[1.0, 0.0]"),
+            _recommendation("second", 0.9, None),
+        ]
+        session = _session_user_then_rows({"id": str(USER_ID)}, rows)
+        app.dependency_overrides[get_db] = lambda: session
+        try:
+            with caplog.at_level(
+                logging.WARNING, logger="src.api.routes.v1.recommendations"
+            ):
+                response = client.get(
+                    f"/v1/recommendations/for-you?user_id={USER_ID}&limit=2"
+                )
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+
+        assert response.status_code == 200
+        assert "MMR" in caplog.text
+
+    def test_candidate_pool_is_deterministic_on_score_ties(
+        self, client: TestClient
+    ) -> None:
+        """project_id breaks final_score ties so the pool is stable across runs."""
+        session = _session_user_then_rows({"id": str(USER_ID)}, [])
+        app.dependency_overrides[get_db] = lambda: session
+        try:
+            client.get(f"/v1/recommendations/for-you?user_id={USER_ID}")
+        finally:
+            app.dependency_overrides.pop(get_db, None)
+
+        sql = " ".join(str(session.execute.call_args_list[1].args[0]).split())
+        assert "ORDER BY mur.final_score DESC, mur.project_id" in sql
 
     def test_response_payload_excludes_internal_embedding(
         self, client: TestClient

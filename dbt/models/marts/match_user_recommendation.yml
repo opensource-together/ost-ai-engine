@@ -67,6 +67,8 @@ models:
           ranker model when one exists with exactly 4 finite coefficients and a
           finite intercept; otherwise the static weighted blend of similarity
           (0.40), preference (0.35), freshness (0.15), and popularity (0.10).
+          Setting `enable_learned_ranker: false` forces that static blend even
+          when a model version is persisted.
         data_type: double precision
         constraints:
           - type: not_null
@@ -489,6 +491,117 @@ unit_tests:
               1 as version,
               array[0.1, 0.2, 'NaN'::double precision, 0.4]::double precision[] as coefficients,
               0.0::double precision as intercept
+      - input: ref('fct_github_project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              100 as stars,
+              '2000-01-01'::timestamp as pushed_at,
+              0.9::double precision as language_confidence
+      - input: ref('stg_github__readme')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as project_id,
+              repeat('lorem ipsum dolor sit amet ', 5) as content
+      - input: ref('match_global_recommendation')
+        format: sql
+        rows: |
+          select '20000000-0000-0000-0000-000000000001'::uuid as project_id
+      - input: ref('stg_public__recommendation_event')
+        format: sql
+        rows: |
+          select
+              cast(null as uuid) as user_id,
+              cast(null as uuid) as project_id,
+              cast(null as text) as event_type,
+              cast(null as timestamp) as occurred_at
+          where false
+      - input: ref('stg_public__project_bookmark')
+        format: sql
+        rows: |
+          select cast(null as uuid) as user_id, cast(null as uuid) as project_id
+          where false
+    expect:
+      rows:
+        - {
+            user_id: "10000000-0000-0000-0000-000000000001",
+            project_id: "20000000-0000-0000-0000-000000000001",
+            similarity_score: 0.0,
+            preference_score: 0.0,
+            freshness_score: 0.0,
+            popularity_score: 1.0,
+            final_score: 0.10,
+          }
+
+  - name: match_user_recommendation_learned_ranker_kill_switch
+    description: >
+      With `enable_learned_ranker: false`, a perfectly valid persisted ranker
+      model is ignored: final_score is the static weighted blend, byte-for-byte
+      the same value as when no model exists. Lets operators force the static
+      fallback with `dbt build --vars '{enable_learned_ranker: false}'` without
+      deleting any model version.
+    model: match_user_recommendation
+    overrides:
+      vars:
+        enable_learned_ranker: false
+    given:
+      - input: source('public', 'user_tech_stack')
+        format: sql
+        rows: |
+          select
+              '10000000-0000-0000-0000-000000000001'::uuid as "userId",
+              '30000000-0000-0000-0000-000000000001'::uuid as "techStackId"
+      - input: source('public', 'user_categories')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "categoryId"
+          where false
+      - input: source('public', 'user_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as uuid) as "domainId"
+          where false
+      - input: source('public', 'project_tech_stack')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "techStackId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_category')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "categoryId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'project_domain')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "domainId", cast(null as uuid) as "projectId"
+          where false
+      - input: source('public', 'Project')
+        format: sql
+        rows: |
+          select
+              '20000000-0000-0000-0000-000000000001'::uuid as id,
+              true as published,
+              false as trending
+      - input: source('ml', 'embd_user')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "userId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'embd_github_project')
+        format: sql
+        rows: |
+          select cast(null as uuid) as "projectId", cast(null as vector) as vector
+          where false
+      - input: source('ml', 'recommendation_ranker_model')
+        format: sql
+        rows: |
+          select
+              1 as version,
+              array[0.10, 0.20, 0.30, 0.40]::double precision[] as coefficients,
+              0.05::double precision as intercept
       - input: ref('fct_github_project')
         format: sql
         rows: |

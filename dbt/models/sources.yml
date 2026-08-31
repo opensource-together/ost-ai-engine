@@ -106,6 +106,12 @@ sources:
           until the first successful training (needs >= 100 impressions with
           >= 10 of each label, from real feature snapshots supplied by the
           frontend), and a freshness check would fail before that point.
+          A version is only written when its held-out NDCG@10 is at least the
+          static blend's NDCG@10 on the same sessions (`baselineNdcgAt10`), so
+          activating a learned model is impossible until the frontend emits
+          per-impression score snapshots — until then the static blend stays.
+          CI (and any deploy) applies `prisma migrate deploy` before
+          `dbt build`, so this table exists before models referencing it run.
         loaded_at_field: '"createdAt"'
 
   - name: public

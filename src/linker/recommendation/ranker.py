@@ -3,6 +3,7 @@
 import math
 from collections.abc import Sequence
 from dataclasses import dataclass
+from typing import cast
 
 import numpy as np
 import pandas as pd
@@ -17,6 +18,11 @@ FEATURE_ORDER: tuple[str, str, str, str] = (
     "freshness_score",
     "popularity_score",
 )
+
+# Static weighted blend currently in production, in FEATURE_ORDER order. Must
+# stay in sync with w_similarity/w_preference/w_freshness/w_popularity in
+# dbt/dbt_project.yml: it is the baseline a learned model has to beat.
+STATIC_SCORE_WEIGHTS: tuple[float, float, float, float] = (0.40, 0.35, 0.15, 0.10)
 
 MIN_IMPRESSIONS = 100
 MIN_POSITIVES = 10
@@ -45,6 +51,7 @@ class RankerTrainingResult:
     precision_at_10: float | None = None
     recall_at_10: float | None = None
     ndcg_at_10: float | None = None
+    baseline_ndcg_at_10: float | None = None
 
 
 def _complete_impressions(impressions: pd.DataFrame) -> pd.DataFrame:
@@ -115,8 +122,11 @@ def _average_session_metrics(
     """Average Precision/Recall/NDCG@10 per session over holdout impressions.
 
     Ranking metrics are computed within each session (a single shown list)
-    and averaged across sessions, rather than pooled globally. Returns None
-    when the holdout has no sessions to score.
+    and averaged across sessions, rather than pooled globally. Sessions
+    without a single positive item are skipped: as in a conventional IR query
+    set, a query with no relevant document has no defined ranking quality, and
+    counting it as zero would only dilute the average with sessions no ranker
+    can improve. Returns None when no session is evaluable.
     """
     if len(holdout) == 0:
         return None
@@ -127,6 +137,8 @@ def _average_session_metrics(
     ndcgs: list[float] = []
     for _session_key, group in scored.groupby(_SESSION_COLUMN, sort=False):
         labels = _binary_labels(group)
+        if labels.sum() == 0:
+            continue
         relevance = _ranked_relevance(labels, group["_predicted_score"].to_numpy())
         precisions.append(precision_at_k(relevance, _METRIC_K))
         recalls.append(recall_at_k(relevance, _METRIC_K))
@@ -138,6 +150,14 @@ def _average_session_metrics(
         sum(precisions) / len(precisions),
         sum(recalls) / len(recalls),
         sum(ndcgs) / len(ndcgs),
+    )
+
+
+def _static_scores(frame: pd.DataFrame) -> np.ndarray:
+    """Score rows with the static weighted blend dbt applies today."""
+    return cast(
+        "np.ndarray",
+        _feature_matrix(frame) @ np.asarray(STATIC_SCORE_WEIGHTS, dtype=float),
     )
 
 
@@ -154,6 +174,18 @@ def train_ranker(impressions: pd.DataFrame) -> RankerTrainingResult:
     Precision/Recall/NDCG@10 are computed per complete held-out session and
     averaged across sessions. The coefficients actually persisted are then
     fit separately on all complete rows (train + holdout combined).
+
+    Quality gate: the current static weighted blend is scored on the exact
+    same held-out sessions, and a learned model whose NDCG@10 is below that
+    baseline is rejected (not-trained no-op) instead of being persisted. The
+    comparison is relative to the live baseline, so no arbitrary metric
+    threshold is involved.
+
+    Known limitation: labels come from impressions the current ranker chose
+    and ordered, with no exploration arm and no position-bias correction, so
+    the model is fit on click feedback biased towards what was already shown
+    high in the list. The baseline gate bounds the damage; it does not remove
+    the bias.
     """
     complete = _complete_impressions(impressions)
     sample_count = len(complete)
@@ -198,12 +230,35 @@ def train_ranker(impressions: pd.DataFrame) -> RankerTrainingResult:
     if session_metrics is None:
         return RankerTrainingResult(
             trained=False,
-            reason="session holdout produced no sessions to evaluate",
+            reason=(
+                "session holdout produced no evaluable session: no held-out "
+                "session contains a positive impression"
+            ),
             sample_count=sample_count,
             positive_count=positive_count,
             negative_count=negative_count,
         )
     precision, recall, ndcg = session_metrics
+
+    # Same held-out sessions, scored with the live static blend.
+    baseline_metrics = _average_session_metrics(holdout_df, _static_scores(holdout_df))
+    baseline_ndcg = baseline_metrics[2] if baseline_metrics is not None else None
+    if baseline_ndcg is not None and ndcg < baseline_ndcg:
+        return RankerTrainingResult(
+            trained=False,
+            reason=(
+                f"learned model is worse than the current static score: "
+                f"NDCG@10 {ndcg:.6f} < static baseline NDCG@10 "
+                f"{baseline_ndcg:.6f} on the same held-out sessions"
+            ),
+            sample_count=sample_count,
+            positive_count=positive_count,
+            negative_count=negative_count,
+            precision_at_10=precision,
+            recall_at_10=recall,
+            ndcg_at_10=ndcg,
+            baseline_ndcg_at_10=baseline_ndcg,
+        )
 
     final_model = _fit_logistic(_feature_matrix(complete), _binary_labels(complete))
     c0, c1, c2, c3 = (float(c) for c in final_model.coef_[0])
@@ -218,6 +273,7 @@ def train_ranker(impressions: pd.DataFrame) -> RankerTrainingResult:
         precision_at_10=precision,
         recall_at_10=recall,
         ndcg_at_10=ndcg,
+        baseline_ndcg_at_10=baseline_ndcg,
     )
 
 

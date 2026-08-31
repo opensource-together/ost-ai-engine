@@ -14,8 +14,9 @@ DEFAULT_OWNERS = ["team:OST/spideyai-X"]
 _INSERT_MODEL_QUERY = """
     INSERT INTO "ml"."recommendation_ranker_model"
         ("id", "coefficients", "intercept", "sampleCount", "positiveCount",
-         "negativeCount", "precisionAt10", "recallAt10", "ndcgAt10")
-    VALUES (uuid_generate_v4(), %s, %s, %s, %s, %s, %s, %s, %s)
+         "negativeCount", "precisionAt10", "recallAt10", "ndcgAt10",
+         "baselineNdcgAt10")
+    VALUES (uuid_generate_v4(), %s, %s, %s, %s, %s, %s, %s, %s, %s)
     RETURNING "version"
 """
 
@@ -50,6 +51,7 @@ def _persist_model(cur: Any, result: RankerTrainingResult) -> int:
             result.precision_at_10,
             result.recall_at_10,
             result.ndcg_at_10,
+            result.baseline_ndcg_at_10,
         ),
     )
     row = cur.fetchone()
@@ -81,9 +83,10 @@ def core_ml__train_recommendation_ranker(
     """Trains the logistic ranker from `fct_recommendation_feedback`.
 
     Persists one immutable version row to `ml.recommendation_ranker_model` on
-    success. Insufficient data is a successful no-op: no row is written and
-    the current static dbt score is preserved on the next
-    `match_user_recommendation` run.
+    success. Insufficient data, no evaluable held-out session, or a model that
+    loses to the static baseline on the held-out sessions are all successful
+    no-ops: no row is written and the current static dbt score is preserved on
+    the next `match_user_recommendation` run.
     """
     result = train_ranker(feedback_df)
 
@@ -97,6 +100,8 @@ def core_ml__train_recommendation_ranker(
                 "sample_count": result.sample_count,
                 "positive_count": result.positive_count,
                 "negative_count": result.negative_count,
+                "ndcg_at_10": result.ndcg_at_10,
+                "baseline_ndcg_at_10": result.baseline_ndcg_at_10,
             },
         )
 
@@ -115,5 +120,6 @@ def core_ml__train_recommendation_ranker(
             "precision_at_10": result.precision_at_10,
             "recall_at_10": result.recall_at_10,
             "ndcg_at_10": result.ndcg_at_10,
+            "baseline_ndcg_at_10": result.baseline_ndcg_at_10,
         },
     )

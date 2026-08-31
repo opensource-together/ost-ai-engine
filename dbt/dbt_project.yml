@@ -29,6 +29,9 @@ vars:
   min_readme_chars: 50
   min_language_confidence: 0.3
   category_diversity_decay: 0.7
+  # Kill switch: `dbt build --vars '{enable_learned_ranker: false}'` ignores any
+  # persisted ranker model and forces the static weighted blend.
+  enable_learned_ranker: true
 
 target-path: "target"
 clean-targets:

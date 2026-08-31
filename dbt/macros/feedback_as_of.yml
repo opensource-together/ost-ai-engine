@@ -1,0 +1,8 @@
+version: 2
+
+macros:
+  - name: feedback_as_of
+    description: >
+      Wall clock (`now()`) used by fct_recommendation_feedback for its label
+      maturity and rolling-window filters. Isolated in a macro so unit tests
+      can override it with a fixed timestamp and stay deterministic.

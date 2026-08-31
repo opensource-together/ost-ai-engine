@@ -302,7 +302,10 @@ latest_ranker_model AS (
     -- scoring on bad numbers. Postgres treats NaN as equal to itself (unlike
     -- IEEE 754), so `= 'NaN'` reliably detects it.
     WHERE
-        cardinality(coefficients) = 4
+        -- Kill switch: `--vars '{enable_learned_ranker: false}'` empties this
+        -- CTE, so final_score falls back to the exact static blend.
+        {{ 'true' if var('enable_learned_ranker', true) else 'false' }}
+        AND cardinality(coefficients) = 4
         AND coefficients[1] NOT IN (
             'NaN'::double precision, 'Infinity'::double precision, '-Infinity'::double precision
         )

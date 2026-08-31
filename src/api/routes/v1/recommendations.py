@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Any
 from uuid import UUID
 
@@ -16,6 +17,8 @@ from src.api.schemas import (
     TrendingProjectOut,
 )
 from src.linker.recommendation.mmr import select_mmr
+
+logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/recommendations")
 
@@ -145,6 +148,7 @@ def get_for_you(
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # project_id breaks final_score ties so the MMR candidate pool is stable.
     result = db.execute(
         text(
             """SELECT
@@ -163,7 +167,7 @@ def get_for_you(
                LEFT JOIN ml.embd_github_project AS e
                  ON e."projectId" = mur.project_id
                WHERE mur.user_id = :user_id
-               ORDER BY mur.final_score DESC
+               ORDER BY mur.final_score DESC, mur.project_id
                LIMIT :limit"""
         ),
         {"user_id": str(user_id), "limit": 3 * limit},
@@ -171,6 +175,12 @@ def get_for_you(
     rows = mapping_rows(result)
     candidates = _mmr_candidates(rows)
     if candidates is None:
+        logger.warning(
+            "MMR disabled for user %s: invalid or missing project embedding in "
+            "%d candidates; falling back to final_score order",
+            user_id,
+            len(rows),
+        )
         return _public_rows(rows[:limit])
     selected = select_mmr(candidates, limit=limit)
     return _public_rows([dict(candidate) for candidate in selected])

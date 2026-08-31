@@ -15,6 +15,7 @@ from src.linker.recommendation.ranker import (
     MIN_IMPRESSIONS,
     MIN_POSITIVES,
     RankerTrainingResult,
+    train_ranker,
 )
 
 
@@ -89,6 +90,38 @@ class TestInsufficientData:
         mock_get_cursor.assert_not_called()
 
 
+class TestQualityGate:
+    @patch("src.linker.assets.ml.core_ml__train_recommendation_ranker.get_db_cursor")
+    @patch("src.linker.assets.ml.core_ml__train_recommendation_ranker.train_ranker")
+    def test_model_worse_than_static_baseline_is_not_persisted(
+        self, mock_train_ranker: MagicMock, mock_get_cursor: MagicMock, tmp_path: Any
+    ) -> None:
+        mock_train_ranker.return_value = RankerTrainingResult(
+            trained=False,
+            reason=(
+                "learned model is worse than the current static score: "
+                "NDCG@10 0.300000 < static baseline NDCG@10 1.000000 on the "
+                "same held-out sessions"
+            ),
+            sample_count=200,
+            positive_count=20,
+            negative_count=180,
+            precision_at_10=0.1,
+            recall_at_10=1.0,
+            ndcg_at_10=0.3,
+            baseline_ndcg_at_10=1.0,
+        )
+        context = _context(tmp_path)
+
+        output = core_ml__train_recommendation_ranker(context, pd.DataFrame())
+
+        assert output.metadata["status"].value == "not_trained"
+        assert output.metadata["ndcg_at_10"].value == 0.3
+        assert output.metadata["baseline_ndcg_at_10"].value == 1.0
+        assert "static baseline" in str(output.metadata["reason"].value)
+        mock_get_cursor.assert_not_called()
+
+
 class TestSuccessfulTraining:
     @patch("src.linker.assets.ml.core_ml__train_recommendation_ranker.get_db_cursor")
     def test_persists_model_and_returns_version_and_metrics(
@@ -119,6 +152,7 @@ class TestSuccessfulTraining:
         assert output.metadata["precision_at_10"].value is not None
         assert output.metadata["recall_at_10"].value is not None
         assert output.metadata["ndcg_at_10"].value is not None
+        assert output.metadata["baseline_ndcg_at_10"].value is not None
 
     @patch("src.linker.assets.ml.core_ml__train_recommendation_ranker.get_db_cursor")
     def test_insert_receives_coefficients_in_feature_order(
@@ -142,6 +176,30 @@ class TestSuccessfulTraining:
         coefficients = params[0]
         assert len(coefficients) == 4
         assert all(isinstance(c, float) for c in coefficients)
+
+    @patch("src.linker.assets.ml.core_ml__train_recommendation_ranker.get_db_cursor")
+    def test_insert_persists_the_static_baseline_ndcg(
+        self, mock_get_cursor: MagicMock, tmp_path: Any
+    ) -> None:
+        fake_cur = MagicMock()
+        fake_cur.fetchone.return_value = {"version": 1}
+        cursor_cm = MagicMock()
+        cursor_cm.__enter__.return_value = fake_cur
+        cursor_cm.__exit__.return_value = False
+        mock_get_cursor.return_value = cursor_cm
+
+        feedback_df = _feedback_df(
+            n_positive=MIN_POSITIVES, n_negative=MIN_IMPRESSIONS - MIN_POSITIVES
+        )
+        context = _context(tmp_path)
+
+        core_ml__train_recommendation_ranker(context, feedback_df)
+
+        expected = train_ranker(feedback_df).baseline_ndcg_at_10
+        query, params = fake_cur.execute.call_args[0]
+        assert "baselineNdcgAt10" in query
+        assert expected is not None
+        assert params[-1] == pytest.approx(expected)
 
 
 class TestPersistModelInvariants:

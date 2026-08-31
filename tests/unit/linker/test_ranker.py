@@ -13,6 +13,7 @@ from src.linker.recommendation.ranker import (
     MIN_IMPRESSIONS,
     MIN_NEGATIVES,
     MIN_POSITIVES,
+    STATIC_SCORE_WEIGHTS,
     RankerTrainingResult,
     _average_session_metrics,
     _session_holdout_split,
@@ -90,6 +91,36 @@ def _multi_item_sessions(n_sessions: int, items_per_session: int = 10) -> pd.Dat
                     "is_positive": is_positive,
                 }
             )
+    return pd.DataFrame(rows)
+
+
+def _inverted_holdout_sessions() -> pd.DataFrame:
+    """Sessions whose held-out labels contradict the training labels.
+
+    The holdout is picked first with the same deterministic splitter
+    `train_ranker` uses, so the feature/label inversion always lands on the
+    held-out sessions.
+    """
+    base = _multi_item_sessions(n_sessions=20, items_per_session=10)
+    split = _session_holdout_split(base)
+    assert split is not None
+    held_out_sessions = set(split[1]["session_key"])
+
+    rows: list[dict[str, Any]] = []
+    for row in base.to_dict("records"):
+        is_positive = bool(row["is_positive"])
+        inverted = row["session_key"] in held_out_sessions
+        high_similarity = is_positive if inverted else not is_positive
+        rows.append(
+            {
+                "session_key": row["session_key"],
+                "similarity_score": 0.9 if high_similarity else 0.1,
+                "preference_score": 0.5,
+                "freshness_score": 0.5,
+                "popularity_score": 0.1 if high_similarity else 0.9,
+                "is_positive": is_positive,
+            }
+        )
     return pd.DataFrame(rows)
 
 
@@ -322,6 +353,35 @@ class TestAverageSessionMetrics:
         holdout = pd.DataFrame(columns=["session_key", "is_positive"])
         assert _average_session_metrics(holdout, np.array([])) is None
 
+    def test_skips_sessions_without_a_positive_item(self) -> None:
+        """Sessions with no relevant item are not part of the query set."""
+        holdout = pd.DataFrame(
+            [
+                {"session_key": "with-positive", "is_positive": True},
+                {"session_key": "with-positive", "is_positive": False},
+                {"session_key": "all-negative", "is_positive": False},
+                {"session_key": "all-negative", "is_positive": False},
+            ]
+        )
+        scores = np.array([0.9, 0.1, 0.9, 0.1])
+
+        result = _average_session_metrics(holdout, scores)
+
+        assert result is not None
+        precision, recall, ndcg = result
+        assert precision == pytest.approx(precision_at_k([1, 0], 10))
+        assert recall == pytest.approx(recall_at_k([1, 0], 10))
+        assert ndcg == pytest.approx(ndcg_at_k([1, 0], 10))
+
+    def test_returns_none_when_no_session_has_a_positive_item(self) -> None:
+        holdout = pd.DataFrame(
+            [
+                {"session_key": "s1", "is_positive": False},
+                {"session_key": "s2", "is_positive": False},
+            ]
+        )
+        assert _average_session_metrics(holdout, np.array([0.9, 0.1])) is None
+
 
 class TestTrainRankerFit:
     def test_uses_feature_columns_in_declared_order(self) -> None:
@@ -408,6 +468,60 @@ class TestTrainRankerFit:
 
         assert result.coefficients == pytest.approx(tuple(model.coef_[0]))
         assert result.intercept == pytest.approx(model.intercept_[0])
+
+
+class TestHoldoutQuerySet:
+    def test_holdout_without_any_positive_session_is_not_trained(self) -> None:
+        """No held-out session has a positive item: nothing to evaluate."""
+        impressions = _multi_item_sessions(n_sessions=20, items_per_session=10)
+        split = _session_holdout_split(impressions)
+        assert split is not None
+        _train_df, holdout_df = split
+
+        frame = impressions.copy()
+        held_out = frame["session_key"].isin(set(holdout_df["session_key"]))
+        frame.loc[held_out, "is_positive"] = False
+
+        result = train_ranker(frame)
+
+        assert result.trained is False
+        assert result.reason is not None
+        assert "positive" in result.reason
+        assert result.coefficients is None
+
+
+class TestStaticBaselineGate:
+    def test_weights_match_the_dbt_static_blend(self) -> None:
+        """Must stay in sync with w_* vars in dbt/dbt_project.yml."""
+        assert STATIC_SCORE_WEIGHTS == (0.40, 0.35, 0.15, 0.10)
+
+    def test_reports_baseline_ndcg_alongside_learned_ndcg(self) -> None:
+        impressions = _multi_item_sessions(n_sessions=15, items_per_session=10)
+        result = train_ranker(impressions)
+
+        assert result.trained is True
+        assert result.baseline_ndcg_at_10 is not None
+        assert result.ndcg_at_10 is not None
+        assert result.ndcg_at_10 >= result.baseline_ndcg_at_10
+
+    def test_model_worse_than_static_score_is_not_persisted(self) -> None:
+        """Training data contradicts the holdout, so the fit generalizes worse.
+
+        Train sessions mark the low-similarity/high-popularity candidate as
+        positive; held-out sessions mark the opposite. The static blend
+        (similarity 0.40 > popularity 0.10) still ranks held-out positives
+        first, so the learned model must be rejected.
+        """
+        result = train_ranker(_inverted_holdout_sessions())
+
+        assert result.trained is False
+        assert result.coefficients is None
+        assert result.intercept is None
+        assert result.reason is not None
+        assert "NDCG@10" in result.reason
+        assert result.ndcg_at_10 is not None
+        assert result.baseline_ndcg_at_10 is not None
+        assert result.ndcg_at_10 < result.baseline_ndcg_at_10
 
 
 class TestSigmoidScore:
