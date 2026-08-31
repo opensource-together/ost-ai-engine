@@ -104,7 +104,3 @@ class DashboardOut(BaseModel):
     feedback_impressions: int
     feedback_positives: int
     ranker: RankerMetricsOut | None = None
-
-
-class ErrorOut(BaseModel):
-    detail: str

@@ -15,8 +15,8 @@ Written deliverables (later): CDC, roadmap, technical report. Product code/docs 
 |------|--------|--------|
 | 1 | Collect | Go scraper / fetcher / trending → `github.raw_*` |
 | 2 | ETL | Dagster + dbt (`stg_`/`int_`/`fct_`/`match_*`) + Prisma/pgvector |
-| 3 | Consume | Mistral classify, MiniLM embeddings, hybrid reco. No MLflow. Dagster UI for runs |
+| 3 | Consume | Mistral classify, MiniLM embeddings, hybrid reco, ranker metrics. No MLflow. Dagster UI for runs; `GET /v1/dashboard` for reco KPIs |
 | 4 | Prod | FastAPI `/v1` + Docker Compose |
-| 5 | Infra | GitHub Actions + GHCR. Terraform later. Grafana later |
+| 5 | Infra | GitHub Actions + GHCR. Prometheus/Grafana in Compose (`observability/`). Terraform in `infra/terraform/` |
 
 Fiches are **examples**, not the subject. X For You principles (retrieve → filter → score → top-K) apply to reco, not a Phoenix clone.

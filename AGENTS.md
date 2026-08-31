@@ -93,7 +93,7 @@ pytest tests/unit                                  # Unit tests (includes tests/
 pytest -m integration                              # Dagster startup smoke test
 pytest tests/integration/api                       # Live Postgres API tier (needs DATABASE_URL)
 ```
-`make ci-check` runs ruff, sqlfluff, mypy, unit tests, and the Dagster smoke — aligned with `.github/workflows/ci.yml`. It does **not** run the Postgres tier; use **`make test-database`** when **`DATABASE_URL`** points at a migrated, seeded DB.
+`make ci-check` runs ruff, format, mypy, unit tests, and the Dagster smoke. It does **not** run sqlfluff, dbt, Go, Docker, or the Postgres API tier. Use **`make ci-check-full`** for sqlfluff (needs `DATABASE_URL`). Use **`make test-database`** when **`DATABASE_URL`** points at a migrated, seeded DB.
 
 #### Verification tiers (CI vs local Postgres)
 
@@ -116,10 +116,9 @@ cd src/services/go/scraper && go test ./...   # Scraper tests
 
 ### Go Binaries (must be compiled before local use)
 ```bash
-cd src/services/go/scraper && go build -o github-scraper main.go
-cd src/services/go/fetcher && go build -o ost-fetcher main.go
+make build-go   # writes data/github-scraper, data/ost-fetcher, data/ost-trending
 ```
-Set `GO_SCRAPER_PATH`, `GO_FETCHER_PATH`, and (if used) `GO_TRENDING_PATH` in `.env` to the compiled binary paths.
+Set `GO_SCRAPER_PATH`, `GO_FETCHER_PATH`, and `GO_TRENDING_PATH` in `.env` to those `data/` binaries (see `.env.example`). Docker images install them as `ost-scraper` / `ost-fetcher` / `ost-trending` under `/usr/local/bin`.
 
 ### Utility Scripts
 ```bash
@@ -168,6 +167,8 @@ When fixing a bug, always follow this order:
 
 | Workflow | Trigger | Purpose |
 |----------|---------|---------|
+| `ci.yml` | PR/push to develop, staging, main | Lint, typecheck, unit, dbt, Go, integration-db, Docker build, Terraform validate |
+| `cd.yml` | Push to main / version tags | Re-run CI then build/push `ghcr.io/opensource-together/ia` (legacy image name) |
 | `publish-prod.yml` | Release published | Docker build/push to `ghcr.io/opensource-together/ia` |
 | `publish-develop.yml` | PR to main/staging + push to staging | Quality checks (reusable) + Docker build/push |
 | `sync-docs-submodule.yml` | PR to main/staging (path: `ost-docs`) | Sync docs submodule to `ost-docs` repo |
