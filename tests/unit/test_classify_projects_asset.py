@@ -197,6 +197,45 @@ class TestClassifyProjectsAsset:
         "src.linker.assets.classification.core_match__classify_projects._persist_failures",
         return_value=1,
     )
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects._persist_usage"
+    )
+    def test_asset_records_usage_on_quota_errors(
+        self,
+        mock_usage: MagicMock,
+        mock_persist: MagicMock,
+        mock_get_db: MagicMock,
+        mock_db_cursor: MagicMock,
+    ) -> None:
+        cm = MagicMock()
+        cm.__enter__.return_value = mock_db_cursor
+        mock_get_db.return_value = cm
+
+        llm = MagicMock()
+        llm.model_id = "mistral-small-latest"
+        llm.prompt.fingerprint = "v1-fp"
+        llm.classify_project.side_effect = RuntimeError(
+            "Mistral API error: Status 402 insufficient_quota"
+        )
+
+        df = pd.DataFrame([{"id": "fail-1", "title": "Failed Project"}])
+        context = build_asset_context(resources={"llm_classifier": llm})
+
+        with pytest.raises(RuntimeError, match="all 1 project"):
+            core_match__classify_projects(context, df)
+
+        mock_usage.assert_called_once()
+        kwargs = mock_usage.call_args.kwargs
+        assert kwargs["http_402"] == 1
+        assert kwargs["requests"] == 1
+
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects.get_db_cursor"
+    )
+    @patch(
+        "src.linker.assets.classification.core_match__classify_projects._persist_failures",
+        return_value=1,
+    )
     def test_asset_partial_failures_still_succeed(
         self, mock_persist: MagicMock, mock_get_db: MagicMock, mock_db_cursor: MagicMock
     ) -> None:
