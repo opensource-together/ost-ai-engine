@@ -14,6 +14,8 @@ class TestPrometheusConfig:
         api = jobs["linker-api"]
         assert api["metrics_path"] == "/metrics"
         assert api["static_configs"][0]["targets"] == ["api:8000"]
+        assert jobs["docker-stats"]["metrics_path"] == "/"
+        assert jobs["docker-stats"]["static_configs"][0]["targets"] == ["docker-stats:9487"]
         assert "/etc/prometheus/rules.yml" in config["rule_files"]
 
     def test_alert_rules_cover_down_and_error_rate(self) -> None:
@@ -37,3 +39,12 @@ class TestGrafanaProvisioning:
         dashboard = json.loads((GRAFANA / "dashboards" / "linker-api.json").read_text())
         assert dashboard["uid"] == "ost-linker-api"
         assert dashboard["title"] == "OST Linker API"
+
+    def test_container_dashboard_uid_is_stable(self) -> None:
+        import json
+
+        dashboard = json.loads(
+            (GRAFANA / "dashboards" / "linker-containers.json").read_text()
+        )
+        assert dashboard["uid"] == "ost-linker-containers"
+        assert dashboard["title"] == "OST Linker containers"
