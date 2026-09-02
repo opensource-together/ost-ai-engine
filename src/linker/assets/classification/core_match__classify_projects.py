@@ -31,6 +31,61 @@ _COST_INPUT_PER_M = 0.20
 _COST_OUTPUT_PER_M = 0.60
 
 
+def _estimated_cost_usd(prompt_tokens: int, completion_tokens: int) -> float:
+    return round(
+        (prompt_tokens / 1_000_000) * _COST_INPUT_PER_M
+        + (completion_tokens / 1_000_000) * _COST_OUTPUT_PER_M,
+        4,
+    )
+
+
+def _count_status(failures: list[tuple[str, str]], code: str) -> int:
+    return sum(1 for _, error in failures if code in error)
+
+
+def _persist_usage(
+    log: Any,
+    *,
+    model: str,
+    prompt_tokens: int,
+    completion_tokens: int,
+    estimated_cost_usd: float,
+    requests: int,
+    http_402: int,
+    http_429: int,
+) -> None:
+    """Append one classifier usage row. Must not fail the asset."""
+    if (
+        prompt_tokens == 0
+        and completion_tokens == 0
+        and requests == 0
+        and http_402 == 0
+        and http_429 == 0
+    ):
+        return
+    try:
+        with get_db_cursor(commit=True) as cur:
+            cur.execute(
+                """
+                INSERT INTO match.llm_usage
+                    ("model", "promptTokens", "completionTokens",
+                     "estimatedCostUsd", requests, "http402", "http429")
+                VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    model,
+                    prompt_tokens,
+                    completion_tokens,
+                    estimated_cost_usd,
+                    requests,
+                    http_402,
+                    http_429,
+                ),
+            )
+    except Exception as e:
+        log.warning(f"llm_usage write failed: {type(e).__name__}: {e}")
+
+
 def _compute_next_retry(attempts: int) -> datetime:
     hours = min(_DLQ_BACKOFF_BASE_HOURS * (2 ** (attempts - 1)), _DLQ_BACKOFF_CAP_HOURS)
     return datetime.now(UTC) + timedelta(hours=hours)
@@ -255,10 +310,18 @@ def core_match__classify_projects(
 
     dlq_persisted = _persist_failures(failures, context.log)
 
-    estimated_cost_usd = round(
-        (total_prompt_tokens / 1_000_000) * _COST_INPUT_PER_M
-        + (total_completion_tokens / 1_000_000) * _COST_OUTPUT_PER_M,
-        4,
+    estimated_cost_usd = _estimated_cost_usd(
+        total_prompt_tokens, total_completion_tokens
+    )
+    _persist_usage(
+        context.log,
+        model=str(llm.model_id),
+        prompt_tokens=total_prompt_tokens,
+        completion_tokens=total_completion_tokens,
+        estimated_cost_usd=estimated_cost_usd,
+        requests=total + rate_limit_hits,
+        http_402=_count_status(failures, "402"),
+        http_429=_count_status(failures, "429") + rate_limit_hits,
     )
 
     context.log.info(

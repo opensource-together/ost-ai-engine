@@ -281,6 +281,23 @@ model ProjectClassificationFailure {
   @@schema("match")
 }
 
+/// Append-only classifier usage for Prometheus/Grafana (tokens and estimated USD).
+model LlmUsage {
+  id               String   @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
+  model            String
+  promptTokens     Int
+  completionTokens Int
+  estimatedCostUsd Float
+  requests         Int
+  http402          Int      @default(0)
+  http429          Int      @default(0)
+  createdAt        DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("llm_usage")
+  @@schema("match")
+}
+
 model Project {
   id                    String                 @id @default(dbgenerated("uuid_generate_v4()")) @db.Uuid
   title                 String

@@ -1,0 +1,119 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "panels": [
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 }, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "linker_mistral_estimated_cost_usd_total",
+          "legendFormat": "estimated USD",
+          "refId": "A"
+        }
+      ],
+      "title": "Estimated spend (total)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "id": 2,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "linker_mistral_prompt_tokens_total",
+          "legendFormat": "prompt",
+          "refId": "A"
+        }
+      ],
+      "title": "Prompt tokens (total)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 12, "y": 0 },
+      "id": 3,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "linker_mistral_completion_tokens_total",
+          "legendFormat": "completion",
+          "refId": "A"
+        }
+      ],
+      "title": "Completion tokens (total)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 6, "w": 6, "x": 18, "y": 0 },
+      "id": 4,
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"] } },
+      "targets": [
+        {
+          "expr": "linker_mistral_http_responses_total{code=\"402\"}",
+          "legendFormat": "402",
+          "refId": "A"
+        }
+      ],
+      "title": "HTTP 402 (quota)",
+      "type": "stat"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": { "unit": "currencyUSD", "decimals": 4 }, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 6 },
+      "id": 5,
+      "targets": [
+        {
+          "expr": "increase(linker_mistral_estimated_cost_usd_total[24h])",
+          "legendFormat": "USD / 24h",
+          "refId": "A"
+        }
+      ],
+      "title": "Estimated spend (24h)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": { "type": "prometheus", "uid": "prometheus" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 6 },
+      "id": 6,
+      "targets": [
+        {
+          "expr": "increase(linker_mistral_requests_total[24h])",
+          "legendFormat": "calls / 24h",
+          "refId": "A"
+        },
+        {
+          "expr": "increase(linker_mistral_http_responses_total{code=\"429\"}[24h])",
+          "legendFormat": "429 / 24h",
+          "refId": "B"
+        }
+      ],
+      "title": "Classifier calls (24h)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "tags": ["ost-linker"],
+  "templating": { "list": [] },
+  "time": { "from": "now-7d", "to": "now" },
+  "timepicker": {},
+  "timezone": "browser",
+  "title": "OST Linker Mistral",
+  "uid": "ost-linker-mistral",
+  "version": 1
+}

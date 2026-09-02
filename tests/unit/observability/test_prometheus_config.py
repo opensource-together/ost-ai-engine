@@ -48,3 +48,15 @@ class TestGrafanaProvisioning:
         )
         assert dashboard["uid"] == "ost-linker-containers"
         assert dashboard["title"] == "OST Linker containers"
+
+    def test_mistral_dashboard_tracks_usage_metrics(self) -> None:
+        import json
+
+        dashboard = json.loads(
+            (GRAFANA / "dashboards" / "linker-mistral.json").read_text()
+        )
+        assert dashboard["uid"] == "ost-linker-mistral"
+        body = json.dumps(dashboard)
+        assert "linker_mistral_estimated_cost_usd_total" in body
+        assert "linker_mistral_prompt_tokens_total" in body
+        assert "linker_mistral_http_responses_total" in body
