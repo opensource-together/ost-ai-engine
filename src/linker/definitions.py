@@ -33,15 +33,18 @@ dbt_project = DbtProject(
 )
 dbt_project.prepare_if_dev()
 
+# `buildable` runs relationship tests whose extra parent is a source (e.g.
+# public.Project, a Python Dagster asset). `cautious` skipped those tests in
+# subsetted builds, and Dagster then skipped downstream user recos.
+DBT_BUILD_ARGS = ["build", "--indirect-selection", "buildable"]
+
 
 @dbt_assets(manifest=dbt_project.manifest_path, name="dbt_models")
 def dbt_project_assets(
     context: AssetExecutionContext,
     dbt: DbtCliResource,
 ) -> Iterator[Any]:
-    yield from dbt.cli(
-        ["build", "--indirect-selection", "cautious"], context=context
-    ).stream()
+    yield from dbt.cli(DBT_BUILD_ARGS, context=context).stream()
 
 
 dbt_resource = DbtCliResource(project_dir=DBT_PROJECT_DIR)

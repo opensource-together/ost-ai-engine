@@ -99,6 +99,11 @@ class TestDefinitionsAssets:
                 asset_names.add(a.node_def.name)
         assert "dbt_models" in asset_names
 
+    def test_dbt_build_runs_source_relationship_tests(self) -> None:
+        from src.linker.definitions import DBT_BUILD_ARGS
+
+        assert DBT_BUILD_ARGS == ["build", "--indirect-selection", "buildable"]
+
 
 class TestJobsResolve:
     def test_all_jobs_resolve_their_asset_selections(self) -> None:
